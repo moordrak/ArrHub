@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # create the GitHub release for v* tags
   packages: write
 
 env:
@@ -62,3 +62,22 @@ jobs:
           build-args: VERSION=${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          notes=".github/releases/${TAG}.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 0; fi
+          if [ -f "$notes" ]; then
+            gh release create "$TAG" --title "ArrHub ${TAG#v}" --notes-file "$notes" --verify-tag --latest
+          else
+            gh release create "$TAG" --title "ArrHub ${TAG#v}" --generate-notes --verify-tag --latest
+          fi
