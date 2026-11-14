@@ -28,7 +28,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
 - **Add** – search and add movies/series (quality profile and root folder, optionally search right away)
 - **Settings** – service URLs, API keys and passwords, ArrHub login, refresh interval and port, all from the UI.
   *Test connection* checks each service before saving, and changes apply immediately without a restart.
-- **Themes and dynamic backgrounds** (in Settings): 9 themes + automatic (follows the system light/dark mode), custom
+- **Themes and dynamic backgrounds** (in Settings): 10 themes (including Matrix) + automatic (follows the system light/dark mode), custom
   accent colour and animated backgrounds *Aurora, Starfield, Particle network, Waves, Poster wall* and *Library images*.
   The last two use posters and fanart from Radarr/Sonarr (fetched by ArrHub, no internet needed).
   The animation can speed up with download speed and respects the system “reduce motion” setting.

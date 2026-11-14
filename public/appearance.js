@@ -7,10 +7,11 @@
     oled:      { name: 'OLED black',       scheme: 'dark',  bg: '#000000', panel: '#0b0b0d', panel2: '#141418', line: '#22232a', text: '#e8e8ea', muted: '#85899a', accent: '#e8a33d' },
     light:     { name: 'Light',            scheme: 'light', bg: '#f3f4f7', panel: '#ffffff', panel2: '#eef0f4', line: '#dde1e8', text: '#1b1f27', muted: '#5f6878', accent: '#c97f12' },
     nord:      { name: 'Nord',             scheme: 'dark',  bg: '#2e3440', panel: '#3b4252', panel2: '#434c5e', line: '#4c566a', text: '#eceff4', muted: '#a3adbf', accent: '#88c0d0' },
-    dracula:   { name: 'Dracula',          scheme: 'dark',  bg: '#21222c', panel: '#282a36', panel2: '#313442', line: '#44475a', text: '#f8f8f2', muted: '#9ea3c0', accent: '#bd93f9' },
+    dracula:   { name: 'Dracula',          scheme: 'dark',  bg: '#14060b', panel: '#1d0a12', panel2: '#271019', line: '#3d1a29', text: '#f8f8f2', muted: '#bfa6b2', accent: '#ff5555' },
     catppuccin:{ name: 'Catppuccin Mocha', scheme: 'dark',  bg: '#11111b', panel: '#1e1e2e', panel2: '#282839', line: '#313244', text: '#cdd6f4', muted: '#9399b2', accent: '#cba6f7' },
-    tokyo:     { name: 'Tokyo Night',      scheme: 'dark',  bg: '#16161e', panel: '#1a1b26', panel2: '#222433', line: '#2f3347', text: '#c0caf5', muted: '#8089b3', accent: '#7aa2f7' },
+    tokyo:     { name: 'Tokyo Night',      scheme: 'dark',  bg: '#16161e', panel: '#1a1b26', panel2: '#222433', line: '#2f3347', text: '#c0caf5', muted: '#8089b3', accent: '#ff3da0' },
     gruvbox:   { name: 'Gruvbox',          scheme: 'dark',  bg: '#1d2021', panel: '#282828', panel2: '#32302f', line: '#3c3836', text: '#ebdbb2', muted: '#a89984', accent: '#fabd2f' },
+    matrix:    { name: 'Matrix',           scheme: 'dark',  bg: '#000000', panel: '#020d05', panel2: '#04170a', line: '#0b3318', text: '#b9ffc9', muted: '#4fc56d', accent: '#00ff41' },
     solarized: { name: 'Solarized',        scheme: 'dark',  bg: '#002b36', panel: '#073642', panel2: '#0a4150', line: '#124b5a', text: '#eee8d5', muted: '#93a1a1', accent: '#b58900' },
   };
   const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
@@ -29,7 +30,7 @@
     const t = resolveTheme(id);
     const acc = /^#[0-9a-f]{6}$/i.test(accent || '') ? accent : t.accent;
     const vars = { '--bg': t.bg, '--panel': t.panel, '--panel2': t.panel2, '--line': t.line, '--text': t.text, '--muted': t.muted,
-      '--accent': acc, '--on-accent': lum(acc) > .35 ? '#111111' : '#ffffff' };
+      '--accent': acc, '--on-accent': (lum(acc) + .05) / (lum('#111111') + .05) >= 1.05 / (lum(acc) + .05) ? '#111111' : '#ffffff' };
     const root = document.documentElement;
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     root.style.colorScheme = t.scheme;
