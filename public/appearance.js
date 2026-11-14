@@ -12,7 +12,7 @@
     tokyo:     { name: 'Tokyo Night',      scheme: 'dark',  bg: '#16161e', panel: '#1a1b26', panel2: '#222433', line: '#2f3347', text: '#c0caf5', muted: '#8089b3', accent: '#ff3da0' },
     gruvbox:   { name: 'Gruvbox',          scheme: 'dark',  bg: '#1d2021', panel: '#282828', panel2: '#32302f', line: '#3c3836', text: '#ebdbb2', muted: '#a89984', accent: '#fabd2f' },
     matrix:    { name: 'Matrix',           scheme: 'dark',  bg: '#000000', panel: '#020d05', panel2: '#04170a', line: '#0b3318', text: '#b9ffc9', muted: '#4fc56d', accent: '#00ff41' },
-    neon:      { name: 'Neon',             scheme: 'dark',  bg: '#03060f', panel: '#08101f', panel2: '#0d182d', line: '#1c2c52', text: '#eef3ff', muted: '#9fb0d9', accent: '#d61ad6', glow: true },
+    neon:      { name: 'Neon',             scheme: 'dark',  bg: '#03060f', panel: '#08101f', panel2: '#0d182d', line: '#1c2c52', text: '#eef3ff', muted: '#9fb0d9', accent: '#0008ff', glow: true },
     'pastel-lavender': { name: 'Pastel Lavender', scheme: 'light', bg: '#e9defb', panel: '#f8f3ff', panel2: '#ece2fd', line: '#d6c6f3', text: '#2a2340', muted: '#5f5480', accent: '#7445e0', tint: true,
       svc: { radarr: '#ffc93c', sonarr: '#4fbdf2', nzb: '#6fd47a', qb: '#7f9dff', seerr: '#b38cff' }, status: { ok: '#2f8a55', warn: '#9a6a1c', err: '#b33a52' } },
     'pastel-peach':    { name: 'Pastel Peach',    scheme: 'light', bg: '#ffe1d3', panel: '#fff5ef', panel2: '#ffe8dd', line: '#f6cdb9', text: '#3a2420', muted: '#76524a', accent: '#d0386c', tint: true,
@@ -24,6 +24,17 @@
   const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   const lum = h => { const [r, g, b] = hexRgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
   const rgba = (h, a) => `rgba(${hexRgb(h).join(',')},${a})`;
+  const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  // accent used as TEXT: lighten (dark themes) or darken (light themes) until it reads at 4.5:1 on the panels
+  function readableAccent(acc, panel, scheme) {
+    const target = scheme === 'light' ? [0, 0, 0] : [255, 255, 255];
+    const [r, g, b] = hexRgb(acc);
+    for (let t = 0; t <= 1.0001; t += 0.05) {
+      const c = '#' + [r, g, b].map((v, i) => Math.round(v + (target[i] - v) * t).toString(16).padStart(2, '0')).join('');
+      if (contrast(c, panel) >= 4.5) return c;
+    }
+    return scheme === 'light' ? '#000000' : '#ffffff';
+  }
 
   function resolveTheme(id) {
     if (id === 'auto') return matchMedia('(prefers-color-scheme: light)').matches ? THEMES.light : THEMES.dark;
@@ -36,7 +47,7 @@
     const t = resolveTheme(id);
     const acc = /^#[0-9a-f]{6}$/i.test(accent || '') ? accent : t.accent;
     const vars = { '--bg': t.bg, '--panel': t.panel, '--panel2': t.panel2, '--line': t.line, '--text': t.text, '--muted': t.muted,
-      '--accent': acc, '--on-accent': (lum(acc) + .05) / (lum('#111111') + .05) >= 1.05 / (lum(acc) + .05) ? '#111111' : '#ffffff' };
+      '--accent': acc, '--accent-text': readableAccent(acc, t.panel2, t.scheme), '--on-accent': (lum(acc) + .05) / (lum('#111111') + .05) >= 1.05 / (lum(acc) + .05) ? '#111111' : '#ffffff' };
     // optional per-theme service and status colours (pastel themes); other themes fall back to the stylesheet
     const extra = {};
     for (const [k, v] of Object.entries(t.svc || {})) extra['--' + k] = v;
