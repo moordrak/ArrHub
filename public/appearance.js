@@ -12,6 +12,7 @@
     tokyo:     { name: 'Tokyo Night',      scheme: 'dark',  bg: '#16161e', panel: '#1a1b26', panel2: '#222433', line: '#2f3347', text: '#c0caf5', muted: '#8089b3', accent: '#ff3da0' },
     gruvbox:   { name: 'Gruvbox',          scheme: 'dark',  bg: '#1d2021', panel: '#282828', panel2: '#32302f', line: '#3c3836', text: '#ebdbb2', muted: '#a89984', accent: '#fabd2f' },
     matrix:    { name: 'Matrix',           scheme: 'dark',  bg: '#000000', panel: '#020d05', panel2: '#04170a', line: '#0b3318', text: '#b9ffc9', muted: '#4fc56d', accent: '#00ff41' },
+    neon:      { name: 'Neon',             scheme: 'dark',  bg: '#03060f', panel: '#08101f', panel2: '#0d182d', line: '#1c2c52', text: '#eef3ff', muted: '#9fb0d9', accent: '#d61ad6', glow: true },
     solarized: { name: 'Solarized',        scheme: 'dark',  bg: '#002b36', panel: '#073642', panel2: '#0a4150', line: '#124b5a', text: '#eee8d5', muted: '#93a1a1', accent: '#b58900' },
   };
   const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
@@ -35,7 +36,8 @@
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     root.style.colorScheme = t.scheme;
     root.dataset.scheme = t.scheme;
-    try { localStorage.setItem('arrhub-theme', JSON.stringify({ vars, scheme: t.scheme })); } catch {}
+    root.dataset.glow = t.glow ? '1' : '';   // neon glow (CSS in index.html), only for themes that ask for it
+    try { localStorage.setItem('arrhub-theme', JSON.stringify({ vars, scheme: t.scheme, glow: !!t.glow })); } catch {}
     Bg.refreshColors();
   }
   matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (current.theme === 'auto') applyTheme('auto', current.accent); });

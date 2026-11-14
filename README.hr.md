@@ -13,6 +13,8 @@
 
 ![Ikone servisa na karticama](docs/card-icons.png)
 
+![Tema Neon](docs/theme-neon.png)
+
 Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet, qBittorrent i Seerr**.
 Mali Node.js poslužitelj (bez ovisnosti, Node 18+) drži API ključeve i lozinke na strani poslužitelja
 i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
@@ -28,7 +30,7 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 - **Dodaj** – pretraga i dodavanje filmova/serija (odabir profila kvalitete i mape, opcionalno odmah traži)
 - **Postavke** – adrese, API ključevi i lozinke usluga, prijava u ArrHub, interval osvježavanja i port, sve kroz sučelje.
   Gumb *Testiraj vezu* provjerava svaku uslugu prije spremanja, a promjene vrijede odmah, bez ponovnog pokretanja.
-- **Teme i dinamičke pozadine** (u Postavkama): 10 tema (uključujući Matrix) + automatska (prati svijetli/tamni način sustava), vlastita
+- **Teme i dinamičke pozadine** (u Postavkama): 11 tema (uključujući Matrix i Neon sa sjajem) + automatska (prati svijetli/tamni način sustava), vlastita
   naglasna boja te animirane pozadine *Aurora, Zvjezdano nebo, Mreža čestica, Valovi, Zid postera* i *Slike iz knjižnice*.
   Zadnje dvije koriste postere i pozadinske slike iz Radarra/Sonarra (dohvaća ih ArrHub, nije potreban internet).
   Animacija se po želji ubrzava s brzinom preuzimanja, a poštuje i postavku sustava „smanji pokrete”.
