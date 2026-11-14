@@ -219,7 +219,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
       <div class="card wide" data-svc="qbittorrent" data-icon="qbittorrent" style="--c:var(--qb)">
         <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent<span class="sp"></span>
           <select id="qbFilter" style="padding:4px 8px;font-size:12px">
-            <option value="all" data-i18n="dl.all">All</option><option value="active" data-i18n="dl.active">Active</option><option value="downloading" data-i18n="dl.downloading">Downloading</option><option value="seeding" data-i18n="dl.seeding">Seeding</option><option value="paused" data-i18n="dl.paused">Paused</option><option value="error" data-i18n="dl.errors">Errors</option>
+            <option value="all" data-i18n="dl.all">All</option><option value="active" data-i18n="dl.active" selected>Active</option><option value="downloading" data-i18n="dl.downloading">Downloading</option><option value="seeding" data-i18n="dl.seeding">Seeding</option><option value="paused" data-i18n="dl.paused">Paused</option><option value="error" data-i18n="dl.errors">Errors</option>
           </select>
           <button class="btn i" data-i18n-title="dl.stopAll" title="Stop all" onclick="qbGlobal('pause')">⏸</button>
           <button class="btn i" data-i18n-title="dl.startAll" title="Start all" onclick="qbGlobal('resume')">▶</button>

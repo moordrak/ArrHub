@@ -119,7 +119,7 @@ function renderOverview() {
     : `<div class="empty">${t('ov.noUpcoming')}</div>`;
 }
 
-let qbFilter = 'all';
+let qbFilter = 'active';
 const qbMatch = {
   all: () => true,
   active: x => x.dlspeed > 0 || x.upspeed > 0,
