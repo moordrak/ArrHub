@@ -1,6 +1,11 @@
-# ArrHub
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-wordmark-dark.svg">
+    <img src="docs/logo-wordmark-light.svg" alt="ArrHub" width="360">
+  </picture>
+</p>
 
-**English** · [Hrvatski](README.hr.md)
+<p align="center"><b>English</b> · <a href="README.hr.md">Hrvatski</a></p>
 
 ![ArrHub](docs/screenshot.png)
 

@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ArrHub</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23e8a33d'/><path d='M9 21l7-11 7 11' stroke='%23111' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<meta name="theme-color" content="#0f1115">
 <script>try{const t=JSON.parse(localStorage.getItem('arrhub-theme'));if(t){for(const k in t.vars)document.documentElement.style.setProperty(k,t.vars[k]);document.documentElement.style.colorScheme=t.scheme;document.documentElement.dataset.scheme=t.scheme}}catch(e){}</script>
 <style>
 :root{
@@ -16,8 +20,10 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px 24px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
-.logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+.logo{display:flex;align-items:center;gap:10px;font-size:28px;line-height:1;font-weight:800;letter-spacing:-.02em;color:var(--text);white-space:nowrap}
+.logo img{width:28px;height:28px;display:block;flex:none}
+.logo .wm span{font-weight:400;color:var(--muted)}
+@media(max-width:560px){.logo{font-size:24px}.logo img{width:24px;height:24px}}
 nav{display:flex;gap:4px;flex-wrap:wrap}
 nav button{background:none;border:0;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer;font:inherit}
 nav button:hover{color:var(--text);background:var(--panel)}
@@ -158,7 +164,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
 </head>
 <body>
 <header>
-  <div class="logo"><i><svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 22l8-13 8 13" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i>ArrHub</div>
+  <div class="logo"><img src="logo.svg" alt=""><span class="wm">Arr<span>Hub</span></span></div>
   <nav id="nav">
     <button data-v="overview" class="on" data-i18n="nav.overview">Overview</button>
     <button data-v="downloads" data-i18n="nav.downloads">Downloads</button>

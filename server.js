@@ -632,7 +632,7 @@ function checkAuth(r) {
   return u === cfg.auth.user && p === cfg.auth.pass;
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
