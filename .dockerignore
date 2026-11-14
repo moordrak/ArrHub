@@ -1,0 +1,10 @@
+.git
+.github
+docs
+*.md
+config.json
+data
+proxmox
+install.sh
+arrhub.service
+docker-compose.yml

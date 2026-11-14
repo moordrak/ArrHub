@@ -89,10 +89,20 @@ cp arrhub.service /etc/systemd/system/ && systemctl enable --now arrhub
 ```
 
 ### Docker
+Prebuilt multi-arch images (amd64, arm64) are published to GitHub Container Registry:
 ```bash
-docker compose up -d --build
+docker run -d --name arrhub --restart unless-stopped \
+  -p 8686:8686 -v arrhub-data:/app/data \
+  ghcr.io/moordrak/arrhub:latest
+```
+or with Compose (`docker-compose.yml` in this repo):
+```bash
+docker compose up -d
 ```
 The configuration lives in the `arrhub-data` volume (`/app/data/config.json`) and is edited from Settings.
+
+Tags: `latest` (latest release), `1.0.0` / `1.0` / `1` (versions), `edge` (latest commit on `main`).
+To build it yourself: `docker build -t arrhub .`
 
 ### Nginx Proxy Manager
 Add a Proxy Host → `http://<lxc-ip>:8686`. If it is reachable outside your LAN, make sure to enable the

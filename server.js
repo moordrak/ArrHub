@@ -7,6 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
 
+let VERSION = 'dev';
+try { VERSION = require('./package.json').version || VERSION; } catch {}
+
 // ---------- Server-side messages (en / hr) ----------
 // The language of each request comes from the X-Lang header the UI sends (falls back to the configured UI language).
 const MSG = {
@@ -545,7 +548,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui }),
+  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
@@ -621,5 +624,5 @@ async function handle(r, res) {
 
 server.listen(cfg.port, () => {
   const on = SERVICES.filter(enabled);
-  console.log(`ArrHub listening on http://0.0.0.0:${cfg.port} — services: ${on.join(', ') || 'none (configure them in Settings)'}`);
+  console.log(`ArrHub ${VERSION} listening on http://0.0.0.0:${cfg.port} — services: ${on.join(', ') || 'none (configure them in Settings)'}`);
 });

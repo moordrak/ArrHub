@@ -352,7 +352,7 @@ let setLoaded = null;
 function settingsTexts() {
   if (!setLoaded) return;
   const s = setLoaded;
-  $('#setInfo').textContent = t('set.savedIn', { file: s.file }) + (s.locked.length ? ' · ' + t('set.lockedN', { n: s.locked.length }) : '');
+  $('#setInfo').textContent = `ArrHub ${state.cfg.version || ''} · ` + t('set.savedIn', { file: s.file }) + (s.locked.length ? ' · ' + t('set.lockedN', { n: s.locked.length }) : '');
   $('#authHint').textContent = s.values['auth.user'] ? '' : t('set.authHint');
   for (const el of setForm.elements) if (el.dataset.locked === '1') el.title = t('set.lockedTitle');
 }
@@ -487,6 +487,7 @@ setForm.addEventListener('change', onUiChange);
 let timer;
 async function applyConfig() {
   state.cfg = await api('config');
+  $('.logo').title = 'ArrHub ' + (state.cfg.version || '');
   applyUi(state.cfg.ui);
   const any = SVCS.some(k => state.cfg[k]);
   $('#setupNotice').classList.toggle('hidden', any);

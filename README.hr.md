@@ -89,10 +89,20 @@ cp arrhub.service /etc/systemd/system/ && systemctl enable --now arrhub
 ```
 
 ### Docker
+Gotove slike za amd64 i arm64 objavljuju se u GitHub Container Registryju:
 ```bash
-docker compose up -d --build
+docker run -d --name arrhub --restart unless-stopped \
+  -p 8686:8686 -v arrhub-data:/app/data \
+  ghcr.io/moordrak/arrhub:latest
+```
+ili s Composeom (`docker-compose.yml` u repozitoriju):
+```bash
+docker compose up -d
 ```
 Konfiguracija se čuva u volumenu `arrhub-data` (`/app/data/config.json`) i uređuje se kroz Postavke.
+
+Oznake: `latest` (zadnji release), `1.0.0` / `1.0` / `1` (verzije), `edge` (zadnji commit na `main`).
+Za vlastitu izgradnju: `docker build -t arrhub .`
 
 ### Nginx Proxy Manager
 Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavezno uključi

@@ -1,10 +1,14 @@
 services:
   arrhub:
-    build: .
+    image: ghcr.io/moordrak/arrhub:latest
+    # build: .            # build locally instead of pulling the image
     container_name: arrhub
     restart: unless-stopped
     ports:
       - "8686:8686"
+    environment:
+      - TZ=Europe/Zagreb
+      # - ARRHUB_LANG=en  # optional; setting it here locks the field in Settings
     volumes:
       - arrhub-data:/app/data   # config.json, edited from Settings in the UI
 
