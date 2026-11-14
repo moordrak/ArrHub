@@ -6,6 +6,8 @@
 
 ![Poster wall](docs/theme-posters.png)
 
+![Service icons on cards](docs/card-icons.png)
+
 One web dashboard for **Radarr, Sonarr, NZBGet, qBittorrent and Seerr**.
 A small Node.js server (no dependencies, Node 18+) keeps API keys and passwords on the server side
 and proxies the calls, so the browser never sees secrets and there are no CORS problems.
@@ -25,6 +27,8 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
   accent colour and animated backgrounds *Aurora, Starfield, Particle network, Waves, Poster wall* and *Library images*.
   The last two use posters and fanart from Radarr/Sonarr (fetched by ArrHub, no internet needed).
   The animation can speed up with download speed and respects the system “reduce motion” setting.
+- **Service icons on cards**: a large, faded service icon behind each card. ArrHub fetches the official icon from your own
+  Radarr/Sonarr/qBittorrent/NZBGet/Seerr instance (falls back to a generic icon), with an on/off switch and strength slider in Settings → Appearance
 - **Language**: English or Croatian (or automatic from the browser), chosen in Settings → Appearance
 - Automatic refresh (5 s by default), optional Basic Auth login
 - Supports qBittorrent 4.x and 5.x (stop/start and pause/resume)
@@ -44,7 +48,8 @@ never shown in the UI: a field showing `********` means the existing value is ke
 Instead of the UI you can also edit `config.json` by hand (template: `config.example.json`) and restart the service.
 Everything can also be set with environment variables: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
 SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`, and for the look
-`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`).
+`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
+`ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
 
 > ⚠ Without a login, anyone who can open ArrHub can also change its settings. If it is reachable outside your LAN, enable the login.

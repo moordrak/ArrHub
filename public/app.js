@@ -62,7 +62,7 @@ function renderSpeeds() {
 
 function svcCard(k, body) {
   const err = state.err[k];
-  return `<div class="card svc" style="--c:${COLORS[k]}">
+  return `<div class="card svc" data-icon="${k}" style="--c:${COLORS[k]}">
     <h2><span class="dot" style="background:${err ? 'var(--err)' : 'var(--ok)'}"></span>${NAMES[k]}<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0">${esc(state.data[k]?.version || '')}</span></h2>
     ${err ? `<div class="error">${esc(err)}</div>` : state.data[k] ? body(state.data[k]) : `<div class="empty">${t('c.loading')}</div>`}
   </div>`;
@@ -404,6 +404,50 @@ setForm.onsubmit = async e => {
   } catch (err) { toast(t('c.error', { msg: err.message })); }
 };
 
+// ---- service icons on cards ----
+// Official icons come from the user's own instances via /api/icon/<svc>; generic line icons are the fallback.
+const GENERIC_ICONS = {
+  radarr: '<rect x="4" y="16" width="40" height="26" rx="3"/><path d="M4 16l2-8 38-4 1 8z"/><path d="M14 7l-3 7M24 6l-3 7M34 5l-3 7"/><path d="M20 24l10 5-10 5z" fill="C"/>',
+  sonarr: '<rect x="3" y="10" width="42" height="28" rx="4"/><path d="M16 3l8 7 8-7"/><path d="M14 44h20"/><path d="M20 19l10 5-10 5z" fill="C"/>',
+  qbittorrent: '<path d="M10 6v16a14 14 0 0 0 28 0V6"/><path d="M10 6h8v16a6 6 0 0 0 12 0V6h8"/><path d="M10 14h8M30 14h8"/>',
+  nzbget: '<path d="M14 36h-2a9 9 0 0 1-1-17.9A12 12 0 0 1 34 16a8 8 0 0 1 2 15.8"/><path d="M24 22v20M17 35l7 7 7-7"/>',
+  seerr: '<path d="M6 26l6-18h24l6 18v14H6z"/><path d="M6 26h11l2 5h10l2-5h11"/><path d="M24 10v10M19 15l5 5 5-5"/>',
+};
+const ICON_VARS = { radarr: '--radarr', sonarr: '--sonarr', qbittorrent: '--qb', nzbget: '--nzb', seerr: '--seerr' };
+const iconState = {}; // svc -> 'official' | 'generic'
+let iconStamp = Date.now();
+function genericIcon(k) {
+  const col = getComputedStyle(document.documentElement).getPropertyValue(ICON_VARS[k]).trim() || '#888888';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${GENERIC_ICONS[k].replaceAll('fill="C"', `fill="${col}"`)}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+function setIconVar(k) {
+  const v = iconState[k] === 'official' ? `url("/api/icon/${k}?v=${iconStamp}")` : genericIcon(k);
+  document.documentElement.style.setProperty('--icon-' + k, v);
+}
+function refreshGenericIcons() { SVCS.forEach(k => { if (iconState[k] !== 'official') setIconVar(k); }); }
+async function loadIcons(force) {
+  if (force) iconStamp = Date.now();
+  await Promise.all(SVCS.filter(k => state.cfg[k]).map(k => new Promise(done => {
+    iconState[k] ??= 'generic'; setIconVar(k);            // generic right away, swap when the official one loads
+    const img = new Image();
+    img.onload = () => { iconState[k] = 'official'; setIconVar(k); done(); };
+    img.onerror = () => { iconState[k] = 'generic'; setIconVar(k); done(); };
+    img.src = `/api/icon/${k}?v=${iconStamp}${force ? '&refresh=1' : ''}`;
+  })));
+  renderIconStatus();
+}
+function renderIconStatus() {
+  const el = $('#iconStatus'); if (!el) return;
+  el.textContent = SVCS.filter(k => state.cfg[k] && iconState[k])
+    .map(k => `${NAMES[k]}: ${t(iconState[k] === 'official' ? 'set.iconOfficial' : 'set.iconGeneric')}`).join(' · ');
+}
+function applyCardIcons(ui) {
+  document.body.classList.toggle('card-icons', ui.cardIcons !== false);
+  document.documentElement.style.setProperty('--card-icon-opacity', String((ui.cardIconStrength ?? 10) / 100));
+}
+$('#iconReload').onclick = () => loadIcons(true);
+
 // ---- about / version ----
 let aboutData = null;
 function renderAbout() {
@@ -449,13 +493,15 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); render();
+  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); render();
   if (lastResults.length && state.view === 'add') renderResults();
 }
 function applyUi(ui) {
   if (!ui) return;
   if (I18N.setLang(ui.lang)) relabel();
   applyTheme(ui.theme, ui.accent);
+  refreshGenericIcons();
+  applyCardIcons(ui);
   Bg.set(ui.background, { intensity: ui.bgIntensity, reactive: ui.bgReactive });
 }
 function currentUiFromForm() {
@@ -463,6 +509,7 @@ function currentUiFromForm() {
   return {
     theme: v['ui.theme'] || 'dark', accent: v['ui.accent'] || '', background: v['ui.background'] || 'none',
     bgIntensity: Number(v['ui.bgIntensity'] ?? 60), bgReactive: v['ui.bgReactive'] !== false, lang: v['ui.lang'] || 'en',
+    cardIcons: v['ui.cardIcons'] !== false, cardIconStrength: Number(v['ui.cardIconStrength'] ?? 10),
   };
 }
 function syncAppearanceControls() {
@@ -471,6 +518,9 @@ function syncAppearanceControls() {
   $('#accentPick').value = ui.accent || th.accent;
   $('#accentReset').disabled = !ui.accent;
   $('#bgIntVal').textContent = ui.bgIntensity + '%';
+  $('#iconStrVal').textContent = ui.cardIconStrength + '%';
+  setForm.elements['ui.cardIconStrength'].disabled = !ui.cardIcons;
+  $('#iconReload').disabled = !ui.cardIcons;
   const off = ui.background === 'none';
   setForm.elements['ui.bgIntensity'].disabled = off;
   setForm.elements['ui.bgReactive'].disabled = off || ui.background === 'fanart';
@@ -516,6 +566,7 @@ async function applyConfig() {
   $('.logo').title = 'ArrHub ' + (state.cfg.version || '');
   applyUi(state.cfg.ui);
   const any = SVCS.some(k => state.cfg[k]);
+  loadIcons(false);
   $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
   clearInterval(timer);

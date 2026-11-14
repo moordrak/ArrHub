@@ -66,6 +66,8 @@
       'about.title': 'About', 'about.notes': 'Release notes', 'about.check': 'Check for updates', 'about.checking': 'Checking for updates…',
       'about.upToDate': '✓ You are running the latest version', 'about.newVersion': 'New version {v} is available', 'about.whatsNew': "What's new",
       'about.checkFailed': 'Update check failed: {msg}', 'about.dev': 'Development build',
+      'set.cardIconsTitle': 'Service icons on cards', 'set.cardIcons': 'Show a large service icon behind each card', 'set.iconStrength': 'Strength',
+      'set.iconReload': 'Reload icons', 'set.iconOfficial': 'official icon', 'set.iconGeneric': 'generic icon',
       // themes & backgrounds
       'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light',
       'bg.none': 'No background', 'bg.aurora': 'Aurora', 'bg.stars': 'Starfield', 'bg.particles': 'Particle network', 'bg.waves': 'Waves',
@@ -127,6 +129,8 @@
       'about.title': 'O aplikaciji', 'about.notes': 'Bilješke izdanja', 'about.check': 'Provjeri ažuriranja', 'about.checking': 'Provjeravam ažuriranja…',
       'about.upToDate': '✓ Koristiš najnoviju verziju', 'about.newVersion': 'Dostupna je nova verzija {v}', 'about.whatsNew': 'Što je novo',
       'about.checkFailed': 'Provjera ažuriranja nije uspjela: {msg}', 'about.dev': 'Razvojna verzija',
+      'set.cardIconsTitle': 'Ikone servisa na karticama', 'set.cardIcons': 'Prikaži veliku ikonu servisa iza svake kartice', 'set.iconStrength': 'Jačina',
+      'set.iconReload': 'Ponovno učitaj ikone', 'set.iconOfficial': 'službena ikona', 'set.iconGeneric': 'generička ikona',
       'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla',
       'bg.none': 'Bez pozadine', 'bg.aurora': 'Aurora', 'bg.stars': 'Zvjezdano nebo', 'bg.particles': 'Mreža čestica', 'bg.waves': 'Valovi',
       'bg.posters': 'Zid postera', 'bg.fanart': 'Slike iz knjižnice',

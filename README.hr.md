@@ -6,6 +6,8 @@
 
 ![Zid postera](docs/theme-posters.png)
 
+![Ikone servisa na karticama](docs/card-icons.png)
+
 Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet, qBittorrent i Seerr**.
 Mali Node.js poslužitelj (bez ovisnosti, Node 18+) drži API ključeve i lozinke na strani poslužitelja
 i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
@@ -25,6 +27,8 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
   naglasna boja te animirane pozadine *Aurora, Zvjezdano nebo, Mreža čestica, Valovi, Zid postera* i *Slike iz knjižnice*.
   Zadnje dvije koriste postere i pozadinske slike iz Radarra/Sonarra (dohvaća ih ArrHub, nije potreban internet).
   Animacija se po želji ubrzava s brzinom preuzimanja, a poštuje i postavku sustava „smanji pokrete”.
+- **Ikone servisa na karticama**: velika, prigušena ikona servisa iza svake kartice. ArrHub preuzima službenu ikonu s tvoje
+  instance Radarra/Sonarra/qBittorrenta/NZBGeta/Seerra (zamjena je generička ikona), uz prekidač i klizač jačine u Postavke → Izgled
 - **Jezik**: engleski ili hrvatski (ili automatski prema pregledniku), bira se u Postavkama → Izgled
 - Automatsko osvježavanje (zadano 5 s), opcionalna Basic Auth prijava
 - Podržava qBittorrent 4.x i 5.x (stop/start i pause/resume)
@@ -44,7 +48,8 @@ sučelju nikad ne prikazuju: polje s `********` znači da se postojeća vrijedno
 Umjesto sučelja možeš i ručno urediti `config.json` (predložak je `config.example.json`) i ponovno pokrenuti servis.
 Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
 SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`, a za izgled
-`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`). One imaju prednost pred
+`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
+`ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30). One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
 
 > ⚠ Bez prijave svatko tko može otvoriti ArrHub može i mijenjati postavke. Ako je dostupan izvan LAN-a, uključi prijavu.

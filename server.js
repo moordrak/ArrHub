@@ -27,7 +27,7 @@ const MSG = {
     netNet: 'Network unreachable', netTimeout: 'Connection timed out', netReset: 'Connection reset',
     netSelfSigned: 'Self-signed TLS certificate – use http:// or a valid certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
-    loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
+    noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -43,7 +43,7 @@ const MSG = {
     netNet: 'Mreža nije dostupna', netTimeout: 'Isteklo vrijeme povezivanja', netReset: 'Veza prekinuta',
     netSelfSigned: 'Samopotpisani TLS certifikat – koristi http:// ili valjan certifikat', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
-    loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
+    noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -76,6 +76,7 @@ const FIELDS = [
   ['seerr', 'url', 'SEERR_URL'], ['seerr', 'apiKey', 'SEERR_KEY', true],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
+  ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
 ];
 const THEMES = ['auto', 'dark', 'oled', 'light', 'nord', 'dracula', 'catppuccin', 'tokyo', 'gruvbox', 'solarized'];
 const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
@@ -87,6 +88,8 @@ function normalizeUi(u = {}) {
     bgIntensity: Math.max(0, Math.min(100, Math.round(Number(u.bgIntensity ?? 60)))) || 0,
     bgReactive: !(u.bgReactive === false || u.bgReactive === 'false'),
     lang: LANGS.includes(u.lang) ? u.lang : 'en',
+    cardIcons: !(u.cardIcons === false || u.cardIcons === 'false'),
+    cardIconStrength: Math.max(3, Math.min(30, Math.round(Number(u.cardIconStrength ?? 10)) || 10)),
   };
 }
 const getF = (o, sec, f) => (sec ? o[sec]?.[f] : o[f]);
@@ -170,7 +173,7 @@ function saveSettings(values) {
   }
   for (const k of SERVICES) if (file[k] && !file[k].url) delete file[k];
   if (file.ui && !Object.keys(file.ui).length) delete file.ui;
-  mediaCache.at = 0; mediaCache.data = null; coverFail.clear();
+  mediaCache.at = 0; mediaCache.data = null; coverFail.clear(); iconCache.clear();
   const oldPort = cfg.port;
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
@@ -507,6 +510,69 @@ async function cover(id) {
 }
 setInterval(() => coverFail.clear(), 10 * 60000).unref();
 
+// ---------- Service icons (fetched from the user's own instances) ----------
+// Known icon paths per service, tried in order; then <link rel="icon"> from the service's start page.
+const ICON_PATHS = {
+  radarr: ['/Content/Images/logo.svg', '/Content/Images/Icons/android-chrome-192x192.png', '/Content/Images/Icons/apple-touch-icon.png', '/favicon.ico'],
+  sonarr: ['/Content/Images/logo.svg', '/Content/Images/Icons/android-chrome-192x192.png', '/Content/Images/Icons/apple-touch-icon.png', '/favicon.ico'],
+  qbittorrent: ['/images/qbittorrent-tray.svg', '/images/qbittorrent.svg', '/images/qbittorrent32.png', '/favicon.ico'],
+  nzbget: ['/img/favicon-256x256.png', '/img/favicon.png', '/img/favicon.ico', '/favicon.ico'],
+  seerr: ['/os_icon.svg', '/android-chrome-512x512.png', '/apple-touch-icon.png', '/favicon.ico'],
+};
+const iconCache = new Map(); // svc -> { buf, type, at } | { missing: true, at }
+function iconAuth(svc) {
+  const c = cfg[svc];
+  if (svc === 'radarr' || svc === 'sonarr' || svc === 'seerr') return { 'X-Api-Key': c.apiKey };
+  if (svc === 'nzbget' && c.user) return { Authorization: 'Basic ' + Buffer.from(`${c.user}:${c.pass || ''}`).toString('base64') };
+  if (svc === 'qbittorrent' && qb.sid) return { Cookie: `SID=${qb.sid}` };
+  return {};
+}
+async function tryIcon(url, headers) {
+  const r = await req(url, { headers: { ...headers, 'User-Agent': 'ArrHub' }, redirect: 'manual', timeout: 8000 });
+  const type = (r.headers.get('content-type') || '').split(';')[0].trim();
+  if (!r.ok || !/^image\//.test(type)) { r.body?.cancel?.(); return null; }
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (!buf.length || buf.length > 1024 * 1024) return null;
+  return { buf, type };
+}
+async function serviceIcon(svc, force) {
+  if (!SERVICES.includes(svc) || !enabled(svc)) throw Object.assign(new Error(T('notConfigured', { svc })), { status: 400 });
+  const hit = iconCache.get(svc);
+  if (!force && hit && Date.now() - hit.at < (hit.missing ? 30 * 60e3 : 24 * 3600e3)) {
+    if (hit.missing) throw Object.assign(new Error(T('noIcon')), { status: 404 });
+    return hit;
+  }
+  const base = cfg[svc].url;               // may include a URL base, e.g. http://host:7878/radarr
+  if (svc === 'qbittorrent' && !qb.sid) await qb.login().catch(() => {});
+  const headers = iconAuth(svc);
+  let found = null;
+  for (const p of ICON_PATHS[svc]) {
+    found = await tryIcon(base + p, headers).catch(() => null);
+    if (found) break;
+  }
+  if (!found) {
+    // fall back to <link rel="icon"> / apple-touch-icon from the start page, largest first
+    try {
+      const r = await req(base + '/', { headers, timeout: 8000 });
+      const html = (await r.text()).slice(0, 200000);
+      const links = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0])
+        .filter(l => /rel=["'][^"']*(icon|apple-touch-icon)[^"']*["']/i.test(l))
+        .map(l => ({ href: (l.match(/href=["']([^"']+)["']/i) || [])[1], size: parseInt((l.match(/sizes=["'](\d+)/i) || [])[1] || (/svg/i.test(l) ? 9999 : 16), 10) }))
+        .filter(l => l.href && !/^data:/i.test(l.href)).sort((a, b) => b.size - a.size);
+      for (const l of links) {
+        const u = new URL(l.href, base + '/');
+        if (u.origin !== new URL(base).origin) continue;   // only the service's own host
+        found = await tryIcon(u.toString(), headers).catch(() => null);
+        if (found) break;
+      }
+    } catch {}
+  }
+  if (!found) { iconCache.set(svc, { missing: true, at: Date.now() }); throw Object.assign(new Error(T('noIcon')), { status: 404 }); }
+  const entry = { ...found, at: Date.now() };
+  iconCache.set(svc, entry);
+  return entry;
+}
+
 // ---------- About / update check ----------
 const REPO = 'moordrak/arrhub';
 const aboutCache = { at: 0, ttl: 0, data: null };
@@ -573,6 +639,11 @@ const routes = {
   'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/about': q => about(q.get('refresh') === '1'),
+  'GET /api/icon/:svc': async (q, b, p) => {
+    const ic = await serviceIcon(p.svc, q.get('refresh') === '1');
+    // served under our origin: lock it down so an SVG can never run script here
+    return { __raw: ic.buf, type: ic.type, headers: { 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox", 'X-Content-Type-Options': 'nosniff' } };
+  },
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
   'POST /api/settings': (q, b) => saveSettings(b.values),
@@ -622,18 +693,18 @@ async function handle(r, res) {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: T('notFound') });
     const svc = u.pathname.split('/')[2];
-    if (!['config', 'settings', 'media', 'cover', 'about'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
+    if (!['config', 'settings', 'media', 'cover', 'about', 'icon'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);
       if (out?.__raw) {
-        res.writeHead(200, { 'Content-Type': out.type, 'Cache-Control': 'private, max-age=86400' });
+        res.writeHead(200, { 'Content-Type': out.type, 'Cache-Control': 'private, max-age=86400', ...(out.headers || {}) });
         return res.end(out.__raw);
       }
       send(res, 200, out ?? { ok: true });
     } catch (e) {
       const msg = friendlyError(e);
-      send(res, svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502, { error: msg });
+      send(res, e.status || (svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502), { error: msg });
     }
     return;
   }
