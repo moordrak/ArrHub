@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# ArrHub — instalacija / nadogradnja na Debian ili Ubuntu (npr. unutar Proxmox LXC-a)
+# ArrHub — install / upgrade on Debian or Ubuntu (e.g. inside a Proxmox LXC)
 #
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/install.sh)"
 #
-# Ponovno pokretanje nadograđuje ArrHub i zadržava postojeći /opt/arrhub/config.json.
-# Bez pitanja: postavi varijable (PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
+# Running it again upgrades ArrHub and keeps the existing /opt/arrhub/config.json.
+# Unattended: set the variables (PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
 # SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS,
-# SEERR_URL, SEERR_KEY)
-# i NONINTERACTIVE=1.
+# SEERR_URL, SEERR_KEY, ARRHUB_LANG)
+# and NONINTERACTIVE=1.
 set -euo pipefail
 
 REPO="${ARRHUB_REPO:-moordrak/arrhub}"
@@ -18,16 +18,16 @@ APP_USER="arrhub"
 c_ok=$'\e[32m'; c_warn=$'\e[33m'; c_err=$'\e[31m'; c_b=$'\e[1m'; c_0=$'\e[0m'
 msg()  { echo "${c_ok}==>${c_0} ${c_b}$*${c_0}"; }
 warn() { echo "${c_warn}!!${c_0} $*"; }
-die()  { echo "${c_err}GREŠKA:${c_0} $*" >&2; exit 1; }
+die()  { echo "${c_err}ERROR:${c_0} $*" >&2; exit 1; }
 
-[[ $EUID -eq 0 ]] || die "Pokreni kao root."
-command -v apt-get >/dev/null || die "Podržani su samo Debian i Ubuntu."
+[[ $EUID -eq 0 ]] || die "Run as root."
+command -v apt-get >/dev/null || die "Only Debian and Ubuntu are supported."
 
 INTERACTIVE=1
 nl() { [[ $INTERACTIVE -eq 1 ]] && echo || true; }
 [[ "${NONINTERACTIVE:-0}" == "1" || ! -t 0 ]] && INTERACTIVE=0
 
-# ask VAR "Pitanje" [zadano] [secret]
+# ask VAR "Question" [default] [secret]
 ask() {
   local var=$1 q=$2 def=${3:-} secret=${4:-} val
   [[ -n "${!var:-}" || $INTERACTIVE -eq 0 ]] && { printf -v "$var" '%s' "${!var:-$def}"; return; }
@@ -35,8 +35,8 @@ ask() {
   printf -v "$var" '%s' "${val:-$def}"
 }
 
-# ---------- paketi i Node.js ----------
-msg "Instaliram pakete"
+# ---------- packages and Node.js ----------
+msg "Installing packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq curl ca-certificates tar >/dev/null
@@ -46,55 +46,56 @@ if (( $(node_major) < 18 )); then
   apt-get install -y -qq nodejs >/dev/null 2>&1 || true
 fi
 if (( $(node_major) < 18 )); then
-  msg "Instaliram Node.js 22 iz NodeSourcea"
+  msg "Installing Node.js 22 from NodeSource"
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
   apt-get install -y -qq nodejs >/dev/null
 fi
-(( $(node_major) >= 18 )) || die "Node.js 18+ nije dostupan."
+(( $(node_major) >= 18 )) || die "Node.js 18+ is not available."
 msg "Node.js $(node -v)"
 
-# ---------- izvorni kod ----------
+# ---------- source ----------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" 2>/dev/null && pwd || echo /nonexistent)"
 TMP=""
 if [[ -f "$SCRIPT_DIR/server.js" && -d "$SCRIPT_DIR/public" ]]; then
   SRC="$SCRIPT_DIR"
-  msg "Koristim lokalne datoteke iz $SRC"
+  msg "Using local files from $SRC"
 else
-  msg "Preuzimam $REPO ($BRANCH)"
+  msg "Downloading $REPO ($BRANCH)"
   TMP="$(mktemp -d)"; trap '[[ -n $TMP ]] && rm -rf "$TMP"' EXIT
   auth=(); [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
   curl -fsSL "${auth[@]}" "https://api.github.com/repos/$REPO/tarball/$BRANCH" | tar xz -C "$TMP" --strip-components=1 \
-    || die "Preuzimanje nije uspjelo (za privatni repozitorij postavi GITHUB_TOKEN)."
+    || die "Download failed (set GITHUB_TOKEN for a private repository)."
   SRC="$TMP"
 fi
 
-# ---------- korisnik i datoteke ----------
+# ---------- user and files ----------
 id "$APP_USER" &>/dev/null || useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 mkdir -p "$APP_DIR"
 rm -rf "$APP_DIR/public"
-cp -r "$SRC/server.js" "$SRC/public" "$SRC/config.example.json" "$SRC/README.md" "$APP_DIR/"
+cp -r "$SRC/server.js" "$SRC/public" "$SRC/config.example.json" "$APP_DIR/"
+cp "$SRC"/README*.md "$APP_DIR/" 2>/dev/null || true
 
-# ---------- konfiguracija ----------
+# ---------- configuration ----------
 if [[ -f "$APP_DIR/config.json" ]]; then
-  msg "Postojeći config.json je zadržan"
+  msg "Existing config.json kept"
 else
-  msg "Konfiguracija (Enter = preskoči; sve se može kasnije urediti u ⚙ Postavke)"
+  msg "Configuration (Enter = skip; everything can be changed later in ⚙ Settings)"
   ask PORT "Port" 8686
-  ask ARRHUB_USER "Korisničko ime za ArrHub (prazno = bez prijave)"
-  [[ -n "${ARRHUB_USER:-}" ]] && ask ARRHUB_PASS "Lozinka za ArrHub" "" secret
-  nl; ask RADARR_URL "Radarr URL (npr. http://192.168.1.10:7878)"
-  [[ -n "${RADARR_URL:-}" ]] && ask RADARR_KEY "Radarr API ključ"
-  nl; ask SONARR_URL "Sonarr URL (npr. http://192.168.1.10:8989)"
-  [[ -n "${SONARR_URL:-}" ]] && ask SONARR_KEY "Sonarr API ključ"
-  nl; ask NZBGET_URL "NZBGet URL (npr. http://192.168.1.10:6789)"
-  [[ -n "${NZBGET_URL:-}" ]] && { ask NZBGET_USER "NZBGet korisnik" nzbget; ask NZBGET_PASS "NZBGet lozinka" "" secret; }
-  nl; ask QBIT_URL "qBittorrent URL (npr. http://192.168.1.10:8080)"
-  [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent korisnik" admin; ask QBIT_PASS "qBittorrent lozinka" "" secret; }
-  nl; ask SEERR_URL "Seerr URL (npr. http://192.168.1.10:5055)"
-  [[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API ključ"
+  ask ARRHUB_USER "ArrHub username (empty = no login)"
+  [[ -n "${ARRHUB_USER:-}" ]] && ask ARRHUB_PASS "ArrHub password" "" secret
+  nl; ask RADARR_URL "Radarr URL (e.g. http://192.168.1.10:7878)"
+  [[ -n "${RADARR_URL:-}" ]] && ask RADARR_KEY "Radarr API key"
+  nl; ask SONARR_URL "Sonarr URL (e.g. http://192.168.1.10:8989)"
+  [[ -n "${SONARR_URL:-}" ]] && ask SONARR_KEY "Sonarr API key"
+  nl; ask NZBGET_URL "NZBGet URL (e.g. http://192.168.1.10:6789)"
+  [[ -n "${NZBGET_URL:-}" ]] && { ask NZBGET_USER "NZBGet username" nzbget; ask NZBGET_PASS "NZBGet password" "" secret; }
+  nl; ask QBIT_URL "qBittorrent URL (e.g. http://192.168.1.10:8080)"
+  [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent username" admin; ask QBIT_PASS "qBittorrent password" "" secret; }
+  nl; ask SEERR_URL "Seerr URL (e.g. http://192.168.1.10:5055)"
+  [[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API key"
 
   export PORT ARRHUB_USER ARRHUB_PASS RADARR_URL RADARR_KEY SONARR_URL SONARR_KEY \
-         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS SEERR_URL SEERR_KEY
+         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS SEERR_URL SEERR_KEY ARRHUB_LANG
   node -e '
     const e = process.env, s = (u, o) => (u ? { url: u, ...o } : undefined);
     const cfg = {
@@ -105,6 +106,7 @@ else
       nzbget: s(e.NZBGET_URL, { user: e.NZBGET_USER || "", pass: e.NZBGET_PASS || "" }),
       qbittorrent: s(e.QBIT_URL, { user: e.QBIT_USER || "", pass: e.QBIT_PASS || "" }),
       seerr: s(e.SEERR_URL, { apiKey: e.SEERR_KEY || "" }),
+      ui: { lang: ["en", "hr", "auto"].includes(e.ARRHUB_LANG) ? e.ARRHUB_LANG : "en" },
     };
     require("fs").writeFileSync(process.argv[1], JSON.stringify(cfg, null, 2) + "\n");
   ' "$APP_DIR/config.json"
@@ -113,7 +115,7 @@ chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 chmod 600 "$APP_DIR/config.json"
 
 # ---------- systemd ----------
-msg "Postavljam systemd servis"
+msg "Setting up the systemd service"
 cat > /etc/systemd/system/arrhub.service <<EOF
 [Unit]
 Description=ArrHub dashboard
@@ -145,11 +147,11 @@ done
 if [[ "$code" == "200" || "$code" == "401" ]]; then
   IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
   echo
-  msg "ArrHub radi: http://${IP:-localhost}:$PORT_NOW"
-  echo "   Postavke:      u sučelju (⚙ Postavke) ili $APP_DIR/config.json + systemctl restart arrhub"
-  echo "   Zapisi:        journalctl -u arrhub -f"
-  echo "   Nadogradnja:   ponovno pokreni ovu skriptu"
+  msg "ArrHub is running: http://${IP:-localhost}:$PORT_NOW"
+  echo "   Settings:  in the UI (⚙ Settings) or $APP_DIR/config.json + systemctl restart arrhub"
+  echo "   Logs:      journalctl -u arrhub -f"
+  echo "   Upgrade:   run this script again"
 else
-  warn "Servis ne odgovara. Provjeri: journalctl -u arrhub -n 50"
+  warn "The service is not responding. Check: journalctl -u arrhub -n 50"
   exit 1
 fi

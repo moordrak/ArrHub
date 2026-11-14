@@ -1,83 +1,86 @@
 # ArrHub
 
+**English** · [Hrvatski](README.hr.md)
+
 ![ArrHub](docs/screenshot.png)
 
-![Zid postera](docs/theme-posters.png)
+![Poster wall](docs/theme-posters.png)
 
-Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet, qBittorrent i Seerr**.
-Mali Node.js poslužitelj (bez ovisnosti, Node 18+) drži API ključeve i lozinke na strani poslužitelja
-i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
+One web dashboard for **Radarr, Sonarr, NZBGet, qBittorrent and Seerr**.
+A small Node.js server (no dependencies, Node 18+) keeps API keys and passwords on the server side
+and proxies the calls, so the browser never sees secrets and there are no CORS problems.
 
-## Mogućnosti
-- **Pregled** – stanje svih usluga, verzije, brzine, slobodan prostor, health upozorenja, aktivna preuzimanja i nadolazeća izdanja
-- **Preuzimanja** – qBittorrent (filter, pauza/pokretanje, brisanje s/bez datoteka, alt. ograničenje brzine),
-  NZBGet (pauza/nastavak po stavci i globalno, brisanje), Radarr/Sonarr red čekanja (uklanjanje + blocklist)
-- **Zahtjevi (Seerr)** – zahtjevi korisnika s posterom, sezonama i stanjem, filtri (na čekanju, svi, u obradi, dostupni, odbijeni),
-  odobravanje, odbijanje i brisanje. Broj zahtjeva na čekanju vidi se i u Pregledu. Radi i s Overseerrom i Jellyseerrom.
-- **Kalendar** – filmovi i epizode za sljedeća 2 tjedna
-- **Povijest** – zadnji događaji iz Radarra, Sonarra i NZBGeta
-- **Dodaj** – pretraga i dodavanje filmova/serija (odabir profila kvalitete i mape, opcionalno odmah traži)
-- **Postavke** – adrese, API ključevi i lozinke usluga, prijava u ArrHub, interval osvježavanja i port, sve kroz sučelje.
-  Gumb *Testiraj vezu* provjerava svaku uslugu prije spremanja, a promjene vrijede odmah, bez ponovnog pokretanja.
-- **Teme i dinamičke pozadine** (u Postavkama): 9 tema + automatska (prati svijetli/tamni način sustava), vlastita
-  naglasna boja te animirane pozadine *Aurora, Zvjezdano nebo, Mreža čestica, Valovi, Zid postera* i *Slike iz knjižnice*.
-  Zadnje dvije koriste postere i pozadinske slike iz Radarra/Sonarra (dohvaća ih ArrHub, nije potreban internet).
-  Animacija se po želji ubrzava s brzinom preuzimanja, a poštuje i postavku sustava „smanji pokrete”.
-- Automatsko osvježavanje (zadano 5 s), opcionalna Basic Auth prijava
-- Podržava qBittorrent 4.x i 5.x (stop/start i pause/resume)
+## Features
+- **Overview** – status of every service, versions, speeds, free space, health warnings, active downloads and upcoming releases
+- **Downloads** – qBittorrent (filter, pause/start, delete with or without files, alternative speed limits),
+  NZBGet (pause/resume per item and globally, delete), Radarr/Sonarr queues (remove + blocklist)
+- **Requests (Seerr)** – user requests with poster, seasons and status, filters (pending, all, processing, available, declined),
+  approve, decline and delete. The pending count is also shown on the Overview. Works with Overseerr and Jellyseerr too.
+- **Calendar** – movies and episodes for the next 2 weeks
+- **History** – latest events from Radarr, Sonarr and NZBGet
+- **Add** – search and add movies/series (quality profile and root folder, optionally search right away)
+- **Settings** – service URLs, API keys and passwords, ArrHub login, refresh interval and port, all from the UI.
+  *Test connection* checks each service before saving, and changes apply immediately without a restart.
+- **Themes and dynamic backgrounds** (in Settings): 9 themes + automatic (follows the system light/dark mode), custom
+  accent colour and animated backgrounds *Aurora, Starfield, Particle network, Waves, Poster wall* and *Library images*.
+  The last two use posters and fanart from Radarr/Sonarr (fetched by ArrHub, no internet needed).
+  The animation can speed up with download speed and respects the system “reduce motion” setting.
+- **Language**: English or Croatian (or automatic from the browser), chosen in Settings → Appearance
+- Automatic refresh (5 s by default), optional Basic Auth login
+- Supports qBittorrent 4.x and 5.x (stop/start and pause/resume)
 
-## Postavljanje
+## Setup
 ```bash
 node server.js                       # http://<ip>:8686
 ```
-Otvori stranicu: ako nijedna usluga nije podešena, odmah se otvara kartica **⚙ Postavke**. Upiši adrese i ključeve,
-klikni *Testiraj vezu* i *Spremi postavke*. Postavke se spremaju u `config.json` (prava 600). Lozinke i ključevi se u
-sučelju nikad ne prikazuju: polje s `********` znači da se postojeća vrijednost zadržava.
+Open the page: if no service is configured yet, the **⚙ Settings** tab opens straight away. Enter the URLs and keys,
+click *Test connection* and *Save settings*. Settings are stored in `config.json` (mode 600). Passwords and keys are
+never shown in the UI: a field showing `********` means the existing value is kept.
 
-![Postavke](docs/settings.png)
+![Settings](docs/settings.png)
 
-![Seerr zahtjevi](docs/seerr.png)
+![Seerr requests](docs/seerr.png)
 
-Umjesto sučelja možeš i ručno urediti `config.json` (predložak je `config.example.json`) i ponovno pokrenuti servis.
-Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`, a za izgled
-`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE`. One imaju prednost pred
-datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
+Instead of the UI you can also edit `config.json` by hand (template: `config.example.json`) and restart the service.
+Everything can also be set with environment variables: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`, and for the look
+`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`).
+They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
 
-> ⚠ Bez prijave svatko tko može otvoriti ArrHub može i mijenjati postavke. Ako je dostupan izvan LAN-a, uključi prijavu.
+> ⚠ Without a login, anyone who can open ArrHub can also change its settings. If it is reachable outside your LAN, enable the login.
 
-### Proxmox — automatska instalacija (preporučeno)
-Na Proxmox hostu, kao root:
+### Proxmox — automatic install (recommended)
+On the Proxmox host, as root:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/proxmox/arrhub-lxc.sh)"
 ```
-Skripta pita za postavke kontejnera (ID, RAM, disk, storage, bridge, VLAN, statična IP ili DHCP) i
-za adrese i ključeve usluga. Zatim stvara neprivilegirani Debian LXC (Debian 13 na PVE 9+, inače 12),
-instalira Node.js i ArrHub te ga pokreće kao systemd servis. Usluge koje ne koristiš preskoči s Enter. Sve se kasnije može promijeniti u Postavkama.
+The script asks for the container settings (ID, RAM, disk, storage, bridge, VLAN, static IP or DHCP), the language and
+the service URLs and keys. It then creates an unprivileged Debian LXC (Debian 13 on PVE 9+, otherwise 12),
+installs Node.js and ArrHub and runs it as a systemd service. Press Enter to skip services you don't use; everything can be changed later in Settings.
 
-Bez pitanja, npr. za automatizaciju:
+Unattended, e.g. for automation:
 ```bash
-NONINTERACTIVE=1 CTID=120 CT_IP=192.168.1.50/24 CT_GW=192.168.1.1 \
+NONINTERACTIVE=1 CTID=120 CT_IP=192.168.1.50/24 CT_GW=192.168.1.1 ARRHUB_LANG=en \
 RADARR_URL=http://192.168.1.10:7878 RADARR_KEY=xxx \
 QBIT_URL=http://192.168.1.10:8080 QBIT_USER=admin QBIT_PASS=xxx \
 bash proxmox/arrhub-lxc.sh
 ```
-Varijable kontejnera: `CTID, CT_NAME, CT_CORES, CT_RAM, CT_DISK, CT_STORAGE, TPL_STORAGE, CT_BRIDGE, CT_VLAN, CT_IP, CT_GW, CT_PASS`.
+Container variables: `CTID, CT_NAME, CT_CORES, CT_RAM, CT_DISK, CT_STORAGE, TPL_STORAGE, CT_BRIDGE, CT_VLAN, CT_IP, CT_GW, CT_PASS`.
 
-### Postojeći LXC ili Debian/Ubuntu poslužitelj
-Unutar kontejnera ili na poslužitelju, kao root:
+### Existing LXC or Debian/Ubuntu server
+Inside the container or on the server, as root:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/install.sh)"
 ```
-Instalira u `/opt/arrhub`, stvara korisnika `arrhub` i servis `arrhub.service`.
+Installs into `/opt/arrhub`, creates the `arrhub` user and the `arrhub.service` unit.
 
-### Nadogradnja
-Ponovno pokreni `install.sh` (postojeći `config.json` se zadržava). S Proxmox hosta:
+### Upgrade
+Run `install.sh` again (the existing `config.json` is kept). From the Proxmox host:
 ```bash
 pct exec <CTID> -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/install.sh)"
 ```
 
-### Ručno (systemd)
+### Manual (systemd)
 ```bash
 useradd -r -s /usr/sbin/nologin arrhub
 mkdir -p /opt/arrhub && cp -r server.js public config.json /opt/arrhub/
@@ -89,22 +92,21 @@ cp arrhub.service /etc/systemd/system/ && systemctl enable --now arrhub
 ```bash
 docker compose up -d --build
 ```
-Konfiguracija se čuva u volumenu `arrhub-data` (`/app/data/config.json`) i uređuje se kroz Postavke.
+The configuration lives in the `arrhub-data` volume (`/app/data/config.json`) and is edited from Settings.
 
 ### Nginx Proxy Manager
-Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavezno uključi
-`auth` u config.json ili Access List u NPM-u – ploča može brisati i dodavati sadržaj.
+Add a Proxy Host → `http://<lxc-ip>:8686`. If it is reachable outside your LAN, make sure to enable the
+`auth` login in config.json or an Access List in NPM – the dashboard can delete and add content.
 
-## qBittorrent napomena
-Ako je u qBittorrentu uključeno *Bypass authentication for clients on localhost / whitelisted subnets*,
-korisnik/lozinka mogu ostati prazni. Ako prijava pada s `Fails.`, provjeri da IP ArrHuba nije
-zabranjen zbog previše neuspjelih pokušaja (Options → Web UI → ban).
+## qBittorrent note
+If *Bypass authentication for clients on localhost / whitelisted subnets* is enabled in qBittorrent,
+username/password can stay empty. If login fails with `Fails.`, check that ArrHub's IP has not been
+banned after too many failed attempts (Options → Web UI → ban).
 
-## Pozadine iz knjižnice ne rade?
-U Postavkama odaberi *Zid postera* ili *Slike iz knjižnice*. Ispod se pojavi provjera koja za Radarr i Sonarr
-pokazuje koliko je slika pronađeno i učitavaju li se.
-- **preusmjereno na prijavu (302)**: Radarr/Sonarr za `/MediaCover` traži prijavu. ArrHub tada slike dohvaća s
-  TMDB/TVDB-a, pa kontejner treba pristup internetu.
-- **Isteklo vrijeme**: vrlo velika knjižnica. Popis se čeka do 90 s, a nakon prvog dohvata pamti se 10 minuta.
-- Ako se nijedna slika ne može učitati, prikazuje se Aurora i poruka.
-
+## Library backgrounds not working?
+In Settings choose *Poster wall* or *Library images*. A check appears below showing, for Radarr and Sonarr,
+how many images were found and whether they load.
+- **redirected to login (302)**: Radarr/Sonarr requires a login for `/MediaCover`. ArrHub then fetches the images from
+  TMDB/TVDB, so the container needs internet access.
+- **Timed out**: very large library. The list is awaited for up to 90 s and cached for 10 minutes after the first fetch.
+- If no image can be loaded at all, Aurora is shown together with a message.

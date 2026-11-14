@@ -6,7 +6,7 @@ services:
     ports:
       - "8686:8686"
     volumes:
-      - arrhub-data:/app/data   # config.json, uređuje se kroz Postavke u sučelju
+      - arrhub-data:/app/data   # config.json, edited from Settings in the UI
 
 volumes:
   arrhub-data:

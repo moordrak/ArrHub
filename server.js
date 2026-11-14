@@ -1,16 +1,68 @@
-// ArrHub — jedinstveno sučelje za Radarr, Sonarr, NZBGet, qBittorrent i Seerr
-// Bez vanjskih ovisnosti, potreban Node.js 18+
+// ArrHub — one dashboard for Radarr, Sonarr, NZBGet, qBittorrent and Seerr
+// No external dependencies, requires Node.js 18+
 'use strict';
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { AsyncLocalStorage } = require('async_hooks');
 
-// ---------- Konfiguracija ----------
+// ---------- Server-side messages (en / hr) ----------
+// The language of each request comes from the X-Lang header the UI sends (falls back to the configured UI language).
+const MSG = {
+  en: {
+    urlInvalid: '{svc}: invalid URL', urlScheme: '{svc}: URL must start with http:// or https://',
+    needsKey: '{svc} needs an API key', authNeedsPass: 'An ArrHub login also needs a password', badPort: 'Invalid port',
+    badTheme: 'Unknown theme', badBackground: 'Unknown background', badColor: 'Colour must be in #rrggbb format', badLang: 'Unknown language',
+    unknownService: 'Unknown service', urlMissing: 'URL is not set', wrongApp: 'That address is {app}, not {svc}', user: 'user',
+    badLogin: 'Wrong username or password', loginFailed: 'Login failed: {msg}', unknownAction: 'Unknown action', unknown: 'Unknown',
+    badId: 'Invalid ID', unexpectedResponse: 'Unexpected response',
+    imgRedirect: 'redirected to login ({status}) – authentication is enabled', imgDenied: 'access denied ({status})', img404: 'image does not exist (404)',
+    notImage: 'not an image ({type})', unknownImage: 'Unknown image', local: 'local', noRemote: 'no internet URL available',
+    timeout: 'Timed out (service is not responding)', noWrite: 'No permission to write {file}',
+    netRefused: 'Connection refused – check the address and port', netNotFound: 'Host not found (DNS)', netHost: 'Host unreachable',
+    netNet: 'Network unreachable', netTimeout: 'Connection timed out', netReset: 'Connection reset',
+    netSelfSigned: 'Self-signed TLS certificate – use http:// or a valid certificate', fetchFailed: 'Connection failed',
+    e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
+    loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
+  },
+  hr: {
+    urlInvalid: '{svc}: neispravan URL', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
+    needsKey: '{svc} treba API ključ', authNeedsPass: 'Za prijavu u ArrHub treba i lozinka', badPort: 'Neispravan port',
+    badTheme: 'Nepoznata tema', badBackground: 'Nepoznata pozadina', badColor: 'Boja mora biti u obliku #rrggbb', badLang: 'Nepoznat jezik',
+    unknownService: 'Nepoznata usluga', urlMissing: 'URL nije upisan', wrongApp: 'Na toj adresi je {app}, ne {svc}', user: 'korisnik',
+    badLogin: 'Pogrešno korisničko ime ili lozinka', loginFailed: 'Prijava nije uspjela: {msg}', unknownAction: 'Nepoznata akcija', unknown: 'Nepoznato',
+    badId: 'Neispravan ID', unexpectedResponse: 'Neočekivan odgovor',
+    imgRedirect: 'preusmjereno na prijavu ({status}) – uključena je autentifikacija', imgDenied: 'pristup odbijen ({status})', img404: 'slika ne postoji (404)',
+    notImage: 'nije slika ({type})', unknownImage: 'Nepoznata slika', local: 'lokalno', noRemote: 'nema adrese na internetu',
+    timeout: 'Isteklo vrijeme čekanja (usluga ne odgovara)', noWrite: 'Nema dozvole za pisanje u {file}',
+    netRefused: 'Veza odbijena – provjeri adresu i port', netNotFound: 'Adresa nije pronađena (DNS)', netHost: 'Računalo nije dostupno',
+    netNet: 'Mreža nije dostupna', netTimeout: 'Isteklo vrijeme povezivanja', netReset: 'Veza prekinuta',
+    netSelfSigned: 'Samopotpisani TLS certifikat – koristi http:// ili valjan certifikat', fetchFailed: 'Povezivanje nije uspjelo',
+    e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
+    loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
+  },
+};
+const LANGS = ['auto', 'en', 'hr'];
+const langStore = new AsyncLocalStorage();
+function T(key, vars = {}) {
+  const lang = langStore.getStore() || 'en';
+  const str = MSG[lang]?.[key] ?? MSG.en[key] ?? key;
+  return str.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+}
+function requestLang(r) {
+  const h = String(r.headers['x-lang'] || '').toLowerCase();
+  if (MSG[h]) return h;
+  const conf = cfg?.ui?.lang;
+  if (MSG[conf]) return conf;
+  return /^hr\b/i.test(r.headers['accept-language'] || '') ? 'hr' : 'en';
+}
+
+// ---------- Configuration ----------
 const CONFIG_FILE = process.env.ARRHUB_CONFIG || path.join(__dirname, 'config.json');
 const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
 const MASK = '********';
-// [odjeljak, polje, varijabla okruženja, tajno?]
+// [section, field, environment variable, secret?]
 const FIELDS = [
   ['', 'port', 'PORT'], ['', 'refresh', 'ARRHUB_REFRESH'],
   ['auth', 'user', 'ARRHUB_USER'], ['auth', 'pass', 'ARRHUB_PASS', true],
@@ -20,7 +72,7 @@ const FIELDS = [
   ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
   ['seerr', 'url', 'SEERR_URL'], ['seerr', 'apiKey', 'SEERR_KEY', true],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
-  ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'],
+  ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
 ];
 const THEMES = ['auto', 'dark', 'oled', 'light', 'nord', 'dracula', 'catppuccin', 'tokyo', 'gruvbox', 'solarized'];
 const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
@@ -31,6 +83,7 @@ function normalizeUi(u = {}) {
     background: BACKGROUNDS.includes(u.background) ? u.background : 'none',
     bgIntensity: Math.max(0, Math.min(100, Math.round(Number(u.bgIntensity ?? 60)))) || 0,
     bgReactive: !(u.bgReactive === false || u.bgReactive === 'false'),
+    lang: LANGS.includes(u.lang) ? u.lang : 'en',
   };
 }
 const getF = (o, sec, f) => (sec ? o[sec]?.[f] : o[f]);
@@ -41,7 +94,7 @@ function readFileConfig() {
   if (!fs.existsSync(CONFIG_FILE)) return {};
   return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
 }
-// Datoteka + varijable okruženja (okruženje ima prednost)
+// File + environment variables (environment wins)
 function loadConfig() {
   const file = readFileConfig();
   const c = { auth: {}, ui: {} };
@@ -58,7 +111,7 @@ function loadConfig() {
 }
 let cfg = loadConfig();
 
-// Postavke za prikaz (tajne maskirane, oznaka koja polja dolaze iz okruženja)
+// Settings for the UI (secrets masked, flags fields that come from the environment)
 function settingsView() {
   const out = { values: {}, locked: [], file: CONFIG_FILE };
   for (const [sec, f, env, secret] of FIELDS) {
@@ -69,7 +122,7 @@ function settingsView() {
   }
   return out;
 }
-// Spaja unos iz sučelja s postojećim vrijednostima (maska = zadrži staru tajnu)
+// Merges UI input with current values (mask = keep the existing secret)
 function mergeInput(values, base = cfg) {
   const c = { auth: {}, ui: {} };
   for (const [sec, f, , secret] of FIELDS) {
@@ -85,18 +138,19 @@ function validate(c) {
   for (const k of SERVICES) {
     const u = c[k]?.url;
     if (!u) continue;
-    let p; try { p = new URL(u); } catch { throw new Error(`${k}: neispravan URL`); }
-    if (!/^https?:$/.test(p.protocol)) throw new Error(`${k}: URL mora počinjati s http:// ili https://`);
+    let p; try { p = new URL(u); } catch { throw new Error(T('urlInvalid', { svc: k })); }
+    if (!/^https?:$/.test(p.protocol)) throw new Error(T('urlScheme', { svc: k }));
     c[k].url = u.replace(/\/+$/, '');
   }
-  for (const k of ['radarr', 'sonarr', 'seerr']) if (c[k]?.url && !c[k].apiKey) throw new Error(`${k[0].toUpperCase() + k.slice(1)} treba API ključ`);
-  if (c.auth?.user && !c.auth.pass) throw new Error('Za prijavu u ArrHub treba i lozinka');
-  if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error('Neispravan port'); c.port = n; }
+  for (const k of ['radarr', 'sonarr', 'seerr']) if (c[k]?.url && !c[k].apiKey) throw new Error(T('needsKey', { svc: k[0].toUpperCase() + k.slice(1) }));
+  if (c.auth?.user && !c.auth.pass) throw new Error(T('authNeedsPass'));
+  if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(T('badPort')); c.port = n; }
   if (c.refresh !== undefined) c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
   if (c.ui) {
-    if (c.ui.theme !== undefined && !THEMES.includes(c.ui.theme)) throw new Error('Nepoznata tema');
-    if (c.ui.background !== undefined && !BACKGROUNDS.includes(c.ui.background)) throw new Error('Nepoznata pozadina');
-    if (c.ui.accent && !/^#[0-9a-f]{6}$/i.test(c.ui.accent)) throw new Error('Boja mora biti u obliku #rrggbb');
+    if (c.ui.theme !== undefined && !THEMES.includes(c.ui.theme)) throw new Error(T('badTheme'));
+    if (c.ui.background !== undefined && !BACKGROUNDS.includes(c.ui.background)) throw new Error(T('badBackground'));
+    if (c.ui.accent && !/^#[0-9a-f]{6}$/i.test(c.ui.accent)) throw new Error(T('badColor'));
+    if (c.ui.lang !== undefined && !LANGS.includes(c.ui.lang)) throw new Error(T('badLang'));
     c.ui = { ...c.ui, ...normalizeUi(c.ui) };
     if (!c.ui.accent) delete c.ui.accent;
   }
@@ -104,7 +158,7 @@ function validate(c) {
 function saveSettings(values) {
   const merged = mergeInput(values);
   validate(merged);
-  // polja zadana varijablama okruženja ne upisujemo u datoteku – zadržavamo što je u njoj
+  // fields set via environment variables are not written to the file – keep whatever the file already has
   const existing = readFileConfig();
   const file = {};
   for (const [sec, f, env] of FIELDS) {
@@ -121,14 +175,14 @@ function saveSettings(values) {
   return { ok: true, restartRequired: cfg.port !== oldPort };
 }
 async function testService(service, values) {
-  if (!SERVICES.includes(service)) throw new Error('Nepoznata usluga');
+  if (!SERVICES.includes(service)) throw new Error(T('unknownService'));
   const c = mergeInput(values);
   validate(c);
   const s = c[service];
-  if (!s?.url) throw new Error('URL nije upisan');
+  if (!s?.url) throw new Error(T('urlMissing'));
   if (service === 'radarr' || service === 'sonarr') {
     const st = await arr(service, s).call('/system/status');
-    if (st.appName && st.appName.toLowerCase() !== service) throw new Error(`Na toj adresi je ${st.appName}, ne ${service}`);
+    if (st.appName && st.appName.toLowerCase() !== service) throw new Error(T('wrongApp', { app: st.appName, svc: service }));
     return { message: `${st.appName || service} ${st.version}` };
   }
   if (service === 'qbittorrent') {
@@ -138,12 +192,12 @@ async function testService(service, values) {
   if (service === 'seerr') {
     const client = makeSeerr(() => s);
     const [st, me] = await Promise.all([client.call('/status'), client.call('/auth/me')]);
-    return { message: `Seerr ${st.version || ''} · ${me.displayName || me.username || me.email || 'korisnik'}` };
+    return { message: `Seerr ${st.version || ''} · ${me.displayName || me.username || me.email || T('user')}` };
   }
   return { message: `NZBGet ${await makeNzb(() => s).rpc('version')}` };
 }
 
-// ---------- Pomoćne funkcije ----------
+// ---------- Helpers ----------
 const TIMEOUT = 10000;
 async function req(url, { timeout = TIMEOUT, ...opts } = {}) {
   const ctrl = new AbortController();
@@ -219,7 +273,7 @@ function makeQb(conf) { return {
     const cookie = r.headers.get('set-cookie') || '';
     const m = cookie.match(/SID=([^;]+)/);
     if (m) this.sid = m[1];
-    else if (!/Ok/i.test(txt)) throw new Error(/fail/i.test(txt) ? 'Pogrešno korisničko ime ili lozinka' : 'Prijava nije uspjela: ' + txt.slice(0, 100));
+    else if (!/Ok/i.test(txt)) throw new Error(/fail/i.test(txt) ? T('badLogin') : T('loginFailed', { msg: txt.slice(0, 100) }));
   },
   async call(p, form) {
     const c = conf();
@@ -247,12 +301,12 @@ function makeQb(conf) { return {
     ]);
     return { version, transfer, torrents };
   },
-  // qBittorrent 5.x koristi stop/start, starije verzije pause/resume
+  // qBittorrent 5.x uses stop/start, older versions pause/resume
   async action(action, hashes, deleteFiles) {
     const h = { hashes: hashes.join('|') };
     if (action === 'delete') return this.call('/torrents/delete', { ...h, deleteFiles: String(!!deleteFiles) });
     const map = { pause: ['stop', 'pause'], resume: ['start', 'resume'] }[action];
-    if (!map) throw new Error('Nepoznata akcija');
+    if (!map) throw new Error(T('unknownAction'));
     try { return await this.call(`/torrents/${map[0]}`, h); }
     catch { return this.call(`/torrents/${map[1]}`, h); }
   },
@@ -283,7 +337,7 @@ function makeNzb(conf) { return {
     if (action === 'pauseall') return this.rpc('pausedownload');
     if (action === 'resumeall') return this.rpc('resumedownload');
     const cmd = { pause: 'GroupPause', resume: 'GroupResume', delete: 'GroupFinalDelete' }[action];
-    if (!cmd) throw new Error('Nepoznata akcija');
+    if (!cmd) throw new Error(T('unknownAction'));
     return this.rpc('editqueue', [cmd, '', ids.map(Number)]);
   },
 }; }
@@ -291,7 +345,7 @@ const nzb = makeNzb(() => cfg.nzbget);
 
 // ---------- Seerr (Overseerr/Jellyseerr API v1) ----------
 const seerrMeta = new Map(); // 'movie:123' -> { title, year, poster, at }
-// filtri koje Seerr API prihvaća; 'declined' nema, pa ga radimo sami (status 3)
+// filters accepted by the Seerr API; there is no 'declined', so we do it ourselves (status 3)
 const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'deleted', 'completed'];
 const SEERR_LOCAL = { declined: r => r.status === 3 };
 function makeSeerr(conf) {
@@ -329,13 +383,13 @@ function makeSeerr(conf) {
         call(`/request?take=${local ? 200 : 40}&skip=0&sort=added&filter=${local ? 'all' : filter}`),
       ]);
       const results = (list.results || []).filter(local || (() => true)).slice(0, 40);
-      // naslove i postere dohvaćamo zasebno (najviše 6 istovremeno), uz 24 h međuspremnik
+      // titles and posters are fetched separately (max 6 at a time), cached for 24 h
       const metas = new Array(results.length);
       let i = 0;
       await Promise.all(Array.from({ length: Math.min(6, results.length) }, async () => {
         while (i < results.length) {
           const n = i++; const r = results[n];
-          metas[n] = r.media?.tmdbId ? await meta(r.type || r.media.mediaType, r.media.tmdbId) : { title: 'Nepoznato' };
+          metas[n] = r.media?.tmdbId ? await meta(r.type || r.media.mediaType, r.media.tmdbId) : { title: T('unknown') };
         }
       }));
       const requests = results.map((r, n) => ({
@@ -350,25 +404,25 @@ function makeSeerr(conf) {
     },
     action(id, action) {
       id = Number(id);
-      if (!Number.isInteger(id)) throw new Error('Neispravan ID');
+      if (!Number.isInteger(id)) throw new Error(T('badId'));
       if (action === 'approve' || action === 'decline') return call(`/request/${id}/${action}`, { method: 'POST' });
       if (action === 'delete') return call(`/request/${id}`, { method: 'DELETE' });
-      throw new Error('Nepoznata akcija');
+      throw new Error(T('unknownAction'));
     },
   };
 }
 const seerr = makeSeerr(() => cfg.seerr);
 
-// ---------- Slike iz knjižnice (pozadine) ----------
-// Klijent dobiva samo /api/cover/<id>; stvarne adrese (lokalni MediaCover + udaljeni TMDB/TVDB) ostaju na poslužitelju.
+// ---------- Library images (backgrounds) ----------
+// The client only gets /api/cover/<id>; real URLs (local MediaCover + remote TMDB/TVDB) stay on the server.
 const mediaCache = { at: 0, data: null, pending: null };
 const coverMap = new Map(); // id -> { svc, local, remote, kind }
-const coverFail = new Map(); // svc -> { n, last } neuspjeli lokalni dohvati (nakon nekoliko ide se ravno na remote)
+const coverFail = new Map(); // svc -> { n, last } failed local fetches (after a few, go straight to remote)
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const hashId = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 function remoteSized(u, kind) {
   if (!u || !/^https:\/\//.test(u)) return null;
-  // TMDB podržava manje verzije slika
+  // TMDB serves smaller image sizes
   return u.replace(/(image\.tmdb\.org\/t\/p\/)original\//, `$1${kind === 'poster' ? 'w342' : 'w1280'}/`);
 }
 async function buildMedia() {
@@ -378,7 +432,7 @@ async function buildMedia() {
     let list;
     try { list = await arr(k).call(k === 'radarr' ? '/movie' : '/series', { timeout: 90000 }); }
     catch (e) { st.error = friendlyError(e); return; }
-    if (!Array.isArray(list)) { st.error = 'Neočekivan odgovor'; return; }
+    if (!Array.isArray(list)) { st.error = T('unexpectedResponse'); return; }
     st.items = list.length;
     for (const it of list) for (const im of it.images || []) {
       const kind = im.coverType === 'poster' ? 'poster' : im.coverType === 'fanart' ? 'fanart' : null;
@@ -403,7 +457,7 @@ async function buildMedia() {
 }
 async function libraryMedia(force) {
   const ok = mediaCache.data && (mediaCache.data.posters.length || mediaCache.data.fanart.length);
-  const ttl = ok ? 10 * 60000 : 30000; // prazan/neuspio rezultat pamti se samo 30 s
+  const ttl = ok ? 10 * 60000 : 30000; // empty/failed result is cached for 30 s only
   if (!force && mediaCache.data && Date.now() - mediaCache.at < ttl) return mediaCache.data;
   mediaCache.pending ||= buildMedia().then(d => { mediaCache.data = d; mediaCache.at = Date.now(); return d; })
     .finally(() => { mediaCache.pending = null; });
@@ -414,21 +468,21 @@ async function fetchImage(url, headers) {
   const type = r.headers.get('content-type') || '';
   if (!r.ok || !/^image\//.test(type)) {
     r.body?.cancel?.();
-    if (r.status >= 300 && r.status < 400) throw new Error(`preusmjereno na prijavu (${r.status}) – uključena je autentifikacija`);
-    if (r.status === 401 || r.status === 403) throw new Error(`pristup odbijen (${r.status})`);
-    if (r.status === 404) throw new Error('slika ne postoji (404)');
-    if (r.ok) throw new Error(`nije slika (${type.split(';')[0] || 'nepoznat tip'})`);
+    if (r.status >= 300 && r.status < 400) throw new Error(T('imgRedirect', { status: r.status }));
+    if (r.status === 401 || r.status === 403) throw new Error(T('imgDenied', { status: r.status }));
+    if (r.status === 404) throw new Error(T('img404'));
+    if (r.ok) throw new Error(T('notImage', { type: type.split(';')[0] || '?' }));
     throw new Error(`HTTP ${r.status}`);
   }
   return { __raw: Buffer.from(await r.arrayBuffer()), type };
 }
 async function cover(id) {
   const e = coverMap.get(id);
-  if (!e) throw new Error('Nepoznata slika');
+  if (!e) throw new Error(T('unknownImage'));
   const c = cfg[e.svc];
   const errors = [];
   const fail = coverFail.get(e.svc) || { n: 0, last: '' };
-  if (e.local && fail.n >= 5) errors.push(`${e.svc} lokalno: ${fail.last}`);
+  if (e.local && fail.n >= 5) errors.push(`${e.svc} ${T('local')}: ${fail.last}`);
   if (e.local && fail.n < 5) {
     try {
       const u = new URL(e.local);
@@ -438,40 +492,36 @@ async function cover(id) {
       return img;
     } catch (err) {
       const m = friendlyError(err);
-      errors.push(`${e.svc} lokalno: ${m}`);
+      errors.push(`${e.svc} ${T('local')}: ${m}`);
       coverFail.set(e.svc, { n: fail.n + 1, last: m });
     }
   }
   if (e.remote) {
     try { return await fetchImage(e.remote, { 'User-Agent': 'ArrHub' }); }
     catch (err) { errors.push('TMDB/TVDB: ' + friendlyError(err)); }
-  } else errors.push('nema adrese na internetu');
+  } else errors.push(T('noRemote'));
   throw new Error(errors.join('; '));
 }
 setInterval(() => coverFail.clear(), 10 * 60000).unref();
 
 function friendlyError(e) {
-  if (e.name === 'AbortError') return 'Isteklo vrijeme čekanja (usluga ne odgovara)';
-  if (e.code === 'EACCES' || e.code === 'EROFS') return `Nema dozvole za pisanje u ${CONFIG_FILE}`;
+  if (e.name === 'AbortError') return T('timeout');
+  if (e.code === 'EACCES' || e.code === 'EROFS') return T('noWrite', { file: CONFIG_FILE });
   const code = e.cause?.code || e.cause?.errors?.[0]?.code;
   const net = {
-    ECONNREFUSED: 'Veza odbijena – provjeri adresu i port',
-    ENOTFOUND: 'Adresa nije pronađena (DNS)',
-    EHOSTUNREACH: 'Računalo nije dostupno',
-    ENETUNREACH: 'Mreža nije dostupna',
-    ETIMEDOUT: 'Isteklo vrijeme povezivanja',
-    ECONNRESET: 'Veza prekinuta',
-    DEPTH_ZERO_SELF_SIGNED_CERT: 'Samopotpisani TLS certifikat – koristi http:// ili valjan certifikat',
+    ECONNREFUSED: 'netRefused', ENOTFOUND: 'netNotFound', EHOSTUNREACH: 'netHost', ENETUNREACH: 'netNet',
+    ETIMEDOUT: 'netTimeout', ECONNRESET: 'netReset', DEPTH_ZERO_SELF_SIGNED_CERT: 'netSelfSigned',
+    SELF_SIGNED_CERT_IN_CHAIN: 'netSelfSigned',
   }[code];
-  if (net) return net;
-  if (e.message === 'fetch failed') return 'Povezivanje nije uspjelo' + (e.cause?.message ? ` (${e.cause.message})` : '');
-  if (/^401\b/.test(e.message)) return 'Neispravan API ključ ili korisničko ime/lozinka (401)';
-  if (/^403\b/.test(e.message)) return 'Pristup odbijen – provjeri API ključ (403)';
-  if (/^404\b/.test(e.message)) return 'Nije pronađeno (404) – provjeri URL i URL Base';
+  if (net) return T(net);
+  if (e.message === 'fetch failed') return T('fetchFailed') + (e.cause?.message ? ` (${e.cause.message})` : '');
+  if (/^401\b/.test(e.message)) return T('e401');
+  if (/^403\b/.test(e.message)) return T('e403');
+  if (/^404\b/.test(e.message)) return T('e404');
   return e.message;
 }
 
-// ---------- HTTP poslužitelj ----------
+// ---------- HTTP server ----------
 function send(res, code, data, type = 'application/json') {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(type === 'application/json' ? JSON.stringify(data) : data);
@@ -535,17 +585,18 @@ function match(method, pathname) {
   return null;
 }
 
-const server = http.createServer(async (r, res) => {
+const server = http.createServer((r, res) => langStore.run(requestLang(r), () => handle(r, res)));
+async function handle(r, res) {
   if (!checkAuth(r)) {
     res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="ArrHub"' });
-    return res.end('Potrebna prijava');
+    return res.end(T('loginRequired'));
   }
   const u = new URL(r.url, 'http://x');
   if (u.pathname.startsWith('/api/')) {
     const m = match(r.method, u.pathname);
-    if (!m) return send(res, 404, { error: 'Nije pronađeno' });
+    if (!m) return send(res, 404, { error: T('notFound') });
     const svc = u.pathname.split('/')[2];
-    if (!['config', 'settings', 'media', 'cover'].includes(svc) && !enabled(svc)) return send(res, 400, { error: `${svc} nije konfiguriran` });
+    if (!['config', 'settings', 'media', 'cover'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);
@@ -561,14 +612,14 @@ const server = http.createServer(async (r, res) => {
     return;
   }
   let file = path.normalize(path.join(PUBLIC, u.pathname === '/' ? 'index.html' : u.pathname));
-  if (!file.startsWith(PUBLIC)) return send(res, 403, 'Zabranjeno', 'text/plain');
+  if (!file.startsWith(PUBLIC)) return send(res, 403, T('forbidden'), 'text/plain');
   fs.readFile(file, (err, data) => {
-    if (err) return send(res, 404, 'Nije pronađeno', 'text/plain');
+    if (err) return send(res, 404, T('notFound'), 'text/plain');
     send(res, 200, data, MIME[path.extname(file)] || 'application/octet-stream');
   });
-});
+}
 
 server.listen(cfg.port, () => {
-  const on = ['radarr', 'sonarr', 'nzbget', 'qbittorrent'].filter(enabled);
-  console.log(`ArrHub radi na http://0.0.0.0:${cfg.port} — usluge: ${on.join(', ') || 'nijedna (provjeri config.json)'}`);
+  const on = SERVICES.filter(enabled);
+  console.log(`ArrHub listening on http://0.0.0.0:${cfg.port} — services: ${on.join(', ') || 'none (configure them in Settings)'}`);
 });

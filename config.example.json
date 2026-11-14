@@ -6,24 +6,27 @@
   },
   "radarr": {
     "url": "http://192.168.1.10:7878",
-    "apiKey": "RADARR_API_KLJUC"
+    "apiKey": "YOUR_RADARR_API_KEY"
   },
   "sonarr": {
     "url": "http://192.168.1.10:8989",
-    "apiKey": "SONARR_API_KLJUC"
+    "apiKey": "YOUR_SONARR_API_KEY"
   },
   "nzbget": {
     "url": "http://192.168.1.10:6789",
     "user": "nzbget",
-    "pass": "tajna"
+    "pass": "secret"
   },
   "qbittorrent": {
     "url": "http://192.168.1.10:8080",
     "user": "admin",
-    "pass": "tajna"
+    "pass": "secret"
   },
   "seerr": {
     "url": "http://192.168.1.10:5055",
-    "apiKey": "SEERR_API_KLJUC"
+    "apiKey": "YOUR_SEERR_API_KEY"
+  },
+  "ui": {
+    "lang": "en"
   }
 }

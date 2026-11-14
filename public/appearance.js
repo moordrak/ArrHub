@@ -1,11 +1,11 @@
-// ArrHub — teme i dinamičke pozadine
+// ArrHub — themes and dynamic backgrounds
 'use strict';
 (() => {
-  // ---------- Teme ----------
+  // ---------- Themes ----------
   const THEMES = {
-    dark:      { name: 'Tamna',            scheme: 'dark',  bg: '#0f1115', panel: '#171a21', panel2: '#1e222b', line: '#2a2f3a', text: '#e6e8ec', muted: '#8b93a3', accent: '#e8a33d' },
-    oled:      { name: 'OLED crna',        scheme: 'dark',  bg: '#000000', panel: '#0b0b0d', panel2: '#141418', line: '#22232a', text: '#e8e8ea', muted: '#85899a', accent: '#e8a33d' },
-    light:     { name: 'Svijetla',         scheme: 'light', bg: '#f3f4f7', panel: '#ffffff', panel2: '#eef0f4', line: '#dde1e8', text: '#1b1f27', muted: '#5f6878', accent: '#c97f12' },
+    dark:      { name: 'Dark',            scheme: 'dark',  bg: '#0f1115', panel: '#171a21', panel2: '#1e222b', line: '#2a2f3a', text: '#e6e8ec', muted: '#8b93a3', accent: '#e8a33d' },
+    oled:      { name: 'OLED black',       scheme: 'dark',  bg: '#000000', panel: '#0b0b0d', panel2: '#141418', line: '#22232a', text: '#e8e8ea', muted: '#85899a', accent: '#e8a33d' },
+    light:     { name: 'Light',            scheme: 'light', bg: '#f3f4f7', panel: '#ffffff', panel2: '#eef0f4', line: '#dde1e8', text: '#1b1f27', muted: '#5f6878', accent: '#c97f12' },
     nord:      { name: 'Nord',             scheme: 'dark',  bg: '#2e3440', panel: '#3b4252', panel2: '#434c5e', line: '#4c566a', text: '#eceff4', muted: '#a3adbf', accent: '#88c0d0' },
     dracula:   { name: 'Dracula',          scheme: 'dark',  bg: '#21222c', panel: '#282a36', panel2: '#313442', line: '#44475a', text: '#f8f8f2', muted: '#9ea3c0', accent: '#bd93f9' },
     catppuccin:{ name: 'Catppuccin Mocha', scheme: 'dark',  bg: '#11111b', panel: '#1e1e2e', panel2: '#282839', line: '#313244', text: '#cdd6f4', muted: '#9399b2', accent: '#cba6f7' },
@@ -13,15 +13,7 @@
     gruvbox:   { name: 'Gruvbox',          scheme: 'dark',  bg: '#1d2021', panel: '#282828', panel2: '#32302f', line: '#3c3836', text: '#ebdbb2', muted: '#a89984', accent: '#fabd2f' },
     solarized: { name: 'Solarized',        scheme: 'dark',  bg: '#002b36', panel: '#073642', panel2: '#0a4150', line: '#124b5a', text: '#eee8d5', muted: '#93a1a1', accent: '#b58900' },
   };
-  const BACKGROUNDS = {
-    none:      'Bez pozadine',
-    aurora:    'Aurora',
-    stars:     'Zvjezdano nebo',
-    particles: 'Mreža čestica',
-    waves:     'Valovi',
-    posters:   'Zid postera',
-    fanart:    'Slike iz knjižnice',
-  };
+  const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
 
   const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   const lum = h => { const [r, g, b] = hexRgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
@@ -47,7 +39,7 @@
   }
   matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (current.theme === 'auto') applyTheme('auto', current.accent); });
 
-  // ---------- Pozadine ----------
+  // ---------- Backgrounds ----------
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   let root, canvas, ctx, imgLayer, shade, W = 0, H = 0, raf = 0, scene = null, last = 0, speed = 1;
 
@@ -58,7 +50,7 @@
       this.intensity = Math.max(0, Math.min(100, Number(intensity)));
       this.reactive = !!reactive;
       const changed = type !== this.type;
-      this.type = BACKGROUNDS[type] ? type : 'none';
+      this.type = BACKGROUNDS.includes(type) ? type : 'none';
       ensure();
       document.body.classList.toggle('has-bg', this.type !== 'none');
       root.style.display = this.type === 'none' ? 'none' : '';
@@ -133,7 +125,7 @@
 
   const rnd = (a, b) => a + Math.random() * (b - a);
 
-  // ---------- Scene ----------
+  // ---------- Scenes ----------
   const SCENES = {
     aurora() {
       let blobs = [];
@@ -256,7 +248,7 @@
         async init() {
           const media = await loadMedia();
           if (!alive) return;
-          if (!media.posters.length) return fallback('Nema postera u knjižnici');
+          if (!media.posters.length) return fallback('bg.noPosters');
           imgLayer.innerHTML = '';
           const tw = W < 700 ? 110 : 150, th = tw * 1.5, gap = 10;
           const cols = Math.ceil((W * 1.4) / (tw + gap)) + 1, rows = Math.ceil((H * 1.4) / (th + gap)) + 2;
@@ -276,7 +268,7 @@
             im.onload = () => { ok++; const u = im.getAttribute('src'); if (!good.includes(u)) good.push(u); };
             im.onerror = () => {
               badSet.add(im.getAttribute('src')); bad++;
-              if (bad >= Math.min(12, list.length) && ok === 0 && alive) return fallback('Posteri se ne mogu učitati');
+              if (bad >= Math.min(12, list.length) && ok === 0 && alive) return fallback('bg.postersFail');
               const n = ++tries <= 4 ? nextSrc() : null;
               if (n) im.src = n; else im.style.visibility = 'hidden';
             };
@@ -312,7 +304,7 @@
         };
         pre.onerror = () => {
           if (!alive) return;
-          if (++fails >= Math.min(8, imgs.length)) { if (!shown) fallback('Slike iz knjižnice se ne mogu učitati'); return; }
+          if (++fails >= Math.min(8, imgs.length)) { if (!shown) fallback('bg.imagesFail'); return; }
           show();
         };
         pre.src = next;
@@ -322,7 +314,7 @@
           const media = await loadMedia();
           if (!alive) return;
           imgs = media.fanart.length ? media.fanart : media.posters;
-          if (!imgs.length) return fallback('Nema slika u knjižnici');
+          if (!imgs.length) return fallback('bg.noImages');
           imgLayer.innerHTML = '';
           a = document.createElement('div'); b = document.createElement('div');
           a.className = b.className = 'bg-slide';
@@ -345,10 +337,11 @@
     lastMediaLoad = Date.now();
     return Bg.media;
   }
-  function fallback(msg) {
-    if (Bg.fallbackMsg === msg && scene?.isFallback) return;
-    Bg.fallbackMsg = msg;
-    window.toast?.(msg + ' – prikazujem Auroru. Detalji su u Postavkama.');
+  function fallback(key) {
+    if (Bg.fallbackMsg === key && scene?.isFallback) return;
+    Bg.fallbackMsg = key;
+    const tr = window.t || (k => k);
+    window.toast?.(tr('bg.fallback', { msg: tr(key) }));
     scene?.destroy?.();
     scene = SCENES.aurora(); scene.isFallback = true; scene.init();
     canvas.style.opacity = Bg.intensity / 100; imgLayer.style.opacity = 0; shade.style.opacity = 0;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -148,73 +148,73 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 <header>
   <div class="logo"><i><svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 22l8-13 8 13" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i>ArrHub</div>
   <nav id="nav">
-    <button data-v="overview" class="on">Pregled</button>
-    <button data-v="downloads">Preuzimanja</button>
-    <button data-v="calendar">Kalendar</button>
-    <button data-v="history">Povijest</button>
-    <button data-v="requests" data-svc="seerr">Zahtjevi</button>
-    <button data-v="add">Dodaj</button>
-    <button data-v="settings">⚙ Postavke</button>
+    <button data-v="overview" class="on" data-i18n="nav.overview">Overview</button>
+    <button data-v="downloads" data-i18n="nav.downloads">Downloads</button>
+    <button data-v="calendar" data-i18n="nav.calendar">Calendar</button>
+    <button data-v="history" data-i18n="nav.history">History</button>
+    <button data-v="requests" data-svc="seerr" data-i18n="nav.requests">Requests</button>
+    <button data-v="add" data-i18n="nav.add">Add</button>
+    <button data-v="settings" data-i18n="nav.settings">⚙ Settings</button>
   </nav>
   <div class="speeds" id="speeds"></div>
 </header>
 
 <main>
-  <!-- PREGLED -->
+  <!-- OVERVIEW -->
   <section id="v-overview">
-    <div class="notice hidden" id="setupNotice"><span>Nijedna usluga još nije podešena.</span><span class="sp"></span><button class="btn p" onclick="show('settings')">Otvori postavke</button></div>
+    <div class="notice hidden" id="setupNotice"><span data-i18n="ov.noServices">No services are configured yet.</span><span class="sp"></span><button class="btn p" onclick="show('settings')" data-i18n="ov.openSettings">Open settings</button></div>
     <div class="grid g4" id="svcCards"></div>
     <div class="grid g2" style="margin-top:16px">
-      <div class="card"><h2>Aktivna preuzimanja</h2><div class="list" id="ovActive"></div></div>
-      <div class="card"><h2>Uskoro</h2><div class="list" id="ovUpcoming"></div></div>
+      <div class="card"><h2 data-i18n="ov.active">Active downloads</h2><div class="list" id="ovActive"></div></div>
+      <div class="card"><h2 data-i18n="ov.upcoming">Upcoming</h2><div class="list" id="ovUpcoming"></div></div>
     </div>
   </section>
 
-  <!-- PREUZIMANJA -->
+  <!-- DOWNLOADS -->
   <section id="v-downloads" class="hidden">
     <div class="grid g2">
       <div class="card" data-svc="qbittorrent" style="--c:var(--qb)">
         <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent<span class="sp"></span>
           <select id="qbFilter" style="padding:4px 8px;font-size:12px">
-            <option value="all">Svi</option><option value="active">Aktivni</option><option value="downloading">Preuzimaju</option><option value="seeding">Seedaju</option><option value="paused">Zaustavljeni</option><option value="error">Greške</option>
+            <option value="all" data-i18n="dl.all">All</option><option value="active" data-i18n="dl.active">Active</option><option value="downloading" data-i18n="dl.downloading">Downloading</option><option value="seeding" data-i18n="dl.seeding">Seeding</option><option value="paused" data-i18n="dl.paused">Paused</option><option value="error" data-i18n="dl.errors">Errors</option>
           </select>
-          <button class="btn i" title="Zaustavi sve" onclick="qbGlobal('pause')">⏸</button>
-          <button class="btn i" title="Pokreni sve" onclick="qbGlobal('resume')">▶</button>
-          <button class="btn i" title="Alternativna ograničenja brzine" onclick="qbGlobal('altspeed')">🐢</button>
+          <button class="btn i" data-i18n-title="dl.stopAll" title="Stop all" onclick="qbGlobal('pause')">⏸</button>
+          <button class="btn i" data-i18n-title="dl.startAll" title="Start all" onclick="qbGlobal('resume')">▶</button>
+          <button class="btn i" data-i18n-title="dl.altSpeed" title="Alternative speed limits" onclick="qbGlobal('altspeed')">🐢</button>
         </h2>
         <div class="list" id="qbList"></div>
       </div>
       <div class="card" data-svc="nzbget" style="--c:var(--nzb)">
         <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet<span class="sp"></span>
-          <button class="btn i" title="Pauziraj sve" onclick="nzbAct('pauseall')">⏸</button>
-          <button class="btn i" title="Nastavi sve" onclick="nzbAct('resumeall')">▶</button>
+          <button class="btn i" data-i18n-title="dl.pauseAll" title="Pause all" onclick="nzbAct('pauseall')">⏸</button>
+          <button class="btn i" data-i18n-title="dl.resumeAll" title="Resume all" onclick="nzbAct('resumeall')">▶</button>
         </h2>
         <div class="list" id="nzbList"></div>
       </div>
       <div class="card" data-svc="radarr" style="--c:var(--radarr)">
-        <h2><span class="dot" style="background:var(--radarr)"></span>Radarr red čekanja<span class="sp"></span>
-          <button class="btn" onclick="arrCmd('radarr','RefreshMonitoredDownloads')">Osvježi</button></h2>
+        <h2><span class="dot" style="background:var(--radarr)"></span><span data-i18n="dl.radarrQueue">Radarr queue</span><span class="sp"></span>
+          <button class="btn" onclick="arrCmd('radarr','RefreshMonitoredDownloads')" data-i18n="c.refresh">Refresh</button></h2>
         <div class="list" id="radarrQueue"></div>
       </div>
       <div class="card" data-svc="sonarr" style="--c:var(--sonarr)">
-        <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr red čekanja<span class="sp"></span>
-          <button class="btn" onclick="arrCmd('sonarr','RefreshMonitoredDownloads')">Osvježi</button></h2>
+        <h2><span class="dot" style="background:var(--sonarr)"></span><span data-i18n="dl.sonarrQueue">Sonarr queue</span><span class="sp"></span>
+          <button class="btn" onclick="arrCmd('sonarr','RefreshMonitoredDownloads')" data-i18n="c.refresh">Refresh</button></h2>
         <div class="list" id="sonarrQueue"></div>
       </div>
     </div>
   </section>
 
-  <!-- ZAHTJEVI (Seerr) -->
+  <!-- REQUESTS (Seerr) -->
   <section id="v-requests" class="hidden">
     <div class="card" style="margin-bottom:16px;border-top:3px solid var(--seerr)">
-      <h2><span class="dot" style="background:var(--seerr)"></span>Seerr zahtjevi<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0" id="seerrVer"></span></h2>
+      <h2><span class="dot" style="background:var(--seerr)"></span><span data-i18n="req.title">Seerr requests</span><span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0" id="seerrVer"></span></h2>
       <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
         <div class="seg" id="reqFilter">
-          <button type="button" data-f="pending" class="on">Na čekanju</button>
-          <button type="button" data-f="all">Svi</button>
-          <button type="button" data-f="processing">U obradi</button>
-          <button type="button" data-f="available">Dostupni</button>
-          <button type="button" data-f="declined">Odbijeni</button>
+          <button type="button" data-f="pending" class="on" data-i18n="req.f.pending">Pending</button>
+          <button type="button" data-f="all" data-i18n="req.f.all">All</button>
+          <button type="button" data-f="processing" data-i18n="req.f.processing">Processing</button>
+          <button type="button" data-f="available" data-i18n="req.f.available">Available</button>
+          <button type="button" data-f="declined" data-i18n="req.f.declined">Declined</button>
         </div>
         <div class="counts" id="reqCounts"></div>
       </div>
@@ -222,12 +222,12 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
     <div class="reqs" id="reqList"></div>
   </section>
 
-  <!-- KALENDAR -->
+  <!-- CALENDAR -->
   <section id="v-calendar" class="hidden">
-    <div class="card"><h2>Sljedeća dva tjedna</h2><div class="cal" id="calGrid"></div></div>
+    <div class="card"><h2 data-i18n="cal.title">Next two weeks</h2><div class="cal" id="calGrid"></div></div>
   </section>
 
-  <!-- POVIJEST -->
+  <!-- HISTORY -->
   <section id="v-history" class="hidden">
     <div class="grid g2">
       <div class="card" data-svc="radarr"><h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2><div class="list" id="radarrHist"></div></div>
@@ -236,560 +236,114 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
     </div>
   </section>
 
-  <!-- DODAJ -->
+  <!-- ADD -->
   <section id="v-add" class="hidden">
     <form class="search" id="searchForm">
       <div class="seg" id="addType">
-        <button type="button" data-t="radarr" class="on">Film</button>
-        <button type="button" data-t="sonarr">Serija</button>
+        <button type="button" data-t="radarr" class="on" data-i18n="c.movie">Movie</button>
+        <button type="button" data-t="sonarr" data-i18n="c.series">Series</button>
       </div>
-      <input id="searchTerm" placeholder="Naziv filma ili serije…" autocomplete="off">
-      <select id="profileSel" title="Profil kvalitete"></select>
-      <select id="rootSel" title="Mapa"></select>
-      <button class="btn p">Traži</button>
+      <input id="searchTerm" placeholder="Movie or series title…" data-i18n-ph="add.placeholder" autocomplete="off">
+      <select id="profileSel" title="Quality profile" data-i18n-title="add.profile"></select>
+      <select id="rootSel" title="Folder" data-i18n-title="add.folder"></select>
+      <button class="btn p" data-i18n="add.search">Search</button>
     </form>
     <div class="results" id="results"></div>
   </section>
-  <!-- POSTAVKE -->
+  <!-- SETTINGS -->
   <section id="v-settings" class="hidden">
     <form id="setForm" autocomplete="off">
       <div class="set-grid">
         <div class="card span2">
-          <h2>Izgled</h2>
-          <div class="field" style="margin-bottom:6px"><label>Tema</label></div>
+          <h2 data-i18n="set.appearance">Appearance</h2>
+          <div class="ctl">
+            <span class="muted" data-i18n="set.language">Language</span>
+            <select name="ui.lang" style="padding:6px 10px;border-radius:8px">
+              <option value="en">English</option>
+              <option value="hr">Hrvatski</option>
+              <option value="auto" data-i18n="set.langAuto">Automatic (browser)</option>
+            </select>
+          </div>
+          <div class="field" style="margin:10px 0 6px"><label data-i18n="set.theme">Theme</label></div>
           <div class="themes" id="themeList"></div>
           <div class="ctl">
-            <span class="muted">Naglasna boja</span>
-            <input type="color" id="accentPick" title="Naglasna boja">
+            <span class="muted" data-i18n="set.accent">Accent colour</span>
+            <input type="color" id="accentPick" title="Accent colour" data-i18n-title="set.accent">
             <input type="hidden" name="ui.accent">
-            <button type="button" class="btn" id="accentReset">Zadana boja teme</button>
+            <button type="button" class="btn" id="accentReset" data-i18n="set.accentReset">Theme default colour</button>
           </div>
-          <div class="field" style="margin:14px 0 6px"><label>Dinamička pozadina</label></div>
+          <div class="field" style="margin:14px 0 6px"><label data-i18n="set.background">Dynamic background</label></div>
           <div class="bgs" id="bgList"></div>
           <div class="ctl">
-            <span class="muted">Intenzitet</span>
+            <span class="muted" data-i18n="set.intensity">Intensity</span>
             <input type="range" name="ui.bgIntensity" min="5" max="100" step="5"><span class="mono" id="bgIntVal"></span>
-            <label title="Animacija se ubrzava kad se nešto preuzima"><input type="checkbox" name="ui.bgReactive"> Reagira na brzinu preuzimanja</label>
+            <label data-i18n-title="set.reactiveTitle"><input type="checkbox" name="ui.bgReactive"> <span data-i18n="set.reactive">Reacts to download speed</span></label>
           </div>
-          <div class="test hidden" id="mediaDiag"><button type="button" class="btn" id="mediaCheck">Provjeri slike knjižnice</button><span class="r"></span></div>
-          <span class="muted" style="font-size:12px">Promjene se odmah vide kao pregled, a spremaju se gumbom <b>Spremi postavke</b>. „Zid postera” i „Slike iz knjižnice” koriste slike iz Radarra i Sonarra.</span>
+          <div class="test hidden" id="mediaDiag"><button type="button" class="btn" id="mediaCheck" data-i18n="set.checkMedia">Check library images</button><span class="r"></span></div>
+          <span class="muted" style="font-size:12px" data-i18n-html="set.appearanceHint"></span>
         </div>
         <div class="card" style="border-top:3px solid var(--radarr)">
           <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
-          <div class="field"><label>URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
-          <div class="field"><label>API ključ</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
-          <div class="test"><button type="button" class="btn" data-test="radarr">Testiraj vezu</button><span class="r"></span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="radarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--sonarr)">
           <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2>
-          <div class="field"><label>URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
-          <div class="field"><label>API ključ</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
-          <div class="test"><button type="button" class="btn" data-test="sonarr">Testiraj vezu</button><span class="r"></span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="sonarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--qb)">
           <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent</h2>
-          <div class="field"><label>URL Web UI-ja</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
+          <div class="field"><label data-i18n="set.webUiUrl">Web UI URL</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
           <div class="row2">
-            <div class="field"><label>Korisnik</label><input name="qbittorrent.user" placeholder="admin"></div>
-            <div class="field"><label>Lozinka</label><input name="qbittorrent.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="qbittorrent.user" placeholder="admin"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="qbittorrent.pass" type="password"></div>
           </div>
-          <div class="test"><button type="button" class="btn" data-test="qbittorrent">Testiraj vezu</button><span class="r"></span></div>
+          <div class="test"><button type="button" class="btn" data-test="qbittorrent" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--nzb)">
           <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2>
-          <div class="field"><label>URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
           <div class="row2">
-            <div class="field"><label>Korisnik</label><input name="nzbget.user" placeholder="nzbget"></div>
-            <div class="field"><label>Lozinka</label><input name="nzbget.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="nzbget.user" placeholder="nzbget"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="nzbget.pass" type="password"></div>
           </div>
-          <div class="test"><button type="button" class="btn" data-test="nzbget">Testiraj vezu</button><span class="r"></span></div>
+          <div class="test"><button type="button" class="btn" data-test="nzbget" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--seerr)">
           <h2><span class="dot" style="background:var(--seerr)"></span>Seerr</h2>
-          <div class="field"><label>URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
-          <div class="field"><label>API ključ</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
-          <div class="test"><button type="button" class="btn" data-test="seerr">Testiraj vezu</button><span class="r"></span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
+          <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card">
-          <h2>Općenito</h2>
+          <h2 data-i18n="set.general">General</h2>
           <div class="row2">
-            <div class="field"><label>Osvježavanje (sekundi)</label><input name="refresh" type="number" min="2" max="300"></div>
-            <div class="field"><label>Port</label><input name="port" type="number" min="1" max="65535"><span class="hint">Promjena zahtijeva ponovno pokretanje servisa</span></div>
+            <div class="field"><label data-i18n="set.refresh">Refresh (seconds)</label><input name="refresh" type="number" min="2" max="300"></div>
+            <div class="field"><label data-i18n="set.port">Port</label><input name="port" type="number" min="1" max="65535"><span class="hint" data-i18n="set.portHint">Changing it requires a service restart</span></div>
           </div>
         </div>
         <div class="card">
-          <h2>Prijava u ArrHub</h2>
+          <h2 data-i18n="set.login">ArrHub login</h2>
           <div class="row2">
-            <div class="field"><label>Korisnik</label><input name="auth.user" placeholder="prazno = bez prijave"></div>
-            <div class="field"><label>Lozinka</label><input name="auth.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="auth.user" placeholder="empty = no login" data-i18n-ph="set.loginPh"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="auth.pass" type="password"></div>
           </div>
           <span class="muted" style="font-size:12px" id="authHint"></span>
         </div>
       </div>
       <div class="savebar"><span class="muted" id="setInfo"></span><span class="sp"></span>
-        <button type="button" class="btn" id="setReset">Poništi</button>
-        <button class="btn p">Spremi postavke</button></div>
+        <button type="button" class="btn" id="setReset" data-i18n="set.reset">Reset</button>
+        <button class="btn p" data-i18n="set.save">Save settings</button></div>
     </form>
   </section>
 </main>
 <div id="toast"></div>
 
+<script src="i18n.js"></script>
 <script src="appearance.js"></script>
-<script>
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {} };
-const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)' };
-const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr' };
-const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
-state.seerrFilter = 'pending';
-
-// ---- formatiranje ----
-function size(b) { if (!b && b !== 0) return '–'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return b.toFixed(i > 1 ? 1 : 0) + ' ' + u[i]; }
-const speed = b => size(b) + '/s';
-function eta(s) { if (!s || s < 0 || s >= 8640000) return '∞'; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}m` : m ? `${m}m` : `${Math.floor(s)}s`; }
-function tleft(t) { if (!t) return ''; const p = t.split(/[.:]/).map(Number); if (p.length === 4) return eta(p[0]*86400 + p[1]*3600 + p[2]*60 + p[3]); return eta(p[0]*3600 + p[1]*60 + p[2]); }
-function ago(d) { const s = (Date.now() - new Date(d)) / 1000; if (s < 60) return 'upravo'; if (s < 3600) return `prije ${Math.floor(s/60)} min`; if (s < 86400) return `prije ${Math.floor(s/3600)} h`; return `prije ${Math.floor(s/86400)} d`; }
-const dayFmt = new Intl.DateTimeFormat('hr-HR', { weekday: 'long', day: 'numeric', month: 'numeric' });
-const timeFmt = new Intl.DateTimeFormat('hr-HR', { hour: '2-digit', minute: '2-digit' });
-const ep = e => `S${String(e.seasonNumber).padStart(2,'0')}E${String(e.episodeNumber).padStart(2,'0')}`;
-
-window.toast = toast;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
-
-async function api(path, body) {
-  const r = await fetch('/api/' + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.statusText);
-  return d;
-}
-
-// ---- dohvat podataka ----
-async function refresh() {
-  await Promise.all(SVCS.filter(k => state.cfg[k]).map(async k => {
-    try { state.data[k] = await api(k === 'seerr' ? `seerr?filter=${state.seerrFilter}` : k); delete state.err[k]; }
-    catch (e) { state.err[k] = e.message; }
-  }));
-  render();
-}
-
-// ---- prikaz ----
-function render() {
-  renderSpeeds(); renderCards(); renderOverview();
-  renderQb(); renderNzb(); renderArrQueue('radarr'); renderArrQueue('sonarr');
-  renderCalendar(); renderHistory(); renderRequests();
-}
-
-function renderSpeeds() {
-  const q = state.data.qbittorrent?.transfer, n = state.data.nzbget?.status;
-  let dl = 0, ul = 0;
-  if (q) { dl += q.dl_info_speed; ul += q.up_info_speed; }
-  if (n) dl += n.DownloadRate;
-  $('#speeds').innerHTML = `<span>↓ <b>${speed(dl)}</b></span><span>↑ <b>${speed(ul)}</b></span>`;
-  Appearance.Bg.setActivity(dl);
-}
-
-function svcCard(k, body) {
-  const err = state.err[k];
-  return `<div class="card svc" style="--c:${COLORS[k]}">
-    <h2><span class="dot" style="background:${err ? 'var(--err)' : 'var(--ok)'}"></span>${NAMES[k]}<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0">${esc(state.data[k]?.version || '')}</span></h2>
-    ${err ? `<div class="error">${esc(err)}</div>` : state.data[k] ? body(state.data[k]) : '<div class="empty">Učitavanje…</div>'}
-  </div>`;
-}
-function disks(d) {
-  const seen = new Set();
-  return (d || []).filter(x => x.totalSpace > 0 && !seen.has(x.totalSpace + '' + x.freeSpace) && seen.add(x.totalSpace + '' + x.freeSpace)).slice(0, 2).map(x => {
-    const used = 1 - x.freeSpace / x.totalSpace;
-    return `<div class="disk"><div class="lbl"><span class="mono">${esc(x.path)}</span><span>${size(x.freeSpace)} slobodno</span></div><div class="bar" style="--c:${used > .9 ? 'var(--err)' : 'var(--c)'}"><i style="width:${used*100}%"></i></div></div>`;
-  }).join('');
-}
-function health(h) { return (h || []).slice(0, 2).map(x => `<div class="health ${x.type === 'error' ? 'error' : ''}">${esc(x.message)}</div>`).join(''); }
-
-function renderCards() {
-  const out = [];
-  if (state.cfg.radarr) out.push(svcCard('radarr', d => `<div class="big">${d.queue.length}</div><div class="sub">u redu čekanja</div>
-    <div class="row"><span>Izlazi uskoro</span><span>${d.calendar.filter(m => !m.hasFile).length}</span></div>${disks(d.disk)}${health(d.health)}`));
-  if (state.cfg.sonarr) out.push(svcCard('sonarr', d => `<div class="big">${d.queue.length}</div><div class="sub">u redu čekanja</div>
-    <div class="row"><span>Epizode (14 dana)</span><span>${d.calendar.length}</span></div>${disks(d.disk)}${health(d.health)}`));
-  if (state.cfg.qbittorrent) out.push(svcCard('qbittorrent', d => {
-    const act = d.torrents.filter(t => /downloading|forcedDL|metaDL|stalledDL/.test(t.state)).length;
-    const seed = d.torrents.filter(t => /uploading|stalledUP|forcedUP/.test(t.state)).length;
-    return `<div class="big">${speed(d.transfer.dl_info_speed)}</div><div class="sub">↑ ${speed(d.transfer.up_info_speed)} · ${esc(d.transfer.connection_status)}</div>
-    <div class="row"><span>Preuzima</span><span>${act}</span></div><div class="row"><span>Seeda</span><span>${seed}</span></div><div class="row"><span>Ukupno</span><span>${d.torrents.length}</span></div>`;
-  }));
-  if (state.cfg.nzbget) out.push(svcCard('nzbget', d => `<div class="big">${speed(d.status.DownloadRate)}</div><div class="sub">${d.status.DownloadPaused ? '<span class="tag warn">Pauzirano</span>' : 'aktivno'}</div>
-    <div class="row"><span>U redu</span><span>${d.groups.length}</span></div><div class="row"><span>Preostalo</span><span>${size(d.status.RemainingSizeMB * 1048576)}</span></div><div class="row"><span>Slobodno na disku</span><span>${size(d.status.FreeDiskSpaceMB * 1048576)}</span></div>`));
-  if (state.cfg.seerr) out.push(svcCard('seerr', d => {
-    const c = d.count || {};
-    return `<div class="big">${c.pending ?? 0}</div><div class="sub">zahtjeva na čekanju${d.updateAvailable ? ' · <span class="tag warn">nova verzija</span>' : ''}</div>
-    <div class="row"><span>Odobreno</span><span>${c.approved ?? 0}</span></div><div class="row"><span>U obradi</span><span>${c.processing ?? 0}</span></div><div class="row"><span>Dostupno</span><span>${c.available ?? 0}</span></div>
-    <div class="link"><button class="btn" onclick="show('requests')">Otvori zahtjeve</button></div>`;
-  }));
-  $('#svcCards').innerHTML = out.join('');
-}
-
-function renderOverview() {
-  const items = [];
-  (state.data.qbittorrent?.torrents || []).filter(t => /downloading|forcedDL|metaDL|stalledDL/.test(t.state)).forEach(t =>
-    items.push({ c: COLORS.qbittorrent, name: t.name, p: t.progress, meta: [speed(t.dlspeed), 'ETA ' + eta(t.eta), size(t.size)] }));
-  (state.data.nzbget?.groups || []).forEach(g => {
-    const tot = g.FileSizeMB || 1; items.push({ c: COLORS.nzbget, name: g.NZBName, p: 1 - g.RemainingSizeMB / tot, meta: [g.Status.toLowerCase(), size(tot * 1048576)] });
-  });
-  $('#ovActive').innerHTML = items.length ? items.slice(0, 10).map(i => `<div class="item" style="--c:${i.c}">
-    <div class="t" title="${esc(i.name)}">${esc(i.name)}</div><div class="mono muted">${(i.p * 100).toFixed(1)}%</div>
-    <div class="bar"><i style="width:${i.p * 100}%"></i></div><div class="m">${i.meta.map(esc).join('<span>·</span>')}</div></div>`).join('')
-    : '<div class="empty">Ništa se trenutno ne preuzima</div>';
-
-  const up = calendarEvents().filter(e => e.date >= new Date(new Date().setHours(0,0,0,0))).slice(0, 8);
-  $('#ovUpcoming').innerHTML = up.length ? up.map(e => `<div class="item" style="--c:${e.c}">
-    <div class="t"><span class="dot" style="background:${e.c};margin-right:8px"></span>${esc(e.title)}</div><div class="muted">${dayFmt.format(e.date)}</div>
-    <div class="m">${esc(e.sub)}${e.hasFile ? '<span class="tag ok">preuzeto</span>' : ''}</div></div>`).join('')
-    : '<div class="empty">Nema nadolazećih izdanja</div>';
-}
-
-let qbFilter = 'all';
-const qbMatch = {
-  all: () => true,
-  active: t => t.dlspeed > 0 || t.upspeed > 0,
-  downloading: t => /downloading|forcedDL|metaDL|stalledDL|queuedDL|checkingDL/.test(t.state),
-  seeding: t => /uploading|stalledUP|forcedUP|queuedUP/.test(t.state),
-  paused: t => /paused|stopped/i.test(t.state),
-  error: t => /error|missingFiles/.test(t.state),
-};
-function qbState(s) {
-  if (/error|missingFiles/.test(s)) return ['greška', 'err'];
-  if (/paused|stopped/i.test(s)) return ['zaustavljen', 'warn'];
-  if (/stalledDL/.test(s)) return ['zastoj', 'warn'];
-  if (/downloading|forcedDL|metaDL/.test(s)) return ['preuzima', ''];
-  if (/uploading|stalledUP|forcedUP/.test(s)) return ['seeda', 'ok'];
-  if (/queued/.test(s)) return ['u redu', ''];
-  if (/checking/.test(s)) return ['provjera', ''];
-  return [s, ''];
-}
-function renderQb() {
-  const el = $('#qbList'); if (!state.cfg.qbittorrent) return;
-  if (state.err.qbittorrent) return el.innerHTML = `<div class="error">${esc(state.err.qbittorrent)}</div>`;
-  const ts = (state.data.qbittorrent?.torrents || []).filter(qbMatch[qbFilter]);
-  el.innerHTML = ts.length ? ts.slice(0, 60).map(t => { const [st, cl] = qbState(t.state); const paused = /paused|stopped/i.test(t.state); return `<div class="item">
-    <div class="t" title="${esc(t.name)}">${esc(t.name)}</div>
-    <div class="a"><button class="btn i" title="${paused ? 'Pokreni' : 'Zaustavi'}" onclick="qbAct('${paused ? 'resume' : 'pause'}','${t.hash}')">${paused ? '▶' : '⏸'}</button>
-    <button class="btn i d" title="Obriši" onclick="qbDel('${t.hash}')">✕</button></div>
-    <div class="bar"><i style="width:${t.progress * 100}%"></i></div>
-    <div class="m"><span class="tag ${cl}">${st}</span><span class="mono">${(t.progress * 100).toFixed(1)}%</span><span>${size(t.size)}</span>
-    ${t.progress < 1 ? `<span>↓ ${speed(t.dlspeed)}</span><span>ETA ${eta(t.eta)}</span>` : ''}<span>↑ ${speed(t.upspeed)}</span><span>omjer ${t.ratio.toFixed(2)}</span>${t.category ? `<span class="tag">${esc(t.category)}</span>` : ''}</div></div>`; }).join('')
-    : '<div class="empty">Nema torrenata</div>';
-}
-function renderNzb() {
-  const el = $('#nzbList'); if (!state.cfg.nzbget) return;
-  if (state.err.nzbget) return el.innerHTML = `<div class="error">${esc(state.err.nzbget)}</div>`;
-  const gs = state.data.nzbget?.groups || [];
-  el.innerHTML = gs.length ? gs.map(g => { const p = g.FileSizeMB ? 1 - g.RemainingSizeMB / g.FileSizeMB : 0; const paused = /PAUSED/.test(g.Status); return `<div class="item">
-    <div class="t" title="${esc(g.NZBName)}">${esc(g.NZBName)}</div>
-    <div class="a"><button class="btn i" onclick="nzbAct('${paused ? 'resume' : 'pause'}',${g.NZBID})">${paused ? '▶' : '⏸'}</button>
-    <button class="btn i d" onclick="nzbDel(${g.NZBID})">✕</button></div>
-    <div class="bar"><i style="width:${p * 100}%"></i></div>
-    <div class="m"><span class="tag ${paused ? 'warn' : ''}">${esc(g.Status.toLowerCase())}</span><span class="mono">${(p * 100).toFixed(1)}%</span><span>${size(g.FileSizeMB * 1048576)}</span>${g.Category ? `<span class="tag">${esc(g.Category)}</span>` : ''}</div></div>`; }).join('')
-    : '<div class="empty">Red čekanja je prazan</div>';
-}
-function renderArrQueue(k) {
-  const el = $('#' + k + 'Queue'); if (!state.cfg[k]) return;
-  if (state.err[k]) return el.innerHTML = `<div class="error">${esc(state.err[k])}</div>`;
-  const q = state.data[k]?.queue || [];
-  el.innerHTML = q.length ? q.map(r => {
-    const p = r.size ? 1 - r.sizeleft / r.size : 0;
-    const title = k === 'radarr' ? (r.movie ? `${r.movie.title} (${r.movie.year})` : r.title) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.title);
-    const warn = r.trackedDownloadStatus && r.trackedDownloadStatus !== 'ok';
-    return `<div class="item" style="--c:${COLORS[k]}">
-    <div class="t" title="${esc(r.title)}">${esc(title)}</div>
-    <div class="a"><button class="btn i d" title="Ukloni" onclick="arrRemove('${k}',${r.id})">✕</button></div>
-    <div class="bar"><i style="width:${p * 100}%"></i></div>
-    <div class="m"><span class="tag ${warn ? 'warn' : ''}">${esc(r.trackedDownloadState || r.status)}</span><span class="mono">${(p * 100).toFixed(1)}%</span><span>${esc(r.protocol)}</span><span>${esc(r.downloadClient || '')}</span>${r.timeleft ? `<span>ETA ${tleft(r.timeleft)}</span>` : ''}
-    ${warn && r.statusMessages?.length ? `<span style="color:var(--warn)">${esc(r.statusMessages[0].messages?.[0] || r.statusMessages[0].title)}</span>` : ''}</div></div>`;
-  }).join('') : '<div class="empty">Prazno</div>';
-}
-
-function calendarEvents() {
-  const ev = [];
-  (state.data.radarr?.calendar || []).forEach(m => {
-    const opts = [['digitalRelease', 'digitalno'], ['physicalRelease', 'fizičko izdanje'], ['inCinemas', 'u kinima']];
-    for (const [f, lbl] of opts) if (m[f]) ev.push({ c: COLORS.radarr, date: new Date(m[f]), title: m.title, sub: `${m.year} · ${lbl}`, hasFile: m.hasFile });
-  });
-  (state.data.sonarr?.calendar || []).forEach(e => ev.push({ c: COLORS.sonarr, date: new Date(e.airDateUtc), title: e.series?.title || 'Serija', sub: `${ep(e)} · ${e.title || ''} · ${timeFmt.format(new Date(e.airDateUtc))}`, hasFile: e.hasFile }));
-  const from = new Date(); from.setDate(from.getDate() - 1); from.setHours(0,0,0,0);
-  const to = new Date(); to.setDate(to.getDate() + 15);
-  return ev.filter(e => e.date >= from && e.date <= to).sort((a, b) => a.date - b.date);
-}
-function renderCalendar() {
-  const byDay = {};
-  calendarEvents().forEach(e => { const k = e.date.toDateString(); (byDay[k] ||= []).push(e); });
-  const today = new Date().toDateString();
-  const keys = Object.keys(byDay);
-  $('#calGrid').innerHTML = keys.length ? keys.map(k => `<div class="day ${k === today ? 'today' : ''}"><h3>${dayFmt.format(new Date(k))}</h3>
-    ${byDay[k].map(e => `<div class="ev" style="--c:${e.c}">${esc(e.title)} ${e.hasFile ? '✓' : ''}<div class="muted">${esc(e.sub)}</div></div>`).join('')}</div>`).join('')
-    : '<div class="empty">Nema događaja</div>';
-}
-const EVT = { grabbed: ['preuzet', ''], downloadFolderImported: ['uvezen', 'ok'], episodeFileImported: ['uvezen', 'ok'], movieFileImported: ['uvezen', 'ok'], downloadFailed: ['neuspjeh', 'err'], movieFileDeleted: ['obrisan', 'warn'], episodeFileDeleted: ['obrisan', 'warn'], movieFileRenamed: ['preimenovan', ''], episodeFileRenamed: ['preimenovan', ''], downloadIgnored: ['ignoriran', 'warn'] };
-function renderHistory() {
-  for (const k of ['radarr', 'sonarr']) {
-    const el = $('#' + k + 'Hist'); if (!state.cfg[k]) continue;
-    const h = state.data[k]?.history || [];
-    el.innerHTML = h.length ? h.map(r => { const [l, c] = EVT[r.eventType] || [r.eventType, '']; const t = k === 'radarr' ? (r.movie?.title || r.sourceTitle) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.sourceTitle);
-      return `<div class="item"><div class="t" title="${esc(r.sourceTitle)}">${esc(t)}</div><div class="muted">${ago(r.date)}</div><div class="m"><span class="tag ${c}">${l}</span><span>${esc(r.quality?.quality?.name || '')}</span></div></div>`; }).join('') : '<div class="empty">Nema zapisa</div>';
-  }
-  if (state.cfg.nzbget) {
-    const h = state.data.nzbget?.history || [];
-    $('#nzbHist').innerHTML = h.length ? h.map(r => { const ok = /^SUCCESS/.test(r.Status); return `<div class="item"><div class="t" title="${esc(r.Name)}">${esc(r.Name)}</div><div class="muted">${ago(r.HistoryTime * 1000)}</div>
-      <div class="m"><span class="tag ${ok ? 'ok' : /FAILURE/.test(r.Status) ? 'err' : 'warn'}">${esc(r.Status.toLowerCase())}</span><span>${size(r.FileSizeMB * 1048576)}</span>${r.Category ? `<span class="tag">${esc(r.Category)}</span>` : ''}</div></div>`; }).join('') : '<div class="empty">Nema zapisa</div>';
-  }
-}
-
-// ---- Seerr zahtjevi ----
-const REQ_STATUS = { 1: ['na čekanju', 'warn'], 2: ['odobreno', 'ok'], 3: ['odbijeno', 'err'], 4: ['neuspjelo', 'err'], 5: ['završeno', 'ok'] };
-const MEDIA_STATUS = { 2: ['čeka preuzimanje', ''], 3: ['preuzima se', ''], 4: ['djelomično dostupno', 'warn'], 5: ['dostupno', 'ok'], 6: ['obrisano', 'err'], 7: ['obrisano', 'err'] };
-function seasonsText(arr) {
-  if (!arr?.length) return '';
-  // 1,2,3,5 -> S1–3, S5
-  const out = []; let a = arr[0], b = arr[0];
-  for (const n of [...arr.slice(1), null]) { if (n === b + 1) { b = n; continue; } out.push(a === b ? `S${a}` : `S${a}–${b}`); a = b = n; }
-  return out.join(', ');
-}
-function renderRequests() {
-  if (!state.cfg.seerr) return;
-  const el = $('#reqList');
-  if (state.err.seerr) { el.innerHTML = `<div class="error">${esc(state.err.seerr)}</div>`; return; }
-  const d = state.data.seerr; if (!d) { el.innerHTML = '<div class="empty">Učitavanje…</div>'; return; }
-  if (d.filter !== state.seerrFilter) return; // stari odgovor nakon promjene filtera
-  $('#seerrVer').textContent = d.version || '';
-  const c = d.count || {};
-  $('#reqCounts').innerHTML = `<span>Ukupno <b>${c.total ?? 0}</b></span><span>Na čekanju <b>${c.pending ?? 0}</b></span><span>Odobreno <b>${c.approved ?? 0}</b></span><span>Dostupno <b>${c.available ?? 0}</b></span><span>Odbijeno <b>${c.declined ?? 0}</b></span>`;
-  el.innerHTML = d.requests.length ? d.requests.map(r => {
-    const [rs, rc] = REQ_STATUS[r.status] || [String(r.status), ''];
-    const ms = r.status === 2 && MEDIA_STATUS[r.mediaStatus];
-    return `<div class="req">
-      ${r.poster ? `<img src="${esc(r.poster)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'np'}))">` : '<div class="np"></div>'}
-      <div class="info">
-        <div class="t" title="${esc(r.title)}">${esc(r.title)} <span class="muted" style="font-weight:400">${esc(r.year || '')}</span></div>
-        <div class="m"><span class="tag">${r.type === 'tv' ? 'Serija' : 'Film'}</span>${r.is4k ? '<span class="tag">4K</span>' : ''}${r.type === 'tv' && r.seasons.length ? `<span>${seasonsText(r.seasons)}</span>` : ''}</div>
-        <div class="m"><span class="tag ${rc}">${rs}</span>${ms ? `<span class="tag ${ms[1]}">${ms[0]}</span>` : ''}</div>
-        <div class="m">${esc(r.requestedBy)}${r.createdAt ? ` · ${ago(r.createdAt)}` : ''}</div>
-        <div class="act">
-          ${r.status === 1 ? `<button class="btn ok" onclick="seerrAct(${r.id},'approve')">✓ Odobri</button><button class="btn d" onclick="seerrAct(${r.id},'decline')">✕ Odbij</button>` : ''}
-          <button class="btn d" title="Obriši zahtjev" onclick="seerrAct(${r.id},'delete')">Obriši</button>
-        </div>
-      </div></div>`;
-  }).join('') : `<div class="empty">${state.seerrFilter === 'pending' ? 'Nema zahtjeva na čekanju 🎉' : 'Nema zahtjeva'}</div>`;
-}
-function seerrAct(id, action) {
-  if (action === 'delete' && !confirm('Obrisati zahtjev? (sadržaj u Radarru/Sonarru ostaje)')) return;
-  if (action === 'decline' && !confirm('Odbiti zahtjev?')) return;
-  run('seerr/action', { id, action }, { approve: 'Zahtjev odobren', decline: 'Zahtjev odbijen', delete: 'Zahtjev obrisan' }[action]);
-}
-$('#reqFilter').onclick = async e => {
-  const b = e.target.closest('button'); if (!b) return;
-  state.seerrFilter = b.dataset.f;
-  [...$('#reqFilter').children].forEach(x => x.classList.toggle('on', x === b));
-  $('#reqList').innerHTML = '<div class="empty">Učitavanje…</div>';
-  try { state.data.seerr = await api(`seerr?filter=${state.seerrFilter}`); delete state.err.seerr; } catch (err) { state.err.seerr = err.message; }
-  renderRequests(); renderCards();
-};
-
-// ---- akcije ----
-async function run(p, body, msg) { try { await api(p, body); toast(msg); setTimeout(refresh, 600); } catch (e) { toast('Greška: ' + e.message); } }
-const qbAct = (a, h) => run('qbittorrent/action', { action: a, hashes: [h] }, a === 'pause' ? 'Zaustavljeno' : 'Pokrenuto');
-const qbGlobal = a => run('qbittorrent/global', { action: a }, a === 'altspeed' ? 'Ograničenje brzine prebačeno' : 'Gotovo');
-function qbDel(h) { if (!confirm('Obrisati torrent?')) return; const files = confirm('Obrisati i datoteke s diska?'); run('qbittorrent/action', { action: 'delete', hashes: [h], deleteFiles: files }, 'Obrisano'); }
-const nzbAct = (a, id) => run('nzbget/action', { action: a, ids: id ? [id] : [] }, 'Gotovo');
-function nzbDel(id) { if (confirm('Obrisati iz reda čekanja?')) run('nzbget/action', { action: 'delete', ids: [id] }, 'Obrisano'); }
-function arrRemove(k, id) { if (!confirm('Ukloniti iz reda i iz download klijenta?')) return; const bl = confirm('Dodati na blocklist (neće se ponovno preuzeti)?'); run(k + '/queue/remove', { id, blocklist: bl }, 'Uklonjeno'); }
-const arrCmd = (k, name) => run(k + '/command', { name }, 'Naredba poslana');
-
-// ---- dodavanje ----
-let lastResults = [];
-async function loadOptions() {
-  const k = state.addType;
-  if (!state.cfg[k]) { $('#profileSel').innerHTML = $('#rootSel').innerHTML = ''; return; }
-  try {
-    const o = state.opts[k] ||= await api(k + '/options');
-    $('#profileSel').innerHTML = o.profiles.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    $('#rootSel').innerHTML = o.roots.map(r => `<option value="${esc(r.path)}">${esc(r.path)} (${size(r.free)})</option>`).join('');
-  } catch (e) { toast('Greška: ' + e.message); }
-}
-$('#addType').onclick = e => { const b = e.target.closest('button'); if (!b) return;
-  state.addType = b.dataset.t; [...$('#addType').children].forEach(x => x.classList.toggle('on', x === b)); $('#results').innerHTML = ''; loadOptions(); };
-$('#searchForm').onsubmit = async e => {
-  e.preventDefault(); const term = $('#searchTerm').value.trim(); if (!term) return;
-  const k = state.addType; if (!state.cfg[k]) return toast(NAMES[k] + ' nije konfiguriran');
-  $('#results').innerHTML = '<div class="empty">Tražim…</div>';
-  try {
-    lastResults = await api(`${k}/lookup?term=${encodeURIComponent(term)}`);
-    $('#results').innerHTML = lastResults.length ? lastResults.slice(0, 24).map((r, i) => {
-      const poster = r.remotePoster || r.images?.find(x => x.coverType === 'poster')?.remoteUrl || '';
-      const exists = r.id > 0;
-      return `<div class="res"><img src="${esc(poster)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
-      <div class="info"><div><b>${esc(r.title)}</b> <span class="muted">${r.year || ''}</span></div>
-      <div class="muted" style="font-size:12px">${k === 'sonarr' ? `${r.seasonCount || r.seasons?.length || 0} sezona · ${esc(r.network || '')} · ${esc(r.status || '')}` : `${r.runtime ? r.runtime + ' min · ' : ''}${esc((r.genres || []).slice(0, 3).join(', '))}`}</div>
-      <div class="ov">${esc(r.overview || '')}</div>
-      <div class="act">${exists ? '<span class="tag ok">Već u knjižnici</span>' : `<button class="btn p" onclick="addItem(${i},true)">Dodaj i traži</button><button class="btn" onclick="addItem(${i},false)">Samo dodaj</button>`}</div></div></div>`;
-    }).join('') : '<div class="empty">Nema rezultata</div>';
-  } catch (e) { $('#results').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
-};
-async function addItem(i, search) {
-  const k = state.addType;
-  try {
-    await api(k + '/add', { item: lastResults[i], qualityProfileId: Number($('#profileSel').value), rootFolderPath: $('#rootSel').value, search });
-    toast(`Dodano: ${lastResults[i].title}`); lastResults[i].id = 1; $('#searchForm').requestSubmit();
-  } catch (e) { toast('Greška: ' + e.message); }
-}
-
-// ---- navigacija ----
-function show(v) {
-  state.view = v;
-  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'v-' + v));
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  if (v === 'add') loadOptions();
-  if (v === 'settings') loadSettings();
-  else if (state.cfg.ui) applyUi(state.cfg.ui);
-  history.replaceState(null, '', '#' + v);
-}
-$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
-$('#qbFilter').onchange = e => { qbFilter = e.target.value; renderQb(); };
-
-// ---- postavke ----
-const setForm = $('#setForm');
-let setLoaded = null;
-async function loadSettings() {
-  try {
-    const s = await api('settings'); setLoaded = s;
-    for (const el of setForm.elements) {
-      if (!el.name) continue;
-      const val = s.values[el.name];
-      if (el.type === 'radio') el.checked = el.value === String(val);
-      else if (el.type === 'checkbox') el.checked = val !== false && val !== 'false';
-      else el.value = val ?? '';
-      const locked = s.locked.includes(el.name);
-      el.disabled = locked; el.dataset.locked = locked ? '1' : ''; el.title = locked ? 'Postavljeno varijablom okruženja' : '';
-    }
-    setForm.querySelectorAll('.test .r').forEach(r => { r.textContent = ''; r.className = 'r'; });
-    $('#setInfo').textContent = 'Spremljeno u ' + s.file + (s.locked.length ? ` · ${s.locked.length} polja zaključano varijablama okruženja` : '');
-    $('#authHint').textContent = s.values['auth.user'] ? '' : 'Bez prijave svatko u mreži može mijenjati ove postavke.';
-    syncAppearanceControls(); previewAppearance();
-  } catch (e) { toast('Greška: ' + e.message); }
-}
-function formValues() {
-  const v = {};
-  for (const el of setForm.elements) {
-    if (!el.name || el.dataset.locked === '1') continue;
-    if (el.type === 'radio') { if (el.checked) v[el.name] = el.value; }
-    else if (el.type === 'checkbox') v[el.name] = el.checked;
-    else v[el.name] = el.value;
-  }
-  return v;
-}
-setForm.addEventListener('click', async e => {
-  const b = e.target.closest('[data-test]'); if (!b) return;
-  const r = b.nextElementSibling; r.className = 'r'; r.textContent = 'Provjeravam…'; b.disabled = true;
-  try { const res = await api('settings/test', { service: b.dataset.test, values: formValues() }); r.className = 'r ok'; r.textContent = '✓ ' + res.message; }
-  catch (err) { r.className = 'r err'; r.textContent = '✕ ' + err.message; }
-  finally { b.disabled = false; }
-});
-$('#setReset').onclick = loadSettings;
-setForm.onsubmit = async e => {
-  e.preventDefault();
-  const v = formValues();
-  const authChanged = setLoaded && (v['auth.user'] !== setLoaded.values['auth.user'] || v['auth.pass'] !== setLoaded.values['auth.pass']);
-  try {
-    const res = await api('settings', { values: v });
-    toast(res.restartRequired ? 'Spremljeno. Novi port vrijedi nakon ponovnog pokretanja servisa.' : 'Postavke spremljene');
-    if (authChanged) { setTimeout(() => location.reload(), 1200); return; }
-    state.opts = {}; state.data = {}; state.err = {};
-    await applyConfig(); await loadSettings(); refresh();
-  } catch (err) { toast('Greška: ' + err.message); }
-};
-
-// ---- izgled ----
-const { THEMES, BACKGROUNDS, applyTheme, Bg } = Appearance;
-Bg.mediaLoader = () => api('media');
-const BG_ICONS = { none: '∅', aurora: '◐', stars: '✦', particles: '⁘', waves: '≈', posters: '▦', fanart: '▣' };
-$('#themeList').innerHTML = [['auto', { name: 'Automatski', auto: true }], ...Object.entries(THEMES)].map(([id, t]) => {
-  const pv = t.auto
-    ? `<div class="pv" style="background:linear-gradient(90deg,${THEMES.light.bg} 50%,${THEMES.dark.bg} 50%)"><i style="background:linear-gradient(90deg,${THEMES.light.panel} 50%,${THEMES.dark.panel} 50%)"></i><b style="background:${THEMES.dark.accent}"></b></div>`
-    : `<div class="pv" style="background:${t.bg}"><i style="background:${t.panel};border:1px solid ${t.line}"></i><b style="background:${t.accent}"></b></div>`;
-  return `<label class="theme-opt"><input type="radio" name="ui.theme" value="${id}">${pv}<div class="nm">${esc(t.name)}</div></label>`;
-}).join('');
-$('#bgList').innerHTML = Object.entries(BACKGROUNDS).map(([id, n]) =>
-  `<label class="bg-opt"><input type="radio" name="ui.background" value="${id}"><span>${BG_ICONS[id] || ''}</span>${esc(n)}</label>`).join('');
-
-function applyUi(ui) {
-  if (!ui) return;
-  applyTheme(ui.theme, ui.accent);
-  Bg.set(ui.background, { intensity: ui.bgIntensity, reactive: ui.bgReactive });
-}
-function currentUiFromForm() {
-  const v = formValues();
-  return { theme: v['ui.theme'] || 'dark', accent: v['ui.accent'] || '', background: v['ui.background'] || 'none',
-    bgIntensity: Number(v['ui.bgIntensity'] ?? 60), bgReactive: v['ui.bgReactive'] !== false };
-}
-function syncAppearanceControls() {
-  const ui = currentUiFromForm();
-  const t = ui.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? THEMES.light : THEMES.dark) : THEMES[ui.theme] || THEMES.dark;
-  $('#accentPick').value = ui.accent || t.accent;
-  $('#accentReset').disabled = !ui.accent;
-  $('#bgIntVal').textContent = ui.bgIntensity + '%';
-  const off = ui.background === 'none';
-  setForm.elements['ui.bgIntensity'].disabled = off;
-  setForm.elements['ui.bgReactive'].disabled = off || ui.background === 'fanart';
-  const lib = ui.background === 'posters' || ui.background === 'fanart';
-  const diag = $('#mediaDiag'), wasHidden = diag.classList.contains('hidden');
-  diag.classList.toggle('hidden', !lib);
-  if (lib && wasHidden) checkMedia();
-}
-function previewAppearance() { applyUi(currentUiFromForm()); }
-async function checkMedia() {
-  const r = $('#mediaDiag .r'); r.className = 'r'; r.textContent = 'Dohvaćam knjižnicu…';
-  try {
-    const m = await api('media?refresh=1');
-    Bg.reloadMedia();
-    const entries = Object.entries(m.stats || {});
-    if (!entries.length) { r.className = 'r err'; r.textContent = '✕ Radarr ni Sonarr nisu podešeni'; return; }
-    let anyOk = false;
-    const parts = await Promise.all(entries.map(async ([k, st]) => {
-      if (st.error) return `${NAMES[k]}: ✕ ${st.error}`;
-      let img = '✕ nema slika';
-      if (st.sample) {
-        const res = await fetch(st.sample);
-        if (res.ok && (res.headers.get('content-type') || '').startsWith('image/')) { img = 'slike ✓'; anyOk = true; }
-        else { const e = await res.json().catch(() => ({})); img = '✕ slike se ne učitavaju: ' + (e.error || res.status); }
-      }
-      return `${NAMES[k]}: ${st.items} ${k === 'radarr' ? 'filmova' : 'serija'}, ${st.posters} postera, ${st.fanart} pozadina, ${img}`;
-    }));
-    r.className = 'r ' + (anyOk ? 'ok' : 'err');
-    r.innerHTML = parts.map(esc).join('<br>');
-    if (anyOk) { previewAppearance(); Bg.restart(); }
-  } catch (e) { r.className = 'r err'; r.textContent = '✕ ' + e.message; }
-}
-$('#mediaCheck').onclick = checkMedia;
-$('#accentPick').addEventListener('input', e => { setForm.elements['ui.accent'].value = e.target.value; syncAppearanceControls(); previewAppearance(); });
-$('#accentReset').onclick = () => { setForm.elements['ui.accent'].value = ''; syncAppearanceControls(); previewAppearance(); };
-setForm.addEventListener('input', e => { if (e.target.name?.startsWith('ui.')) { syncAppearanceControls(); previewAppearance(); } });
-setForm.addEventListener('change', e => { if (e.target.name?.startsWith('ui.')) { syncAppearanceControls(); previewAppearance(); } });
-
-let timer;
-async function applyConfig() {
-  state.cfg = await api('config');
-  applyUi(state.cfg.ui);
-  const any = SVCS.some(k => state.cfg[k]);
-  $('#setupNotice').classList.toggle('hidden', any);
-  document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
-  clearInterval(timer);
-  timer = setInterval(() => { if (!document.hidden) refresh(); }, (state.cfg.refresh || 5) * 1000);
-  return any;
-}
-
-(async () => {
-  const any = await applyConfig();
-  show(location.hash.slice(1) || (any ? 'overview' : 'settings'));
-  await refresh();
-})();
-</script>
+<script src="app.js"></script>
 </body>
 </html>
