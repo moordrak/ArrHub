@@ -1,0 +1,14 @@
+[Unit]
+Description=ArrHub dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/arrhub
+ExecStart=/usr/bin/node /opt/arrhub/server.js
+Restart=on-failure
+User=arrhub
+
+[Install]
+WantedBy=multi-user.target

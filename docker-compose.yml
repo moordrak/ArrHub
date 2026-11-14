@@ -1,0 +1,9 @@
+services:
+  arrhub:
+    build: .
+    container_name: arrhub
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    volumes:
+      - ./config.json:/app/config.json:ro

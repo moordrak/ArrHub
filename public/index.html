@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArrHub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23e8a33d'/><path d='M9 21l7-11 7 11' stroke='%23111' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
+  --accent:#e8a33d;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;
+  --ok:#4caf7a;--warn:#e0a63a;--err:#e05a5a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px 24px;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
+.logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer;font:inherit}
+nav button:hover{color:var(--text);background:var(--panel)}
+nav button.on{color:var(--text);background:var(--panel2)}
+.speeds{margin-left:auto;display:flex;gap:16px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.speeds b{color:var(--text);font-weight:600}
+main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media(max-width:560px){.g4{grid-template-columns:1fr}header{flex-wrap:wrap}.speeds{margin-left:0}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h2{margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.svc{border-top:3px solid var(--c)}
+.svc .big{font-size:26px;font-weight:700;font-family:var(--mono)}
+.svc .sub{color:var(--muted);font-size:12.5px}
+.svc .row{display:flex;justify-content:space-between;margin-top:6px;font-size:13px}
+.svc .row span:last-child{font-family:var(--mono)}
+.list{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.item .m{color:var(--muted);font-size:12.5px;grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap}
+.item .a{display:flex;gap:4px;align-items:start}
+.bar{grid-column:1/-1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c,var(--accent));transition:width .4s}
+.tag{font-size:11px;padding:1px 7px;border-radius:10px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.tag.ok{color:var(--ok);border-color:#2b4a3a}.tag.warn{color:var(--warn);border-color:#4d3f22}.tag.err{color:var(--err);border-color:#4d2626}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:5px 10px;cursor:pointer;font:inherit;font-size:12.5px}
+.btn:hover{border-color:var(--muted)}
+.btn.i{padding:4px 7px;line-height:1}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#111;font-weight:600}
+.btn.d:hover{border-color:var(--err);color:var(--err)}
+.empty{color:var(--muted);padding:14px 0;text-align:center;font-size:13px}
+.error{color:var(--err);font-size:13px;padding:8px 0}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)}
+.cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.cal .day{background:var(--panel2);border-radius:9px;padding:10px;border:1px solid var(--line)}
+.cal .day h3{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
+.cal .day.today{border-color:var(--accent)}
+.cal .ev{font-size:12.5px;padding:4px 0 4px 8px;border-left:3px solid var(--c);margin-top:4px}
+.cal .ev .muted{font-size:11.5px}
+.search{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.search input,.search select,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:inherit}
+.search input{flex:1;min-width:220px}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.res{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.res img{width:80px;height:120px;object-fit:cover;border-radius:6px;background:var(--panel2);flex:none}
+.res .info{min-width:0;display:flex;flex-direction:column;gap:6px}
+.res .ov{color:var(--muted);font-size:12.5px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.res .act{margin-top:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--panel2);border-radius:8px;padding:3px;border:1px solid var(--line)}
+.seg button{background:none;border:0;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+.seg button.on{background:var(--panel);color:var(--text)}
+.disk{margin-top:8px}
+.disk .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px}
+.health{font-size:12.5px;padding:6px 10px;border-radius:7px;margin-top:6px;background:#2a2316;color:var(--warn)}
+.health.error{background:#2a1717;color:var(--err)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><i><svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 22l8-13 8 13" stroke="#111" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i>ArrHub</div>
+  <nav id="nav">
+    <button data-v="overview" class="on">Pregled</button>
+    <button data-v="downloads">Preuzimanja</button>
+    <button data-v="calendar">Kalendar</button>
+    <button data-v="history">Povijest</button>
+    <button data-v="add">Dodaj</button>
+  </nav>
+  <div class="speeds" id="speeds"></div>
+</header>
+
+<main>
+  <!-- PREGLED -->
+  <section id="v-overview">
+    <div class="grid g4" id="svcCards"></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h2>Aktivna preuzimanja</h2><div class="list" id="ovActive"></div></div>
+      <div class="card"><h2>Uskoro</h2><div class="list" id="ovUpcoming"></div></div>
+    </div>
+  </section>
+
+  <!-- PREUZIMANJA -->
+  <section id="v-downloads" class="hidden">
+    <div class="grid g2">
+      <div class="card" data-svc="qbittorrent" style="--c:var(--qb)">
+        <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent<span class="sp"></span>
+          <select id="qbFilter" style="padding:4px 8px;font-size:12px">
+            <option value="all">Svi</option><option value="active">Aktivni</option><option value="downloading">Preuzimaju</option><option value="seeding">Seedaju</option><option value="paused">Zaustavljeni</option><option value="error">Greške</option>
+          </select>
+          <button class="btn i" title="Zaustavi sve" onclick="qbGlobal('pause')">⏸</button>
+          <button class="btn i" title="Pokreni sve" onclick="qbGlobal('resume')">▶</button>
+          <button class="btn i" title="Alternativna ograničenja brzine" onclick="qbGlobal('altspeed')">🐢</button>
+        </h2>
+        <div class="list" id="qbList"></div>
+      </div>
+      <div class="card" data-svc="nzbget" style="--c:var(--nzb)">
+        <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet<span class="sp"></span>
+          <button class="btn i" title="Pauziraj sve" onclick="nzbAct('pauseall')">⏸</button>
+          <button class="btn i" title="Nastavi sve" onclick="nzbAct('resumeall')">▶</button>
+        </h2>
+        <div class="list" id="nzbList"></div>
+      </div>
+      <div class="card" data-svc="radarr" style="--c:var(--radarr)">
+        <h2><span class="dot" style="background:var(--radarr)"></span>Radarr red čekanja<span class="sp"></span>
+          <button class="btn" onclick="arrCmd('radarr','RefreshMonitoredDownloads')">Osvježi</button></h2>
+        <div class="list" id="radarrQueue"></div>
+      </div>
+      <div class="card" data-svc="sonarr" style="--c:var(--sonarr)">
+        <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr red čekanja<span class="sp"></span>
+          <button class="btn" onclick="arrCmd('sonarr','RefreshMonitoredDownloads')">Osvježi</button></h2>
+        <div class="list" id="sonarrQueue"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KALENDAR -->
+  <section id="v-calendar" class="hidden">
+    <div class="card"><h2>Sljedeća dva tjedna</h2><div class="cal" id="calGrid"></div></div>
+  </section>
+
+  <!-- POVIJEST -->
+  <section id="v-history" class="hidden">
+    <div class="grid g2">
+      <div class="card" data-svc="radarr"><h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2><div class="list" id="radarrHist"></div></div>
+      <div class="card" data-svc="sonarr"><h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2><div class="list" id="sonarrHist"></div></div>
+      <div class="card" data-svc="nzbget"><h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2><div class="list" id="nzbHist"></div></div>
+    </div>
+  </section>
+
+  <!-- DODAJ -->
+  <section id="v-add" class="hidden">
+    <form class="search" id="searchForm">
+      <div class="seg" id="addType">
+        <button type="button" data-t="radarr" class="on">Film</button>
+        <button type="button" data-t="sonarr">Serija</button>
+      </div>
+      <input id="searchTerm" placeholder="Naziv filma ili serije…" autocomplete="off">
+      <select id="profileSel" title="Profil kvalitete"></select>
+      <select id="rootSel" title="Mapa"></select>
+      <button class="btn p">Traži</button>
+    </form>
+    <div class="results" id="results"></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {} };
+const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)' };
+const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent' };
+
+// ---- formatiranje ----
+function size(b) { if (!b && b !== 0) return '–'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return b.toFixed(i > 1 ? 1 : 0) + ' ' + u[i]; }
+const speed = b => size(b) + '/s';
+function eta(s) { if (!s || s < 0 || s >= 8640000) return '∞'; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}m` : m ? `${m}m` : `${Math.floor(s)}s`; }
+function tleft(t) { if (!t) return ''; const p = t.split(/[.:]/).map(Number); if (p.length === 4) return eta(p[0]*86400 + p[1]*3600 + p[2]*60 + p[3]); return eta(p[0]*3600 + p[1]*60 + p[2]); }
+function ago(d) { const s = (Date.now() - new Date(d)) / 1000; if (s < 60) return 'upravo'; if (s < 3600) return `prije ${Math.floor(s/60)} min`; if (s < 86400) return `prije ${Math.floor(s/3600)} h`; return `prije ${Math.floor(s/86400)} d`; }
+const dayFmt = new Intl.DateTimeFormat('hr-HR', { weekday: 'long', day: 'numeric', month: 'numeric' });
+const timeFmt = new Intl.DateTimeFormat('hr-HR', { hour: '2-digit', minute: '2-digit' });
+const ep = e => `S${String(e.seasonNumber).padStart(2,'0')}E${String(e.episodeNumber).padStart(2,'0')}`;
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+
+async function api(path, body) {
+  const r = await fetch('/api/' + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+
+// ---- dohvat podataka ----
+async function refresh() {
+  await Promise.all(Object.keys(state.cfg).filter(k => state.cfg[k]).map(async k => {
+    try { state.data[k] = await api(k); delete state.err[k]; }
+    catch (e) { state.err[k] = e.message; }
+  }));
+  render();
+}
+
+// ---- prikaz ----
+function render() {
+  renderSpeeds(); renderCards(); renderOverview();
+  renderQb(); renderNzb(); renderArrQueue('radarr'); renderArrQueue('sonarr');
+  renderCalendar(); renderHistory();
+}
+
+function renderSpeeds() {
+  const q = state.data.qbittorrent?.transfer, n = state.data.nzbget?.status;
+  let dl = 0, ul = 0;
+  if (q) { dl += q.dl_info_speed; ul += q.up_info_speed; }
+  if (n) dl += n.DownloadRate;
+  $('#speeds').innerHTML = `<span>↓ <b>${speed(dl)}</b></span><span>↑ <b>${speed(ul)}</b></span>`;
+}
+
+function svcCard(k, body) {
+  const err = state.err[k];
+  return `<div class="card svc" style="--c:${COLORS[k]}">
+    <h2><span class="dot" style="background:${err ? 'var(--err)' : 'var(--ok)'}"></span>${NAMES[k]}<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0">${esc(state.data[k]?.version || '')}</span></h2>
+    ${err ? `<div class="error">${esc(err)}</div>` : state.data[k] ? body(state.data[k]) : '<div class="empty">Učitavanje…</div>'}
+  </div>`;
+}
+function disks(d) {
+  const seen = new Set();
+  return (d || []).filter(x => x.totalSpace > 0 && !seen.has(x.totalSpace + '' + x.freeSpace) && seen.add(x.totalSpace + '' + x.freeSpace)).slice(0, 2).map(x => {
+    const used = 1 - x.freeSpace / x.totalSpace;
+    return `<div class="disk"><div class="lbl"><span class="mono">${esc(x.path)}</span><span>${size(x.freeSpace)} slobodno</span></div><div class="bar" style="--c:${used > .9 ? 'var(--err)' : 'var(--c)'}"><i style="width:${used*100}%"></i></div></div>`;
+  }).join('');
+}
+function health(h) { return (h || []).slice(0, 2).map(x => `<div class="health ${x.type === 'error' ? 'error' : ''}">${esc(x.message)}</div>`).join(''); }
+
+function renderCards() {
+  const out = [];
+  if (state.cfg.radarr) out.push(svcCard('radarr', d => `<div class="big">${d.queue.length}</div><div class="sub">u redu čekanja</div>
+    <div class="row"><span>Izlazi uskoro</span><span>${d.calendar.filter(m => !m.hasFile).length}</span></div>${disks(d.disk)}${health(d.health)}`));
+  if (state.cfg.sonarr) out.push(svcCard('sonarr', d => `<div class="big">${d.queue.length}</div><div class="sub">u redu čekanja</div>
+    <div class="row"><span>Epizode (14 dana)</span><span>${d.calendar.length}</span></div>${disks(d.disk)}${health(d.health)}`));
+  if (state.cfg.qbittorrent) out.push(svcCard('qbittorrent', d => {
+    const act = d.torrents.filter(t => /downloading|forcedDL|metaDL|stalledDL/.test(t.state)).length;
+    const seed = d.torrents.filter(t => /uploading|stalledUP|forcedUP/.test(t.state)).length;
+    return `<div class="big">${speed(d.transfer.dl_info_speed)}</div><div class="sub">↑ ${speed(d.transfer.up_info_speed)} · ${esc(d.transfer.connection_status)}</div>
+    <div class="row"><span>Preuzima</span><span>${act}</span></div><div class="row"><span>Seeda</span><span>${seed}</span></div><div class="row"><span>Ukupno</span><span>${d.torrents.length}</span></div>`;
+  }));
+  if (state.cfg.nzbget) out.push(svcCard('nzbget', d => `<div class="big">${speed(d.status.DownloadRate)}</div><div class="sub">${d.status.DownloadPaused ? '<span class="tag warn">Pauzirano</span>' : 'aktivno'}</div>
+    <div class="row"><span>U redu</span><span>${d.groups.length}</span></div><div class="row"><span>Preostalo</span><span>${size(d.status.RemainingSizeMB * 1048576)}</span></div><div class="row"><span>Slobodno na disku</span><span>${size(d.status.FreeDiskSpaceMB * 1048576)}</span></div>`));
+  $('#svcCards').innerHTML = out.join('');
+}
+
+function renderOverview() {
+  const items = [];
+  (state.data.qbittorrent?.torrents || []).filter(t => /downloading|forcedDL|metaDL|stalledDL/.test(t.state)).forEach(t =>
+    items.push({ c: COLORS.qbittorrent, name: t.name, p: t.progress, meta: [speed(t.dlspeed), 'ETA ' + eta(t.eta), size(t.size)] }));
+  (state.data.nzbget?.groups || []).forEach(g => {
+    const tot = g.FileSizeMB || 1; items.push({ c: COLORS.nzbget, name: g.NZBName, p: 1 - g.RemainingSizeMB / tot, meta: [g.Status.toLowerCase(), size(tot * 1048576)] });
+  });
+  $('#ovActive').innerHTML = items.length ? items.slice(0, 10).map(i => `<div class="item" style="--c:${i.c}">
+    <div class="t" title="${esc(i.name)}">${esc(i.name)}</div><div class="mono muted">${(i.p * 100).toFixed(1)}%</div>
+    <div class="bar"><i style="width:${i.p * 100}%"></i></div><div class="m">${i.meta.map(esc).join('<span>·</span>')}</div></div>`).join('')
+    : '<div class="empty">Ništa se trenutno ne preuzima</div>';
+
+  const up = calendarEvents().filter(e => e.date >= new Date(new Date().setHours(0,0,0,0))).slice(0, 8);
+  $('#ovUpcoming').innerHTML = up.length ? up.map(e => `<div class="item" style="--c:${e.c}">
+    <div class="t"><span class="dot" style="background:${e.c};margin-right:8px"></span>${esc(e.title)}</div><div class="muted">${dayFmt.format(e.date)}</div>
+    <div class="m">${esc(e.sub)}${e.hasFile ? '<span class="tag ok">preuzeto</span>' : ''}</div></div>`).join('')
+    : '<div class="empty">Nema nadolazećih izdanja</div>';
+}
+
+let qbFilter = 'all';
+const qbMatch = {
+  all: () => true,
+  active: t => t.dlspeed > 0 || t.upspeed > 0,
+  downloading: t => /downloading|forcedDL|metaDL|stalledDL|queuedDL|checkingDL/.test(t.state),
+  seeding: t => /uploading|stalledUP|forcedUP|queuedUP/.test(t.state),
+  paused: t => /paused|stopped/i.test(t.state),
+  error: t => /error|missingFiles/.test(t.state),
+};
+function qbState(s) {
+  if (/error|missingFiles/.test(s)) return ['greška', 'err'];
+  if (/paused|stopped/i.test(s)) return ['zaustavljen', 'warn'];
+  if (/stalledDL/.test(s)) return ['zastoj', 'warn'];
+  if (/downloading|forcedDL|metaDL/.test(s)) return ['preuzima', ''];
+  if (/uploading|stalledUP|forcedUP/.test(s)) return ['seeda', 'ok'];
+  if (/queued/.test(s)) return ['u redu', ''];
+  if (/checking/.test(s)) return ['provjera', ''];
+  return [s, ''];
+}
+function renderQb() {
+  const el = $('#qbList'); if (!state.cfg.qbittorrent) return;
+  if (state.err.qbittorrent) return el.innerHTML = `<div class="error">${esc(state.err.qbittorrent)}</div>`;
+  const ts = (state.data.qbittorrent?.torrents || []).filter(qbMatch[qbFilter]);
+  el.innerHTML = ts.length ? ts.slice(0, 60).map(t => { const [st, cl] = qbState(t.state); const paused = /paused|stopped/i.test(t.state); return `<div class="item">
+    <div class="t" title="${esc(t.name)}">${esc(t.name)}</div>
+    <div class="a"><button class="btn i" title="${paused ? 'Pokreni' : 'Zaustavi'}" onclick="qbAct('${paused ? 'resume' : 'pause'}','${t.hash}')">${paused ? '▶' : '⏸'}</button>
+    <button class="btn i d" title="Obriši" onclick="qbDel('${t.hash}')">✕</button></div>
+    <div class="bar"><i style="width:${t.progress * 100}%"></i></div>
+    <div class="m"><span class="tag ${cl}">${st}</span><span class="mono">${(t.progress * 100).toFixed(1)}%</span><span>${size(t.size)}</span>
+    ${t.progress < 1 ? `<span>↓ ${speed(t.dlspeed)}</span><span>ETA ${eta(t.eta)}</span>` : ''}<span>↑ ${speed(t.upspeed)}</span><span>omjer ${t.ratio.toFixed(2)}</span>${t.category ? `<span class="tag">${esc(t.category)}</span>` : ''}</div></div>`; }).join('')
+    : '<div class="empty">Nema torrenata</div>';
+}
+function renderNzb() {
+  const el = $('#nzbList'); if (!state.cfg.nzbget) return;
+  if (state.err.nzbget) return el.innerHTML = `<div class="error">${esc(state.err.nzbget)}</div>`;
+  const gs = state.data.nzbget?.groups || [];
+  el.innerHTML = gs.length ? gs.map(g => { const p = g.FileSizeMB ? 1 - g.RemainingSizeMB / g.FileSizeMB : 0; const paused = /PAUSED/.test(g.Status); return `<div class="item">
+    <div class="t" title="${esc(g.NZBName)}">${esc(g.NZBName)}</div>
+    <div class="a"><button class="btn i" onclick="nzbAct('${paused ? 'resume' : 'pause'}',${g.NZBID})">${paused ? '▶' : '⏸'}</button>
+    <button class="btn i d" onclick="nzbDel(${g.NZBID})">✕</button></div>
+    <div class="bar"><i style="width:${p * 100}%"></i></div>
+    <div class="m"><span class="tag ${paused ? 'warn' : ''}">${esc(g.Status.toLowerCase())}</span><span class="mono">${(p * 100).toFixed(1)}%</span><span>${size(g.FileSizeMB * 1048576)}</span>${g.Category ? `<span class="tag">${esc(g.Category)}</span>` : ''}</div></div>`; }).join('')
+    : '<div class="empty">Red čekanja je prazan</div>';
+}
+function renderArrQueue(k) {
+  const el = $('#' + k + 'Queue'); if (!state.cfg[k]) return;
+  if (state.err[k]) return el.innerHTML = `<div class="error">${esc(state.err[k])}</div>`;
+  const q = state.data[k]?.queue || [];
+  el.innerHTML = q.length ? q.map(r => {
+    const p = r.size ? 1 - r.sizeleft / r.size : 0;
+    const title = k === 'radarr' ? (r.movie ? `${r.movie.title} (${r.movie.year})` : r.title) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.title);
+    const warn = r.trackedDownloadStatus && r.trackedDownloadStatus !== 'ok';
+    return `<div class="item" style="--c:${COLORS[k]}">
+    <div class="t" title="${esc(r.title)}">${esc(title)}</div>
+    <div class="a"><button class="btn i d" title="Ukloni" onclick="arrRemove('${k}',${r.id})">✕</button></div>
+    <div class="bar"><i style="width:${p * 100}%"></i></div>
+    <div class="m"><span class="tag ${warn ? 'warn' : ''}">${esc(r.trackedDownloadState || r.status)}</span><span class="mono">${(p * 100).toFixed(1)}%</span><span>${esc(r.protocol)}</span><span>${esc(r.downloadClient || '')}</span>${r.timeleft ? `<span>ETA ${tleft(r.timeleft)}</span>` : ''}
+    ${warn && r.statusMessages?.length ? `<span style="color:var(--warn)">${esc(r.statusMessages[0].messages?.[0] || r.statusMessages[0].title)}</span>` : ''}</div></div>`;
+  }).join('') : '<div class="empty">Prazno</div>';
+}
+
+function calendarEvents() {
+  const ev = [];
+  (state.data.radarr?.calendar || []).forEach(m => {
+    const opts = [['digitalRelease', 'digitalno'], ['physicalRelease', 'fizičko izdanje'], ['inCinemas', 'u kinima']];
+    for (const [f, lbl] of opts) if (m[f]) ev.push({ c: COLORS.radarr, date: new Date(m[f]), title: m.title, sub: `${m.year} · ${lbl}`, hasFile: m.hasFile });
+  });
+  (state.data.sonarr?.calendar || []).forEach(e => ev.push({ c: COLORS.sonarr, date: new Date(e.airDateUtc), title: e.series?.title || 'Serija', sub: `${ep(e)} · ${e.title || ''} · ${timeFmt.format(new Date(e.airDateUtc))}`, hasFile: e.hasFile }));
+  const from = new Date(); from.setDate(from.getDate() - 1); from.setHours(0,0,0,0);
+  const to = new Date(); to.setDate(to.getDate() + 15);
+  return ev.filter(e => e.date >= from && e.date <= to).sort((a, b) => a.date - b.date);
+}
+function renderCalendar() {
+  const byDay = {};
+  calendarEvents().forEach(e => { const k = e.date.toDateString(); (byDay[k] ||= []).push(e); });
+  const today = new Date().toDateString();
+  const keys = Object.keys(byDay);
+  $('#calGrid').innerHTML = keys.length ? keys.map(k => `<div class="day ${k === today ? 'today' : ''}"><h3>${dayFmt.format(new Date(k))}</h3>
+    ${byDay[k].map(e => `<div class="ev" style="--c:${e.c}">${esc(e.title)} ${e.hasFile ? '✓' : ''}<div class="muted">${esc(e.sub)}</div></div>`).join('')}</div>`).join('')
+    : '<div class="empty">Nema događaja</div>';
+}
+const EVT = { grabbed: ['preuzet', ''], downloadFolderImported: ['uvezen', 'ok'], episodeFileImported: ['uvezen', 'ok'], movieFileImported: ['uvezen', 'ok'], downloadFailed: ['neuspjeh', 'err'], movieFileDeleted: ['obrisan', 'warn'], episodeFileDeleted: ['obrisan', 'warn'], movieFileRenamed: ['preimenovan', ''], episodeFileRenamed: ['preimenovan', ''], downloadIgnored: ['ignoriran', 'warn'] };
+function renderHistory() {
+  for (const k of ['radarr', 'sonarr']) {
+    const el = $('#' + k + 'Hist'); if (!state.cfg[k]) continue;
+    const h = state.data[k]?.history || [];
+    el.innerHTML = h.length ? h.map(r => { const [l, c] = EVT[r.eventType] || [r.eventType, '']; const t = k === 'radarr' ? (r.movie?.title || r.sourceTitle) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.sourceTitle);
+      return `<div class="item"><div class="t" title="${esc(r.sourceTitle)}">${esc(t)}</div><div class="muted">${ago(r.date)}</div><div class="m"><span class="tag ${c}">${l}</span><span>${esc(r.quality?.quality?.name || '')}</span></div></div>`; }).join('') : '<div class="empty">Nema zapisa</div>';
+  }
+  if (state.cfg.nzbget) {
+    const h = state.data.nzbget?.history || [];
+    $('#nzbHist').innerHTML = h.length ? h.map(r => { const ok = /^SUCCESS/.test(r.Status); return `<div class="item"><div class="t" title="${esc(r.Name)}">${esc(r.Name)}</div><div class="muted">${ago(r.HistoryTime * 1000)}</div>
+      <div class="m"><span class="tag ${ok ? 'ok' : /FAILURE/.test(r.Status) ? 'err' : 'warn'}">${esc(r.Status.toLowerCase())}</span><span>${size(r.FileSizeMB * 1048576)}</span>${r.Category ? `<span class="tag">${esc(r.Category)}</span>` : ''}</div></div>`; }).join('') : '<div class="empty">Nema zapisa</div>';
+  }
+}
+
+// ---- akcije ----
+async function run(p, body, msg) { try { await api(p, body); toast(msg); setTimeout(refresh, 600); } catch (e) { toast('Greška: ' + e.message); } }
+const qbAct = (a, h) => run('qbittorrent/action', { action: a, hashes: [h] }, a === 'pause' ? 'Zaustavljeno' : 'Pokrenuto');
+const qbGlobal = a => run('qbittorrent/global', { action: a }, a === 'altspeed' ? 'Ograničenje brzine prebačeno' : 'Gotovo');
+function qbDel(h) { if (!confirm('Obrisati torrent?')) return; const files = confirm('Obrisati i datoteke s diska?'); run('qbittorrent/action', { action: 'delete', hashes: [h], deleteFiles: files }, 'Obrisano'); }
+const nzbAct = (a, id) => run('nzbget/action', { action: a, ids: id ? [id] : [] }, 'Gotovo');
+function nzbDel(id) { if (confirm('Obrisati iz reda čekanja?')) run('nzbget/action', { action: 'delete', ids: [id] }, 'Obrisano'); }
+function arrRemove(k, id) { if (!confirm('Ukloniti iz reda i iz download klijenta?')) return; const bl = confirm('Dodati na blocklist (neće se ponovno preuzeti)?'); run(k + '/queue/remove', { id, blocklist: bl }, 'Uklonjeno'); }
+const arrCmd = (k, name) => run(k + '/command', { name }, 'Naredba poslana');
+
+// ---- dodavanje ----
+let lastResults = [];
+async function loadOptions() {
+  const k = state.addType;
+  if (!state.cfg[k]) { $('#profileSel').innerHTML = $('#rootSel').innerHTML = ''; return; }
+  try {
+    const o = state.opts[k] ||= await api(k + '/options');
+    $('#profileSel').innerHTML = o.profiles.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('#rootSel').innerHTML = o.roots.map(r => `<option value="${esc(r.path)}">${esc(r.path)} (${size(r.free)})</option>`).join('');
+  } catch (e) { toast('Greška: ' + e.message); }
+}
+$('#addType').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+  state.addType = b.dataset.t; [...$('#addType').children].forEach(x => x.classList.toggle('on', x === b)); $('#results').innerHTML = ''; loadOptions(); };
+$('#searchForm').onsubmit = async e => {
+  e.preventDefault(); const term = $('#searchTerm').value.trim(); if (!term) return;
+  const k = state.addType; if (!state.cfg[k]) return toast(NAMES[k] + ' nije konfiguriran');
+  $('#results').innerHTML = '<div class="empty">Tražim…</div>';
+  try {
+    lastResults = await api(`${k}/lookup?term=${encodeURIComponent(term)}`);
+    $('#results').innerHTML = lastResults.length ? lastResults.slice(0, 24).map((r, i) => {
+      const poster = r.remotePoster || r.images?.find(x => x.coverType === 'poster')?.remoteUrl || '';
+      const exists = r.id > 0;
+      return `<div class="res"><img src="${esc(poster)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="info"><div><b>${esc(r.title)}</b> <span class="muted">${r.year || ''}</span></div>
+      <div class="muted" style="font-size:12px">${k === 'sonarr' ? `${r.seasonCount || r.seasons?.length || 0} sezona · ${esc(r.network || '')} · ${esc(r.status || '')}` : `${r.runtime ? r.runtime + ' min · ' : ''}${esc((r.genres || []).slice(0, 3).join(', '))}`}</div>
+      <div class="ov">${esc(r.overview || '')}</div>
+      <div class="act">${exists ? '<span class="tag ok">Već u knjižnici</span>' : `<button class="btn p" onclick="addItem(${i},true)">Dodaj i traži</button><button class="btn" onclick="addItem(${i},false)">Samo dodaj</button>`}</div></div></div>`;
+    }).join('') : '<div class="empty">Nema rezultata</div>';
+  } catch (e) { $('#results').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+};
+async function addItem(i, search) {
+  const k = state.addType;
+  try {
+    await api(k + '/add', { item: lastResults[i], qualityProfileId: Number($('#profileSel').value), rootFolderPath: $('#rootSel').value, search });
+    toast(`Dodano: ${lastResults[i].title}`); lastResults[i].id = 1; $('#searchForm').requestSubmit();
+  } catch (e) { toast('Greška: ' + e.message); }
+}
+
+// ---- navigacija ----
+function show(v) {
+  state.view = v;
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'v-' + v));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  if (v === 'add') loadOptions();
+  history.replaceState(null, '', '#' + v);
+}
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
+$('#qbFilter').onchange = e => { qbFilter = e.target.value; renderQb(); };
+
+(async () => {
+  state.cfg = await api('config');
+  document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
+  show(location.hash.slice(1) || 'overview');
+  await refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+})();
+</script>
+</body>
+</html>
