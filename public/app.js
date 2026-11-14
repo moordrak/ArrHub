@@ -478,7 +478,7 @@ $('#aboutCheck').onclick = () => loadAbout(true);
 const { THEMES, BACKGROUNDS, applyTheme, Bg } = Appearance;
 Bg.mediaLoader = () => api('media');
 const BG_ICONS = { none: '∅', aurora: '◐', stars: '✦', particles: '⁘', waves: '≈', posters: '▦', fanart: '▣' };
-const themeName = (id, th) => (['auto', 'dark', 'oled', 'light'].includes(id) ? t('theme.' + id) : th.name);
+const themeName = (id, th) => (['auto', 'dark', 'oled', 'light', 'pastel-lavender', 'pastel-peach'].includes(id) ? t('theme.' + id) : th.name);
 $('#themeList').innerHTML = [['auto', { auto: true }], ...Object.entries(THEMES)].map(([id, th]) => {
   const pv = th.auto
     ? `<div class="pv" style="background:linear-gradient(90deg,${THEMES.light.bg} 50%,${THEMES.dark.bg} 50%)"><i style="background:linear-gradient(90deg,${THEMES.light.panel} 50%,${THEMES.dark.panel} 50%)"></i><b style="background:${THEMES.dark.accent}"></b></div>`

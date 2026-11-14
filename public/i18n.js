@@ -69,7 +69,7 @@
       'set.cardIconsTitle': 'Service icons on cards', 'set.cardIcons': 'Show a large service icon behind each card', 'set.iconStrength': 'Strength',
       'set.iconReload': 'Reload icons', 'set.iconOfficial': 'official icon', 'set.iconGeneric': 'generic icon',
       // themes & backgrounds
-      'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light',
+      'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light', 'theme.pastel-lavender': 'Pastel Lavender', 'theme.pastel-peach': 'Pastel Peach',
       'bg.none': 'No background', 'bg.aurora': 'Aurora', 'bg.stars': 'Starfield', 'bg.particles': 'Particle network', 'bg.waves': 'Waves',
       'bg.posters': 'Poster wall', 'bg.fanart': 'Library images',
       'bg.noPosters': 'No posters in the library', 'bg.noImages': 'No images in the library', 'bg.postersFail': 'Posters cannot be loaded',
@@ -131,7 +131,7 @@
       'about.checkFailed': 'Provjera ažuriranja nije uspjela: {msg}', 'about.dev': 'Razvojna verzija',
       'set.cardIconsTitle': 'Ikone servisa na karticama', 'set.cardIcons': 'Prikaži veliku ikonu servisa iza svake kartice', 'set.iconStrength': 'Jačina',
       'set.iconReload': 'Ponovno učitaj ikone', 'set.iconOfficial': 'službena ikona', 'set.iconGeneric': 'generička ikona',
-      'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla',
+      'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla', 'theme.pastel-lavender': 'Pastel lavanda', 'theme.pastel-peach': 'Pastel breskva',
       'bg.none': 'Bez pozadine', 'bg.aurora': 'Aurora', 'bg.stars': 'Zvjezdano nebo', 'bg.particles': 'Mreža čestica', 'bg.waves': 'Valovi',
       'bg.posters': 'Zid postera', 'bg.fanart': 'Slike iz knjižnice',
       'bg.noPosters': 'Nema postera u knjižnici', 'bg.noImages': 'Nema slika u knjižnici', 'bg.postersFail': 'Posteri se ne mogu učitati',

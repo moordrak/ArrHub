@@ -13,6 +13,10 @@
     gruvbox:   { name: 'Gruvbox',          scheme: 'dark',  bg: '#1d2021', panel: '#282828', panel2: '#32302f', line: '#3c3836', text: '#ebdbb2', muted: '#a89984', accent: '#fabd2f' },
     matrix:    { name: 'Matrix',           scheme: 'dark',  bg: '#000000', panel: '#020d05', panel2: '#04170a', line: '#0b3318', text: '#b9ffc9', muted: '#4fc56d', accent: '#00ff41' },
     neon:      { name: 'Neon',             scheme: 'dark',  bg: '#03060f', panel: '#08101f', panel2: '#0d182d', line: '#1c2c52', text: '#eef3ff', muted: '#9fb0d9', accent: '#d61ad6', glow: true },
+    'pastel-lavender': { name: 'Pastel Lavender', scheme: 'light', bg: '#e9defb', panel: '#f8f3ff', panel2: '#ece2fd', line: '#d6c6f3', text: '#2a2340', muted: '#5f5480', accent: '#7445e0', tint: true,
+      svc: { radarr: '#ffc93c', sonarr: '#4fbdf2', nzb: '#6fd47a', qb: '#7f9dff', seerr: '#b38cff' }, status: { ok: '#2f8a55', warn: '#9a6a1c', err: '#b33a52' } },
+    'pastel-peach':    { name: 'Pastel Peach',    scheme: 'light', bg: '#ffe1d3', panel: '#fff5ef', panel2: '#ffe8dd', line: '#f6cdb9', text: '#3a2420', muted: '#76524a', accent: '#d0386c', tint: true,
+      svc: { radarr: '#ffc93c', sonarr: '#4fbdf2', nzb: '#6fd47a', qb: '#7f9dff', seerr: '#b38cff' }, status: { ok: '#2f8a55', warn: '#9a6a1c', err: '#b33a52' } },
     solarized: { name: 'Solarized',        scheme: 'dark',  bg: '#002b36', panel: '#073642', panel2: '#0a4150', line: '#124b5a', text: '#eee8d5', muted: '#93a1a1', accent: '#b58900' },
   };
   const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
@@ -25,6 +29,7 @@
     if (id === 'auto') return matchMedia('(prefers-color-scheme: light)').matches ? THEMES.light : THEMES.dark;
     return THEMES[id] || THEMES.dark;
   }
+  const OPTIONAL_VARS = ['--radarr', '--sonarr', '--nzb', '--qb', '--seerr', '--ok', '--warn', '--err'];
   let current = { theme: 'dark', accent: '' };
   function applyTheme(id, accent) {
     current = { theme: id, accent: accent || '' };
@@ -32,12 +37,19 @@
     const acc = /^#[0-9a-f]{6}$/i.test(accent || '') ? accent : t.accent;
     const vars = { '--bg': t.bg, '--panel': t.panel, '--panel2': t.panel2, '--line': t.line, '--text': t.text, '--muted': t.muted,
       '--accent': acc, '--on-accent': (lum(acc) + .05) / (lum('#111111') + .05) >= 1.05 / (lum(acc) + .05) ? '#111111' : '#ffffff' };
+    // optional per-theme service and status colours (pastel themes); other themes fall back to the stylesheet
+    const extra = {};
+    for (const [k, v] of Object.entries(t.svc || {})) extra['--' + k] = v;
+    for (const [k, v] of Object.entries(t.status || {})) extra['--' + k] = v;
+    Object.assign(vars, extra);
     const root = document.documentElement;
+    for (const k of OPTIONAL_VARS) if (!(k in vars)) root.style.removeProperty(k);
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     root.style.colorScheme = t.scheme;
     root.dataset.scheme = t.scheme;
     root.dataset.glow = t.glow ? '1' : '';   // neon glow (CSS in index.html), only for themes that ask for it
-    try { localStorage.setItem('arrhub-theme', JSON.stringify({ vars, scheme: t.scheme, glow: !!t.glow })); } catch {}
+    root.dataset.tint = t.tint ? '1' : '';   // tinted cards (pastel themes)
+    try { localStorage.setItem('arrhub-theme', JSON.stringify({ vars, scheme: t.scheme, glow: !!t.glow, tint: !!t.tint })); } catch {}
     Bg.refreshColors();
   }
   matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (current.theme === 'auto') applyTheme('auto', current.accent); });

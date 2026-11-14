@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#0f1115">
-<script>try{const t=JSON.parse(localStorage.getItem('arrhub-theme'));if(t){for(const k in t.vars)document.documentElement.style.setProperty(k,t.vars[k]);document.documentElement.style.colorScheme=t.scheme;document.documentElement.dataset.scheme=t.scheme;document.documentElement.dataset.glow=t.glow?'1':''}}catch(e){}</script>
+<script>try{const t=JSON.parse(localStorage.getItem('arrhub-theme'));if(t){for(const k in t.vars)document.documentElement.style.setProperty(k,t.vars[k]);document.documentElement.style.colorScheme=t.scheme;document.documentElement.dataset.scheme=t.scheme;document.documentElement.dataset.glow=t.glow?'1':'';document.documentElement.dataset.tint=t.tint?'1':''}}catch(e){}</script>
 <style>
 :root{
   --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
@@ -89,6 +89,19 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none}
 #toast.show{opacity:1}
 .hidden{display:none!important}
+/* tinted cards – only for themes with tint: true (pastel themes) */
+[data-tint="1"] .card[data-icon=radarr],[data-tint="1"] .card[data-svc=radarr]{--tc:var(--radarr)}
+[data-tint="1"] .card[data-icon=sonarr],[data-tint="1"] .card[data-svc=sonarr]{--tc:var(--sonarr)}
+[data-tint="1"] .card[data-icon=nzbget],[data-tint="1"] .card[data-svc=nzbget]{--tc:var(--nzb)}
+[data-tint="1"] .card[data-icon=qbittorrent],[data-tint="1"] .card[data-svc=qbittorrent]{--tc:var(--qb)}
+[data-tint="1"] .card[data-icon=seerr],[data-tint="1"] .card[data-svc=seerr]{--tc:var(--seerr)}
+[data-tint="1"] .card{background:color-mix(in srgb,var(--tc,var(--accent)) 10%,var(--panel))}
+[data-tint="1"] .card[data-icon],[data-tint="1"] .card[data-svc]{background:color-mix(in srgb,var(--tc) 14%,var(--panel))}
+[data-tint="1"] .card.svc{background:color-mix(in srgb,var(--tc) 22%,var(--panel));border-color:color-mix(in srgb,var(--tc) 45%,var(--line))}
+[data-tint="1"] header{background:color-mix(in srgb,var(--accent) 12%,var(--bg))}
+[data-tint="1"] nav button.on{background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
+[data-tint="1"] .bar{background:color-mix(in srgb,var(--c,var(--accent)) 18%,var(--panel2))}
+[data-tint="1"] .health{background:color-mix(in srgb,var(--warn) 18%,var(--panel))}
 /* neon glow – only for themes with glow: true (Neon) */
 [data-glow="1"] .card{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 28%,transparent),0 0 22px -6px color-mix(in srgb,var(--accent) 55%,transparent)}
 [data-glow="1"] .card.svc{box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent),0 0 24px -6px color-mix(in srgb,var(--c) 60%,transparent)}
