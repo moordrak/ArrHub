@@ -27,9 +27,39 @@ Usluge koje ne trebaš samo izbriši iz `config.json` – sučelje ih sakrije.
 Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
 SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS`.
 
-### Proxmox LXC (Debian/Ubuntu)
+### Proxmox — automatska instalacija (preporučeno)
+Na Proxmox hostu, kao root:
 ```bash
-apt install -y nodejs        # ili NodeSource za noviju verziju (treba 18+)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/proxmox/arrhub-lxc.sh)"
+```
+Skripta pita za postavke kontejnera (ID, RAM, disk, storage, bridge, VLAN, statična IP ili DHCP) i
+za adrese i ključeve usluga. Zatim stvara neprivilegirani Debian LXC (Debian 13 na PVE 9+, inače 12),
+instalira Node.js i ArrHub te ga pokreće kao systemd servis. Usluge koje ne koristiš preskoči s Enter.
+
+Bez pitanja, npr. za automatizaciju:
+```bash
+NONINTERACTIVE=1 CTID=120 CT_IP=192.168.1.50/24 CT_GW=192.168.1.1 \
+RADARR_URL=http://192.168.1.10:7878 RADARR_KEY=xxx \
+QBIT_URL=http://192.168.1.10:8080 QBIT_USER=admin QBIT_PASS=xxx \
+bash proxmox/arrhub-lxc.sh
+```
+Varijable kontejnera: `CTID, CT_NAME, CT_CORES, CT_RAM, CT_DISK, CT_STORAGE, TPL_STORAGE, CT_BRIDGE, CT_VLAN, CT_IP, CT_GW, CT_PASS`.
+
+### Postojeći LXC ili Debian/Ubuntu poslužitelj
+Unutar kontejnera ili na poslužitelju, kao root:
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/install.sh)"
+```
+Instalira u `/opt/arrhub`, stvara korisnika `arrhub` i servis `arrhub.service`.
+
+### Nadogradnja
+Ponovno pokreni `install.sh` (postojeći `config.json` se zadržava). S Proxmox hosta:
+```bash
+pct exec <CTID> -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/install.sh)"
+```
+
+### Ručno (systemd)
+```bash
 useradd -r -s /usr/sbin/nologin arrhub
 mkdir -p /opt/arrhub && cp -r server.js public config.json /opt/arrhub/
 chown -R arrhub: /opt/arrhub && chmod 600 /opt/arrhub/config.json
