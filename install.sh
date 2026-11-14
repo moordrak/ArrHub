@@ -5,7 +5,8 @@
 #
 # Ponovno pokretanje nadograđuje ArrHub i zadržava postojeći /opt/arrhub/config.json.
 # Bez pitanja: postavi varijable (PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-# SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS)
+# SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS,
+# SEERR_URL, SEERR_KEY)
 # i NONINTERACTIVE=1.
 set -euo pipefail
 
@@ -89,9 +90,11 @@ else
   [[ -n "${NZBGET_URL:-}" ]] && { ask NZBGET_USER "NZBGet korisnik" nzbget; ask NZBGET_PASS "NZBGet lozinka" "" secret; }
   nl; ask QBIT_URL "qBittorrent URL (npr. http://192.168.1.10:8080)"
   [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent korisnik" admin; ask QBIT_PASS "qBittorrent lozinka" "" secret; }
+  nl; ask SEERR_URL "Seerr URL (npr. http://192.168.1.10:5055)"
+  [[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API ključ"
 
   export PORT ARRHUB_USER ARRHUB_PASS RADARR_URL RADARR_KEY SONARR_URL SONARR_KEY \
-         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS
+         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS SEERR_URL SEERR_KEY
   node -e '
     const e = process.env, s = (u, o) => (u ? { url: u, ...o } : undefined);
     const cfg = {
@@ -101,6 +104,7 @@ else
       sonarr: s(e.SONARR_URL, { apiKey: e.SONARR_KEY || "" }),
       nzbget: s(e.NZBGET_URL, { user: e.NZBGET_USER || "", pass: e.NZBGET_PASS || "" }),
       qbittorrent: s(e.QBIT_URL, { user: e.QBIT_USER || "", pass: e.QBIT_PASS || "" }),
+      seerr: s(e.SEERR_URL, { apiKey: e.SEERR_KEY || "" }),
     };
     require("fs").writeFileSync(process.argv[1], JSON.stringify(cfg, null, 2) + "\n");
   ' "$APP_DIR/config.json"

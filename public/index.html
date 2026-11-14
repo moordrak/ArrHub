@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
-  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;
+  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;--seerr:#8b7cf6;
   --ok:#4caf7a;--warn:#e0a63a;--err:#e05a5a;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
@@ -26,10 +26,10 @@ nav button.on{color:var(--text);background:var(--panel2)}
 .speeds b{color:var(--text);font-weight:600}
 main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 .grid{display:grid;gap:16px}
-.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media(max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
-@media(max-width:560px){.g4{grid-template-columns:1fr}header{flex-wrap:wrap}.speeds{margin-left:0}}
+@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+@media(max-width:560px){header{flex-wrap:wrap}.speeds{margin-left:0}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
 .card h2{margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);display:flex;align-items:center;gap:8px}
 .card h2 .sp{flex:1}
@@ -83,7 +83,19 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none}
 #toast.show{opacity:1}
 .hidden{display:none!important}
-[data-scheme=light]{--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
+.req{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+body.has-bg .req{background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(14px)}
+.req img,.req .np{width:62px;height:93px;object-fit:cover;border-radius:6px;background:var(--panel2);flex:none}
+.req .info{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
+.req .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.req .act{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap}
+.btn.ok:hover{border-color:var(--ok);color:var(--ok)}
+.reqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.counts{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.counts b{color:var(--text);font-family:var(--mono)}
+.svc .link{margin-top:10px}
+[data-scheme=light]{--seerr:#6d5bd0;--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
 body{transition:background-color .3s}
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 #bg canvas,#bg .bg-img,#bg .bg-shade{position:absolute;inset:0;transition:opacity .6s}
@@ -140,6 +152,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
     <button data-v="downloads">Preuzimanja</button>
     <button data-v="calendar">Kalendar</button>
     <button data-v="history">Povijest</button>
+    <button data-v="requests" data-svc="seerr">Zahtjevi</button>
     <button data-v="add">Dodaj</button>
     <button data-v="settings">⚙ Postavke</button>
   </nav>
@@ -189,6 +202,24 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
         <div class="list" id="sonarrQueue"></div>
       </div>
     </div>
+  </section>
+
+  <!-- ZAHTJEVI (Seerr) -->
+  <section id="v-requests" class="hidden">
+    <div class="card" style="margin-bottom:16px;border-top:3px solid var(--seerr)">
+      <h2><span class="dot" style="background:var(--seerr)"></span>Seerr zahtjevi<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0" id="seerrVer"></span></h2>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <div class="seg" id="reqFilter">
+          <button type="button" data-f="pending" class="on">Na čekanju</button>
+          <button type="button" data-f="all">Svi</button>
+          <button type="button" data-f="processing">U obradi</button>
+          <button type="button" data-f="available">Dostupni</button>
+          <button type="button" data-f="declined">Odbijeni</button>
+        </div>
+        <div class="counts" id="reqCounts"></div>
+      </div>
+    </div>
+    <div class="reqs" id="reqList"></div>
   </section>
 
   <!-- KALENDAR -->
@@ -273,6 +304,12 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
           </div>
           <div class="test"><button type="button" class="btn" data-test="nzbget">Testiraj vezu</button><span class="r"></span></div>
         </div>
+        <div class="card" style="border-top:3px solid var(--seerr)">
+          <h2><span class="dot" style="background:var(--seerr)"></span>Seerr</h2>
+          <div class="field"><label>URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
+          <div class="field"><label>API ključ</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
+          <div class="test"><button type="button" class="btn" data-test="seerr">Testiraj vezu</button><span class="r"></span></div>
+        </div>
         <div class="card">
           <h2>Općenito</h2>
           <div class="row2">
@@ -302,8 +339,10 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {} };
-const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)' };
-const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent' };
+const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)' };
+const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr' };
+const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
+state.seerrFilter = 'pending';
 
 // ---- formatiranje ----
 function size(b) { if (!b && b !== 0) return '–'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return b.toFixed(i > 1 ? 1 : 0) + ' ' + u[i]; }
@@ -327,8 +366,8 @@ async function api(path, body) {
 
 // ---- dohvat podataka ----
 async function refresh() {
-  await Promise.all(['radarr','sonarr','nzbget','qbittorrent'].filter(k => state.cfg[k]).map(async k => {
-    try { state.data[k] = await api(k); delete state.err[k]; }
+  await Promise.all(SVCS.filter(k => state.cfg[k]).map(async k => {
+    try { state.data[k] = await api(k === 'seerr' ? `seerr?filter=${state.seerrFilter}` : k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
   }));
   render();
@@ -338,7 +377,7 @@ async function refresh() {
 function render() {
   renderSpeeds(); renderCards(); renderOverview();
   renderQb(); renderNzb(); renderArrQueue('radarr'); renderArrQueue('sonarr');
-  renderCalendar(); renderHistory();
+  renderCalendar(); renderHistory(); renderRequests();
 }
 
 function renderSpeeds() {
@@ -380,6 +419,12 @@ function renderCards() {
   }));
   if (state.cfg.nzbget) out.push(svcCard('nzbget', d => `<div class="big">${speed(d.status.DownloadRate)}</div><div class="sub">${d.status.DownloadPaused ? '<span class="tag warn">Pauzirano</span>' : 'aktivno'}</div>
     <div class="row"><span>U redu</span><span>${d.groups.length}</span></div><div class="row"><span>Preostalo</span><span>${size(d.status.RemainingSizeMB * 1048576)}</span></div><div class="row"><span>Slobodno na disku</span><span>${size(d.status.FreeDiskSpaceMB * 1048576)}</span></div>`));
+  if (state.cfg.seerr) out.push(svcCard('seerr', d => {
+    const c = d.count || {};
+    return `<div class="big">${c.pending ?? 0}</div><div class="sub">zahtjeva na čekanju${d.updateAvailable ? ' · <span class="tag warn">nova verzija</span>' : ''}</div>
+    <div class="row"><span>Odobreno</span><span>${c.approved ?? 0}</span></div><div class="row"><span>U obradi</span><span>${c.processing ?? 0}</span></div><div class="row"><span>Dostupno</span><span>${c.available ?? 0}</span></div>
+    <div class="link"><button class="btn" onclick="show('requests')">Otvori zahtjeve</button></div>`;
+  }));
   $('#svcCards').innerHTML = out.join('');
 }
 
@@ -497,6 +542,56 @@ function renderHistory() {
       <div class="m"><span class="tag ${ok ? 'ok' : /FAILURE/.test(r.Status) ? 'err' : 'warn'}">${esc(r.Status.toLowerCase())}</span><span>${size(r.FileSizeMB * 1048576)}</span>${r.Category ? `<span class="tag">${esc(r.Category)}</span>` : ''}</div></div>`; }).join('') : '<div class="empty">Nema zapisa</div>';
   }
 }
+
+// ---- Seerr zahtjevi ----
+const REQ_STATUS = { 1: ['na čekanju', 'warn'], 2: ['odobreno', 'ok'], 3: ['odbijeno', 'err'], 4: ['neuspjelo', 'err'], 5: ['završeno', 'ok'] };
+const MEDIA_STATUS = { 2: ['čeka preuzimanje', ''], 3: ['preuzima se', ''], 4: ['djelomično dostupno', 'warn'], 5: ['dostupno', 'ok'], 6: ['obrisano', 'err'], 7: ['obrisano', 'err'] };
+function seasonsText(arr) {
+  if (!arr?.length) return '';
+  // 1,2,3,5 -> S1–3, S5
+  const out = []; let a = arr[0], b = arr[0];
+  for (const n of [...arr.slice(1), null]) { if (n === b + 1) { b = n; continue; } out.push(a === b ? `S${a}` : `S${a}–${b}`); a = b = n; }
+  return out.join(', ');
+}
+function renderRequests() {
+  if (!state.cfg.seerr) return;
+  const el = $('#reqList');
+  if (state.err.seerr) { el.innerHTML = `<div class="error">${esc(state.err.seerr)}</div>`; return; }
+  const d = state.data.seerr; if (!d) { el.innerHTML = '<div class="empty">Učitavanje…</div>'; return; }
+  if (d.filter !== state.seerrFilter) return; // stari odgovor nakon promjene filtera
+  $('#seerrVer').textContent = d.version || '';
+  const c = d.count || {};
+  $('#reqCounts').innerHTML = `<span>Ukupno <b>${c.total ?? 0}</b></span><span>Na čekanju <b>${c.pending ?? 0}</b></span><span>Odobreno <b>${c.approved ?? 0}</b></span><span>Dostupno <b>${c.available ?? 0}</b></span><span>Odbijeno <b>${c.declined ?? 0}</b></span>`;
+  el.innerHTML = d.requests.length ? d.requests.map(r => {
+    const [rs, rc] = REQ_STATUS[r.status] || [String(r.status), ''];
+    const ms = r.status === 2 && MEDIA_STATUS[r.mediaStatus];
+    return `<div class="req">
+      ${r.poster ? `<img src="${esc(r.poster)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'np'}))">` : '<div class="np"></div>'}
+      <div class="info">
+        <div class="t" title="${esc(r.title)}">${esc(r.title)} <span class="muted" style="font-weight:400">${esc(r.year || '')}</span></div>
+        <div class="m"><span class="tag">${r.type === 'tv' ? 'Serija' : 'Film'}</span>${r.is4k ? '<span class="tag">4K</span>' : ''}${r.type === 'tv' && r.seasons.length ? `<span>${seasonsText(r.seasons)}</span>` : ''}</div>
+        <div class="m"><span class="tag ${rc}">${rs}</span>${ms ? `<span class="tag ${ms[1]}">${ms[0]}</span>` : ''}</div>
+        <div class="m">${esc(r.requestedBy)}${r.createdAt ? ` · ${ago(r.createdAt)}` : ''}</div>
+        <div class="act">
+          ${r.status === 1 ? `<button class="btn ok" onclick="seerrAct(${r.id},'approve')">✓ Odobri</button><button class="btn d" onclick="seerrAct(${r.id},'decline')">✕ Odbij</button>` : ''}
+          <button class="btn d" title="Obriši zahtjev" onclick="seerrAct(${r.id},'delete')">Obriši</button>
+        </div>
+      </div></div>`;
+  }).join('') : `<div class="empty">${state.seerrFilter === 'pending' ? 'Nema zahtjeva na čekanju 🎉' : 'Nema zahtjeva'}</div>`;
+}
+function seerrAct(id, action) {
+  if (action === 'delete' && !confirm('Obrisati zahtjev? (sadržaj u Radarru/Sonarru ostaje)')) return;
+  if (action === 'decline' && !confirm('Odbiti zahtjev?')) return;
+  run('seerr/action', { id, action }, { approve: 'Zahtjev odobren', decline: 'Zahtjev odbijen', delete: 'Zahtjev obrisan' }[action]);
+}
+$('#reqFilter').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.seerrFilter = b.dataset.f;
+  [...$('#reqFilter').children].forEach(x => x.classList.toggle('on', x === b));
+  $('#reqList').innerHTML = '<div class="empty">Učitavanje…</div>';
+  try { state.data.seerr = await api(`seerr?filter=${state.seerrFilter}`); delete state.err.seerr; } catch (err) { state.err.seerr = err.message; }
+  renderRequests(); renderCards();
+};
 
 // ---- akcije ----
 async function run(p, body, msg) { try { await api(p, body); toast(msg); setTimeout(refresh, 600); } catch (e) { toast('Greška: ' + e.message); } }
@@ -682,7 +777,7 @@ let timer;
 async function applyConfig() {
   state.cfg = await api('config');
   applyUi(state.cfg.ui);
-  const any = ['radarr','sonarr','nzbget','qbittorrent'].some(k => state.cfg[k]);
+  const any = SVCS.some(k => state.cfg[k]);
   $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
   clearInterval(timer);

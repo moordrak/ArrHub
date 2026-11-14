@@ -1,4 +1,4 @@
-// ArrHub — jedinstveno sučelje za Radarr, Sonarr, NZBGet i qBittorrent
+// ArrHub — jedinstveno sučelje za Radarr, Sonarr, NZBGet, qBittorrent i Seerr
 // Bez vanjskih ovisnosti, potreban Node.js 18+
 'use strict';
 
@@ -8,7 +8,7 @@ const path = require('path');
 
 // ---------- Konfiguracija ----------
 const CONFIG_FILE = process.env.ARRHUB_CONFIG || path.join(__dirname, 'config.json');
-const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent'];
+const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
 const MASK = '********';
 // [odjeljak, polje, varijabla okruženja, tajno?]
 const FIELDS = [
@@ -18,6 +18,7 @@ const FIELDS = [
   ['sonarr', 'url', 'SONARR_URL'], ['sonarr', 'apiKey', 'SONARR_KEY', true],
   ['nzbget', 'url', 'NZBGET_URL'], ['nzbget', 'user', 'NZBGET_USER'], ['nzbget', 'pass', 'NZBGET_PASS', true],
   ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
+  ['seerr', 'url', 'SEERR_URL'], ['seerr', 'apiKey', 'SEERR_KEY', true],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'],
 ];
@@ -88,7 +89,7 @@ function validate(c) {
     if (!/^https?:$/.test(p.protocol)) throw new Error(`${k}: URL mora počinjati s http:// ili https://`);
     c[k].url = u.replace(/\/+$/, '');
   }
-  if ((c.radarr?.url && !c.radarr.apiKey) || (c.sonarr?.url && !c.sonarr.apiKey)) throw new Error('Radarr/Sonarr trebaju API ključ');
+  for (const k of ['radarr', 'sonarr', 'seerr']) if (c[k]?.url && !c[k].apiKey) throw new Error(`${k[0].toUpperCase() + k.slice(1)} treba API ključ`);
   if (c.auth?.user && !c.auth.pass) throw new Error('Za prijavu u ArrHub treba i lozinka');
   if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error('Neispravan port'); c.port = n; }
   if (c.refresh !== undefined) c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
@@ -133,6 +134,11 @@ async function testService(service, values) {
   if (service === 'qbittorrent') {
     const client = makeQb(() => s);
     return { message: `qBittorrent ${await client.call('/app/version')}` };
+  }
+  if (service === 'seerr') {
+    const client = makeSeerr(() => s);
+    const [st, me] = await Promise.all([client.call('/status'), client.call('/auth/me')]);
+    return { message: `Seerr ${st.version || ''} · ${me.displayName || me.username || me.email || 'korisnik'}` };
   }
   return { message: `NZBGet ${await makeNzb(() => s).rpc('version')}` };
 }
@@ -283,6 +289,73 @@ function makeNzb(conf) { return {
 }; }
 const nzb = makeNzb(() => cfg.nzbget);
 
+// ---------- Seerr (Overseerr/Jellyseerr API v1) ----------
+const seerrMeta = new Map(); // 'movie:123' -> { title, year, poster, at }
+const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'declined', 'completed', 'deleted'];
+function makeSeerr(conf) {
+  const call = (p, opts = {}) => {
+    const c = conf();
+    return json(`${c.url}/api/v1${p}`, { ...opts, headers: { 'X-Api-Key': c.apiKey, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  };
+  async function meta(type, tmdbId) {
+    const key = `${type}:${tmdbId}`;
+    const hit = seerrMeta.get(key);
+    if (hit && Date.now() - hit.at < 24 * 3600e3) return hit;
+    try {
+      const d = await call(`/${type === 'tv' ? 'tv' : 'movie'}/${tmdbId}`);
+      const date = d.releaseDate || d.firstAirDate || '';
+      const m = { title: d.title || d.name || d.originalTitle || d.originalName || `TMDB ${tmdbId}`, year: date.slice(0, 4), poster: d.posterPath || null, at: Date.now() };
+      seerrMeta.set(key, m);
+      if (seerrMeta.size > 3000) seerrMeta.delete(seerrMeta.keys().next().value);
+      return m;
+    } catch { return { title: `TMDB ${tmdbId}`, year: '', poster: null, at: 0 }; }
+  }
+  function posterUrl(path) {
+    if (!path) return null;
+    const id = hashId('seerr' + path);
+    coverMap.set(id, { svc: 'seerr', local: null, remote: `https://image.tmdb.org/t/p/w154${path}`, kind: 'poster' });
+    return `/api/cover/${id}`;
+  }
+  return {
+    call,
+    async summary(filter = 'all') {
+      if (!SEERR_FILTERS.includes(filter)) filter = 'all';
+      const [status, count, list] = await Promise.all([
+        call('/status').catch(() => ({})),
+        call('/request/count').catch(() => ({})),
+        call(`/request?take=40&skip=0&sort=added&filter=${filter}`),
+      ]);
+      const results = list.results || [];
+      // naslove i postere dohvaćamo zasebno (najviše 6 istovremeno), uz 24 h međuspremnik
+      const metas = new Array(results.length);
+      let i = 0;
+      await Promise.all(Array.from({ length: Math.min(6, results.length) }, async () => {
+        while (i < results.length) {
+          const n = i++; const r = results[n];
+          metas[n] = r.media?.tmdbId ? await meta(r.type || r.media.mediaType, r.media.tmdbId) : { title: 'Nepoznato' };
+        }
+      }));
+      const requests = results.map((r, n) => ({
+        id: r.id, type: r.type || r.media?.mediaType, status: r.status, mediaStatus: r.media?.status,
+        is4k: !!r.is4k, createdAt: r.createdAt,
+        seasons: (r.seasons || []).map(x => x.seasonNumber).sort((a, b) => a - b),
+        requestedBy: r.requestedBy?.displayName || r.requestedBy?.username || r.requestedBy?.email || '',
+        title: metas[n].title, year: metas[n].year, poster: posterUrl(metas[n].poster),
+        tmdbId: r.media?.tmdbId,
+      }));
+      return { version: status.version || '', updateAvailable: !!status.updateAvailable, count, filter, total: list.pageInfo?.results ?? requests.length, requests };
+    },
+    action(id, action) {
+      id = Number(id);
+      if (!Number.isInteger(id)) throw new Error('Neispravan ID');
+      if (action === 'approve' || action === 'decline') return call(`/request/${id}/${action}`, { method: 'POST' });
+      if (action === 'delete') return call(`/request/${id}`, { method: 'DELETE' });
+      throw new Error('Nepoznata akcija');
+    },
+  };
+}
+const seerr = makeSeerr(() => cfg.seerr);
+
 // ---------- Slike iz knjižnice (pozadine) ----------
 // Klijent dobiva samo /api/cover/<id>; stvarne adrese (lokalni MediaCover + udaljeni TMDB/TVDB) ostaju na poslužitelju.
 const mediaCache = { at: 0, data: null, pending: null };
@@ -390,6 +463,7 @@ function friendlyError(e) {
   if (net) return net;
   if (e.message === 'fetch failed') return 'Povezivanje nije uspjelo' + (e.cause?.message ? ` (${e.cause.message})` : '');
   if (/^401\b/.test(e.message)) return 'Neispravan API ključ ili korisničko ime/lozinka (401)';
+  if (/^403\b/.test(e.message)) return 'Pristup odbijen – provjeri API ključ (403)';
   if (/^404\b/.test(e.message)) return 'Nije pronađeno (404) – provjeri URL i URL Base';
   return e.message;
 }
@@ -418,7 +492,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent'), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui }),
+  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
@@ -428,6 +502,8 @@ const routes = {
   'GET /api/sonarr': () => arr('sonarr').summary(),
   'GET /api/qbittorrent': () => qb.summary(),
   'GET /api/nzbget': () => nzb.summary(),
+  'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all'),
+  'POST /api/seerr/action': (q, b) => seerr.action(b.id, b.action),
   'GET /api/:arr/lookup': (q, b, p) => arr(p.arr).lookup(q.get('term') || ''),
   'GET /api/:arr/options': (q, b, p) => arr(p.arr).options(),
   'POST /api/:arr/add': (q, b, p) => arr(p.arr).add(b.item, b.qualityProfileId, b.rootFolderPath, b.search),

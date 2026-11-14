@@ -63,6 +63,8 @@ ask NZBGET_URL "NZBGet URL (npr. http://192.168.1.10:6789)"
 [[ -n "${NZBGET_URL:-}" ]] && { ask NZBGET_USER "NZBGet korisnik" nzbget; ask NZBGET_PASS "NZBGet lozinka" "" secret; }
 ask QBIT_URL "qBittorrent URL (npr. http://192.168.1.10:8080)"
 [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent korisnik" admin; ask QBIT_PASS "qBittorrent lozinka" "" secret; }
+ask SEERR_URL "Seerr URL (npr. http://192.168.1.10:5055)"
+[[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API ključ"
 echo
 
 # ---------- predložak ----------
@@ -126,6 +128,7 @@ pct exec "$CTID" -- env NONINTERACTIVE=1 \
   SONARR_URL="${SONARR_URL:-}" SONARR_KEY="${SONARR_KEY:-}" \
   NZBGET_URL="${NZBGET_URL:-}" NZBGET_USER="${NZBGET_USER:-}" NZBGET_PASS="${NZBGET_PASS:-}" \
   QBIT_URL="${QBIT_URL:-}" QBIT_USER="${QBIT_USER:-}" QBIT_PASS="${QBIT_PASS:-}" \
+  SEERR_URL="${SEERR_URL:-}" SEERR_KEY="${SEERR_KEY:-}" \
   bash /root/arrhub-src/install.sh
 pct exec "$CTID" -- rm -rf /root/arrhub-src
 

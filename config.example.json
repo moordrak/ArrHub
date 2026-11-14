@@ -1,8 +1,29 @@
 {
   "port": 8686,
-  "auth": { "user": "", "pass": "" },
-  "radarr":      { "url": "http://192.168.1.10:7878", "apiKey": "RADARR_API_KLJUC" },
-  "sonarr":      { "url": "http://192.168.1.10:8989", "apiKey": "SONARR_API_KLJUC" },
-  "nzbget":      { "url": "http://192.168.1.10:6789", "user": "nzbget", "pass": "tajna" },
-  "qbittorrent": { "url": "http://192.168.1.10:8080", "user": "admin", "pass": "tajna" }
+  "auth": {
+    "user": "",
+    "pass": ""
+  },
+  "radarr": {
+    "url": "http://192.168.1.10:7878",
+    "apiKey": "RADARR_API_KLJUC"
+  },
+  "sonarr": {
+    "url": "http://192.168.1.10:8989",
+    "apiKey": "SONARR_API_KLJUC"
+  },
+  "nzbget": {
+    "url": "http://192.168.1.10:6789",
+    "user": "nzbget",
+    "pass": "tajna"
+  },
+  "qbittorrent": {
+    "url": "http://192.168.1.10:8080",
+    "user": "admin",
+    "pass": "tajna"
+  },
+  "seerr": {
+    "url": "http://192.168.1.10:5055",
+    "apiKey": "SEERR_API_KLJUC"
+  }
 }
