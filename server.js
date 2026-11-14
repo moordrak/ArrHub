@@ -507,6 +507,28 @@ async function cover(id) {
 }
 setInterval(() => coverFail.clear(), 10 * 60000).unref();
 
+// ---------- About / update check ----------
+const REPO = 'moordrak/arrhub';
+const aboutCache = { at: 0, ttl: 0, data: null };
+const semver = v => String(v || '').replace(/^v/, '').split(/[.-]/).slice(0, 3).map(n => parseInt(n, 10) || 0);
+function newer(a, b) { const x = semver(a), y = semver(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; }
+async function about(force) {
+  const base = { version: VERSION, repo: `https://github.com/${REPO}`, releaseUrl: VERSION === 'dev' ? null : `https://github.com/${REPO}/releases/tag/v${VERSION}` };
+  if (!force && aboutCache.data && Date.now() - aboutCache.at < aboutCache.ttl) return { ...base, ...aboutCache.data };
+  let data;
+  try {
+    const r = await json(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'ArrHub' }, timeout: 8000 });
+    const latest = { version: String(r.tag_name || '').replace(/^v/, ''), url: r.html_url, publishedAt: r.published_at };
+    data = { latest, updateAvailable: VERSION !== 'dev' && newer(latest.version, VERSION), checkedAt: new Date().toISOString(), error: null };
+    aboutCache.ttl = 6 * 3600e3;
+  } catch (e) {
+    data = { latest: null, updateAvailable: false, checkedAt: new Date().toISOString(), error: friendlyError(e) };
+    aboutCache.ttl = 30 * 60e3;
+  }
+  aboutCache.data = data; aboutCache.at = Date.now();
+  return { ...base, ...data };
+}
+
 function friendlyError(e) {
   if (e.name === 'AbortError') return T('timeout');
   if (e.code === 'EACCES' || e.code === 'EROFS') return T('noWrite', { file: CONFIG_FILE });
@@ -550,6 +572,7 @@ const PUBLIC = path.join(__dirname, 'public');
 const routes = {
   'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
+  'GET /api/about': q => about(q.get('refresh') === '1'),
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
   'POST /api/settings': (q, b) => saveSettings(b.values),
@@ -599,7 +622,7 @@ async function handle(r, res) {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: T('notFound') });
     const svc = u.pathname.split('/')[2];
-    if (!['config', 'settings', 'media', 'cover'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
+    if (!['config', 'settings', 'media', 'cover', 'about'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);

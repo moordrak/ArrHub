@@ -127,6 +127,13 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .span2{grid-column:1/-1}
+.about{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.about .ver{font-family:var(--mono);font-size:15px;font-weight:700;padding:6px 12px;border-radius:9px;background:color-mix(in srgb,var(--accent) 16%,var(--panel2));color:var(--text);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
+.about .st{font-size:13px;color:var(--muted);flex:1;min-width:200px}
+.about .st.ok{color:var(--ok)}.about .st.upd{color:var(--warn)}
+.about a{color:var(--accent);text-decoration:none;font-size:13px}.about a:hover{text-decoration:underline}
+.vbadge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.vbadge.upd{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
 .set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media(max-width:900px){.set-grid{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
@@ -154,7 +161,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
     <button data-v="history" data-i18n="nav.history">History</button>
     <button data-v="requests" data-svc="seerr" data-i18n="nav.requests">Requests</button>
     <button data-v="add" data-i18n="nav.add">Add</button>
-    <button data-v="settings" data-i18n="nav.settings">⚙ Settings</button>
+    <button data-v="settings"><span data-i18n="nav.settings">⚙ Settings</span> <span class="vbadge hidden" id="navVer"></span></button>
   </nav>
   <div class="speeds" id="speeds"></div>
 </header>
@@ -332,6 +339,16 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
             <div class="field"><label data-i18n="set.pass">Password</label><input name="auth.pass" type="password"></div>
           </div>
           <span class="muted" style="font-size:12px" id="authHint"></span>
+        </div>
+      </div>
+      <div class="card span2" style="margin-top:16px">
+        <h2 data-i18n="about.title">About</h2>
+        <div class="about">
+          <span class="ver" id="aboutVer">ArrHub</span>
+          <span class="st" id="aboutStatus"></span>
+          <a id="aboutNotes" target="_blank" rel="noopener" data-i18n="about.notes">Release notes</a>
+          <a id="aboutRepo" target="_blank" rel="noopener">GitHub</a>
+          <button type="button" class="btn" id="aboutCheck" data-i18n="about.check">Check for updates</button>
         </div>
       </div>
       <div class="savebar"><span class="muted" id="setInfo"></span><span class="sp"></span>

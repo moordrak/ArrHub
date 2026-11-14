@@ -352,7 +352,7 @@ let setLoaded = null;
 function settingsTexts() {
   if (!setLoaded) return;
   const s = setLoaded;
-  $('#setInfo').textContent = `ArrHub ${state.cfg.version || ''} · ` + t('set.savedIn', { file: s.file }) + (s.locked.length ? ' · ' + t('set.lockedN', { n: s.locked.length }) : '');
+  $('#setInfo').textContent = t('set.savedIn', { file: s.file }) + (s.locked.length ? ' · ' + t('set.lockedN', { n: s.locked.length }) : '');
   $('#authHint').textContent = s.values['auth.user'] ? '' : t('set.authHint');
   for (const el of setForm.elements) if (el.dataset.locked === '1') el.title = t('set.lockedTitle');
 }
@@ -404,6 +404,32 @@ setForm.onsubmit = async e => {
   } catch (err) { toast(t('c.error', { msg: err.message })); }
 };
 
+// ---- about / version ----
+let aboutData = null;
+function renderAbout() {
+  const d = aboutData, v = state.cfg.version || d?.version || 'dev';
+  $('#aboutVer').textContent = 'ArrHub v' + v;
+  $('#aboutRepo').href = d?.repo || 'https://github.com/moordrak/arrhub';
+  const notes = $('#aboutNotes');
+  notes.classList.toggle('hidden', !d?.releaseUrl); if (d?.releaseUrl) notes.href = d.releaseUrl;
+  const st = $('#aboutStatus'), nav = $('#navVer');
+  nav.textContent = 'v' + v; nav.classList.remove('hidden');
+  nav.classList.toggle('upd', !!d?.updateAvailable);
+  nav.title = d?.updateAvailable ? t('about.newVersion', { v: d.latest.version }) : '';
+  if (!d) { st.className = 'st'; st.textContent = t('about.checking'); return; }
+  if (d.error) { st.className = 'st'; st.textContent = t('about.checkFailed', { msg: d.error }); return; }
+  if (d.updateAvailable) {
+    st.className = 'st upd';
+    st.innerHTML = `${esc(t('about.newVersion', { v: d.latest.version }))} · <a href="${esc(d.latest.url)}" target="_blank" rel="noopener">${esc(t('about.whatsNew'))}</a>`;
+  } else { st.className = 'st ok'; st.textContent = v === 'dev' ? t('about.dev') : t('about.upToDate'); }
+}
+async function loadAbout(force) {
+  if (force) { aboutData = null; renderAbout(); }
+  try { aboutData = await api('about' + (force ? '?refresh=1' : '')); } catch (e) { aboutData = { error: e.message }; }
+  renderAbout();
+}
+$('#aboutCheck').onclick = () => loadAbout(true);
+
 // ---- appearance & language ----
 const { THEMES, BACKGROUNDS, applyTheme, Bg } = Appearance;
 Bg.mediaLoader = () => api('media');
@@ -423,7 +449,7 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); labelAppearance(); settingsTexts(); render();
+  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); render();
   if (lastResults.length && state.view === 'add') renderResults();
 }
 function applyUi(ui) {
@@ -500,6 +526,7 @@ async function applyConfig() {
 (async () => {
   I18N.apply(); labelAppearance();
   const any = await applyConfig();
+  renderAbout(); loadAbout(false);
   show(location.hash.slice(1) || (any ? 'overview' : 'settings'));
   await refresh();
 })();
