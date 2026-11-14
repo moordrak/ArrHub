@@ -240,6 +240,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
             <input type="range" name="ui.bgIntensity" min="5" max="100" step="5"><span class="mono" id="bgIntVal"></span>
             <label title="Animacija se ubrzava kad se nešto preuzima"><input type="checkbox" name="ui.bgReactive"> Reagira na brzinu preuzimanja</label>
           </div>
+          <div class="test hidden" id="mediaDiag"><button type="button" class="btn" id="mediaCheck">Provjeri slike knjižnice</button><span class="r"></span></div>
           <span class="muted" style="font-size:12px">Promjene se odmah vide kao pregled, a spremaju se gumbom <b>Spremi postavke</b>. „Zid postera” i „Slike iz knjižnice” koriste slike iz Radarra i Sonarra.</span>
         </div>
         <div class="card" style="border-top:3px solid var(--radarr)">
@@ -642,8 +643,36 @@ function syncAppearanceControls() {
   const off = ui.background === 'none';
   setForm.elements['ui.bgIntensity'].disabled = off;
   setForm.elements['ui.bgReactive'].disabled = off || ui.background === 'fanart';
+  const lib = ui.background === 'posters' || ui.background === 'fanart';
+  const diag = $('#mediaDiag'), wasHidden = diag.classList.contains('hidden');
+  diag.classList.toggle('hidden', !lib);
+  if (lib && wasHidden) checkMedia();
 }
 function previewAppearance() { applyUi(currentUiFromForm()); }
+async function checkMedia() {
+  const r = $('#mediaDiag .r'); r.className = 'r'; r.textContent = 'Dohvaćam knjižnicu…';
+  try {
+    const m = await api('media?refresh=1');
+    Bg.reloadMedia();
+    const entries = Object.entries(m.stats || {});
+    if (!entries.length) { r.className = 'r err'; r.textContent = '✕ Radarr ni Sonarr nisu podešeni'; return; }
+    let anyOk = false;
+    const parts = await Promise.all(entries.map(async ([k, st]) => {
+      if (st.error) return `${NAMES[k]}: ✕ ${st.error}`;
+      let img = '✕ nema slika';
+      if (st.sample) {
+        const res = await fetch(st.sample);
+        if (res.ok && (res.headers.get('content-type') || '').startsWith('image/')) { img = 'slike ✓'; anyOk = true; }
+        else { const e = await res.json().catch(() => ({})); img = '✕ slike se ne učitavaju: ' + (e.error || res.status); }
+      }
+      return `${NAMES[k]}: ${st.items} ${k === 'radarr' ? 'filmova' : 'serija'}, ${st.posters} postera, ${st.fanart} pozadina, ${img}`;
+    }));
+    r.className = 'r ' + (anyOk ? 'ok' : 'err');
+    r.innerHTML = parts.map(esc).join('<br>');
+    if (anyOk) { previewAppearance(); Bg.restart(); }
+  } catch (e) { r.className = 'r err'; r.textContent = '✕ ' + e.message; }
+}
+$('#mediaCheck').onclick = checkMedia;
 $('#accentPick').addEventListener('input', e => { setForm.elements['ui.accent'].value = e.target.value; syncAppearanceControls(); previewAppearance(); });
 $('#accentReset').onclick = () => { setForm.elements['ui.accent'].value = ''; syncAppearanceControls(); previewAppearance(); };
 setForm.addEventListener('input', e => { if (e.target.name?.startsWith('ui.')) { syncAppearanceControls(); previewAppearance(); } });

@@ -113,6 +113,7 @@
     scene?.destroy?.();
     ctx.clearRect(0, 0, W, H);
     imgLayer.innerHTML = '';
+    Bg.fallbackMsg = null;
     scene = SCENES[Bg.type] ? SCENES[Bg.type]() : null;
     if (!scene) return;
     scene.init?.();
@@ -262,11 +263,24 @@
           wall = document.createElement('div'); wall.className = 'bg-wall';
           wall.style.gridTemplateColumns = `repeat(${cols}, ${tw}px)`;
           wall.style.gap = gap + 'px';
-          const list = media.posters;
+          const list = media.posters, badSet = new Set(), good = [];
+          let ok = 0, bad = 0, cursor = 0;
+          const nextSrc = () => {
+            if (good.length && badSet.size > list.length / 2) return good[Math.floor(Math.random() * good.length)];
+            for (let n = 0; n < list.length; n++) { const u = list[cursor++ % list.length]; if (!badSet.has(u)) return u; }
+            return good[0] || null;
+          };
           for (let i = 0; i < cols * rows * 2; i++) {
-            const im = new Image(); im.decoding = 'async'; im.loading = 'lazy';
-            im.src = list[i % list.length]; im.style.height = th + 'px';
-            im.onerror = () => { im.style.visibility = 'hidden'; };
+            const im = new Image(); im.decoding = 'async'; im.style.height = th + 'px';
+            let tries = 0;
+            im.onload = () => { ok++; const u = im.getAttribute('src'); if (!good.includes(u)) good.push(u); };
+            im.onerror = () => {
+              badSet.add(im.getAttribute('src')); bad++;
+              if (bad >= Math.min(12, list.length) && ok === 0 && alive) return fallback('Posteri se ne mogu učitati');
+              const n = ++tries <= 4 ? nextSrc() : null;
+              if (n) im.src = n; else im.style.visibility = 'hidden';
+            };
+            im.src = nextSrc();
             wall.appendChild(im);
           }
           rowH = (th + gap) * rows;
@@ -283,19 +297,24 @@
     },
 
     fanart() {
-      let imgs = [], idx = 0, timer = 0, alive = true, a, b;
+      let imgs = [], idx = 0, timer = 0, alive = true, a, b, fails = 0, shown = 0;
       const show = () => {
         if (!imgs.length) return;
         const next = imgs[idx++ % imgs.length];
         const pre = new Image();
         pre.onload = () => {
           if (!alive) return;
+          fails = 0; shown++;
           [a, b] = [b, a];
           a.style.backgroundImage = `url("${next}")`;
           a.classList.remove('kb'); void a.offsetWidth; a.classList.add('kb');
           a.style.opacity = 1; b.style.opacity = 0;
         };
-        pre.onerror = () => { if (alive) show(); };
+        pre.onerror = () => {
+          if (!alive) return;
+          if (++fails >= Math.min(8, imgs.length)) { if (!shown) fallback('Slike iz knjižnice se ne mogu učitati'); return; }
+          show();
+        };
         pre.src = next;
       };
       return {
@@ -319,19 +338,24 @@
 
   let lastMediaLoad = 0;
   async function loadMedia() {
-    if (Bg.media && Date.now() - lastMediaLoad < 600000) return Bg.media;
+    const has = Bg.media && (Bg.media.posters.length || Bg.media.fanart.length);
+    if (Bg.media && Date.now() - lastMediaLoad < (has ? 600000 : 30000)) return Bg.media;
     try { Bg.media = Bg.mediaLoader ? await Bg.mediaLoader() : { posters: [], fanart: [] }; }
     catch { Bg.media = { posters: [], fanart: [] }; }
     lastMediaLoad = Date.now();
     return Bg.media;
   }
   function fallback(msg) {
-    window.toast?.(msg + ' – prikazujem Auroru');
+    if (Bg.fallbackMsg === msg && scene?.isFallback) return;
+    Bg.fallbackMsg = msg;
+    window.toast?.(msg + ' – prikazujem Auroru. Detalji su u Postavkama.');
     scene?.destroy?.();
-    scene = SCENES.aurora(); scene.init();
+    scene = SCENES.aurora(); scene.isFallback = true; scene.init();
     canvas.style.opacity = Bg.intensity / 100; imgLayer.style.opacity = 0; shade.style.opacity = 0;
     if (reduce.matches) drawStatic();
   }
 
+  Bg.reloadMedia = () => { Bg.media = null; lastMediaLoad = 0; };
+  Bg.restart = () => { if (root && Bg.type !== 'none') start(); };
   window.Appearance = { THEMES, BACKGROUNDS, applyTheme, Bg };
 })();

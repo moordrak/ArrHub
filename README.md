@@ -95,3 +95,12 @@ Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavez
 Ako je u qBittorrentu uključeno *Bypass authentication for clients on localhost / whitelisted subnets*,
 korisnik/lozinka mogu ostati prazni. Ako prijava pada s `Fails.`, provjeri da IP ArrHuba nije
 zabranjen zbog previše neuspjelih pokušaja (Options → Web UI → ban).
+
+## Pozadine iz knjižnice ne rade?
+U Postavkama odaberi *Zid postera* ili *Slike iz knjižnice*. Ispod se pojavi provjera koja za Radarr i Sonarr
+pokazuje koliko je slika pronađeno i učitavaju li se.
+- **preusmjereno na prijavu (302)**: Radarr/Sonarr za `/MediaCover` traži prijavu. ArrHub tada slike dohvaća s
+  TMDB/TVDB-a, pa kontejner treba pristup internetu.
+- **Isteklo vrijeme**: vrlo velika knjižnica. Popis se čeka do 90 s, a nakon prvog dohvata pamti se 10 minuta.
+- Ako se nijedna slika ne može učitati, prikazuje se Aurora i poruka.
+

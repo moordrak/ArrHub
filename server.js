@@ -112,7 +112,7 @@ function saveSettings(values) {
   }
   for (const k of SERVICES) if (file[k] && !file[k].url) delete file[k];
   if (file.ui && !Object.keys(file.ui).length) delete file.ui;
-  mediaCache.at = 0;
+  mediaCache.at = 0; mediaCache.data = null; coverFail.clear();
   const oldPort = cfg.port;
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
@@ -139,9 +139,9 @@ async function testService(service, values) {
 
 // ---------- Pomoćne funkcije ----------
 const TIMEOUT = 10000;
-async function req(url, opts = {}) {
+async function req(url, { timeout = TIMEOUT, ...opts } = {}) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT);
+  const t = setTimeout(() => ctrl.abort(), timeout);
   try {
     const r = await fetch(url, { ...opts, signal: ctrl.signal });
     return r;
@@ -284,33 +284,95 @@ function makeNzb(conf) { return {
 const nzb = makeNzb(() => cfg.nzbget);
 
 // ---------- Slike iz knjižnice (pozadine) ----------
-const mediaCache = { at: 0, data: null };
+// Klijent dobiva samo /api/cover/<id>; stvarne adrese (lokalni MediaCover + udaljeni TMDB/TVDB) ostaju na poslužitelju.
+const mediaCache = { at: 0, data: null, pending: null };
+const coverMap = new Map(); // id -> { svc, local, remote, kind }
+const coverFail = new Map(); // svc -> { n, last } neuspjeli lokalni dohvati (nakon nekoliko ide se ravno na remote)
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-async function libraryMedia() {
-  if (mediaCache.data && Date.now() - mediaCache.at < 10 * 60000) return mediaCache.data;
-  const posters = [], fanart = [];
+const hashId = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
+function remoteSized(u, kind) {
+  if (!u || !/^https:\/\//.test(u)) return null;
+  // TMDB podržava manje verzije slika
+  return u.replace(/(image\.tmdb\.org\/t\/p\/)original\//, `$1${kind === 'poster' ? 'w342' : 'w1280'}/`);
+}
+async function buildMedia() {
+  const posters = [], fanart = [], stats = {};
   await Promise.all(['radarr', 'sonarr'].filter(enabled).map(async k => {
-    const list = await arr(k).call(k === 'radarr' ? '/movie' : '/series').catch(() => []);
+    const st = stats[k] = { items: 0, posters: 0, fanart: 0, error: null };
+    let list;
+    try { list = await arr(k).call(k === 'radarr' ? '/movie' : '/series', { timeout: 90000 }); }
+    catch (e) { st.error = friendlyError(e); return; }
+    if (!Array.isArray(list)) { st.error = 'Neočekivan odgovor'; return; }
+    st.items = list.length;
     for (const it of list) for (const im of it.images || []) {
-      if (!im.url || !/\/MediaCover\//.test(im.url)) continue;
-      const src = `/api/cover/${k}?p=${encodeURIComponent(im.url)}`;
-      if (im.coverType === 'poster') posters.push(src + '&s=500');
-      else if (im.coverType === 'fanart') fanart.push(src);
+      const kind = im.coverType === 'poster' ? 'poster' : im.coverType === 'fanart' ? 'fanart' : null;
+      if (!kind) continue;
+      let local = null;
+      if (im.url && /\/MediaCover\//.test(im.url) && !im.url.includes('..')) {
+        local = im.url.startsWith('http') ? im.url : null;
+        if (!local) { try { local = new URL(im.url, new URL(cfg[k].url).origin + '/').toString(); } catch {} }
+        if (local && kind === 'poster') local = local.replace(/poster(\.jpg)/, 'poster-500$1');
+      }
+      const remote = remoteSized(im.remoteUrl, kind);
+      if (!local && !remote) continue;
+      const id = hashId(k + (im.url || im.remoteUrl));
+      coverMap.set(id, { svc: k, local, remote, kind });
+      (kind === 'poster' ? posters : fanart).push(`/api/cover/${id}`);
+      if (kind === 'poster' && !st.sample) st.sample = `/api/cover/${id}`;
+      st[kind === 'poster' ? 'posters' : 'fanart']++;
     }
   }));
-  mediaCache.data = { posters: shuffle(posters).slice(0, 120), fanart: shuffle(fanart).slice(0, 60) };
-  mediaCache.at = Date.now();
-  return mediaCache.data;
+  if (coverMap.size > 20000) [...coverMap.keys()].slice(0, coverMap.size - 20000).forEach(k => coverMap.delete(k));
+  return { posters: shuffle(posters).slice(0, 150), fanart: shuffle(fanart).slice(0, 80), stats };
 }
-async function cover(k, q) {
-  const c = cfg[k];
-  let p = q.get('p') || '';
-  if (!/^\/[^?#]*\/?MediaCover\/[\w\-./]+(\?[\w=&.\-]*)?$/.test(p) || p.includes('..')) throw new Error('Neispravna putanja');
-  if (q.get('s') === '500') p = p.replace(/poster(\.jpg)/, 'poster-500$1');
-  const r = await req(new URL(p, new URL(c.url).origin + '/').toString(), { headers: { 'X-Api-Key': c.apiKey } });
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return { __raw: Buffer.from(await r.arrayBuffer()), type: r.headers.get('content-type') || 'image/jpeg' };
+async function libraryMedia(force) {
+  const ok = mediaCache.data && (mediaCache.data.posters.length || mediaCache.data.fanart.length);
+  const ttl = ok ? 10 * 60000 : 30000; // prazan/neuspio rezultat pamti se samo 30 s
+  if (!force && mediaCache.data && Date.now() - mediaCache.at < ttl) return mediaCache.data;
+  mediaCache.pending ||= buildMedia().then(d => { mediaCache.data = d; mediaCache.at = Date.now(); return d; })
+    .finally(() => { mediaCache.pending = null; });
+  return mediaCache.pending;
 }
+async function fetchImage(url, headers) {
+  const r = await req(url, { headers, redirect: 'manual', timeout: 20000 });
+  const type = r.headers.get('content-type') || '';
+  if (!r.ok || !/^image\//.test(type)) {
+    r.body?.cancel?.();
+    if (r.status >= 300 && r.status < 400) throw new Error(`preusmjereno na prijavu (${r.status}) – uključena je autentifikacija`);
+    if (r.status === 401 || r.status === 403) throw new Error(`pristup odbijen (${r.status})`);
+    if (r.status === 404) throw new Error('slika ne postoji (404)');
+    if (r.ok) throw new Error(`nije slika (${type.split(';')[0] || 'nepoznat tip'})`);
+    throw new Error(`HTTP ${r.status}`);
+  }
+  return { __raw: Buffer.from(await r.arrayBuffer()), type };
+}
+async function cover(id) {
+  const e = coverMap.get(id);
+  if (!e) throw new Error('Nepoznata slika');
+  const c = cfg[e.svc];
+  const errors = [];
+  const fail = coverFail.get(e.svc) || { n: 0, last: '' };
+  if (e.local && fail.n >= 5) errors.push(`${e.svc} lokalno: ${fail.last}`);
+  if (e.local && fail.n < 5) {
+    try {
+      const u = new URL(e.local);
+      u.searchParams.set('apikey', c.apiKey);
+      const img = await fetchImage(u.toString(), { 'X-Api-Key': c.apiKey });
+      coverFail.delete(e.svc);
+      return img;
+    } catch (err) {
+      const m = friendlyError(err);
+      errors.push(`${e.svc} lokalno: ${m}`);
+      coverFail.set(e.svc, { n: fail.n + 1, last: m });
+    }
+  }
+  if (e.remote) {
+    try { return await fetchImage(e.remote, { 'User-Agent': 'ArrHub' }); }
+    catch (err) { errors.push('TMDB/TVDB: ' + friendlyError(err)); }
+  } else errors.push('nema adrese na internetu');
+  throw new Error(errors.join('; '));
+}
+setInterval(() => coverFail.clear(), 10 * 60000).unref();
 
 function friendlyError(e) {
   if (e.name === 'AbortError') return 'Isteklo vrijeme čekanja (usluga ne odgovara)';
@@ -357,8 +419,8 @@ const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
   'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent'), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui }),
-  'GET /api/media': () => libraryMedia(),
-  'GET /api/cover/:arr': (q, b, p) => { if (!enabled(p.arr)) throw new Error('Usluga nije podešena'); return cover(p.arr, q); },
+  'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
+  'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
   'POST /api/settings': (q, b) => saveSettings(b.values),
   'POST /api/settings/test': (q, b) => testService(b.service, b.values),
