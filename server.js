@@ -291,7 +291,9 @@ const nzb = makeNzb(() => cfg.nzbget);
 
 // ---------- Seerr (Overseerr/Jellyseerr API v1) ----------
 const seerrMeta = new Map(); // 'movie:123' -> { title, year, poster, at }
-const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'declined', 'completed', 'deleted'];
+// filtri koje Seerr API prihvaća; 'declined' nema, pa ga radimo sami (status 3)
+const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'deleted', 'completed'];
+const SEERR_LOCAL = { declined: r => r.status === 3 };
 function makeSeerr(conf) {
   const call = (p, opts = {}) => {
     const c = conf();
@@ -319,13 +321,14 @@ function makeSeerr(conf) {
   return {
     call,
     async summary(filter = 'all') {
-      if (!SEERR_FILTERS.includes(filter)) filter = 'all';
+      const local = SEERR_LOCAL[filter];
+      if (!local && !SEERR_FILTERS.includes(filter)) filter = 'all';
       const [status, count, list] = await Promise.all([
         call('/status').catch(() => ({})),
         call('/request/count').catch(() => ({})),
-        call(`/request?take=40&skip=0&sort=added&filter=${filter}`),
+        call(`/request?take=${local ? 200 : 40}&skip=0&sort=added&filter=${local ? 'all' : filter}`),
       ]);
-      const results = list.results || [];
+      const results = (list.results || []).filter(local || (() => true)).slice(0, 40);
       // naslove i postere dohvaćamo zasebno (najviše 6 istovremeno), uz 24 h međuspremnik
       const metas = new Array(results.length);
       let i = 0;
@@ -343,7 +346,7 @@ function makeSeerr(conf) {
         title: metas[n].title, year: metas[n].year, poster: posterUrl(metas[n].poster),
         tmdbId: r.media?.tmdbId,
       }));
-      return { version: status.version || '', updateAvailable: !!status.updateAvailable, count, filter, total: list.pageInfo?.results ?? requests.length, requests };
+      return { version: status.version || '', updateAvailable: !!status.updateAvailable, count, filter, total: local ? requests.length : list.pageInfo?.results ?? requests.length, requests };
     },
     action(id, action) {
       id = Number(id);
