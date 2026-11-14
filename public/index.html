@@ -82,6 +82,21 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none}
 #toast.show{opacity:1}
 .hidden{display:none!important}
+.set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:900px){.set-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:12.5px;color:var(--muted)}
+.field input{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:inherit}
+.field input:focus,.search input:focus{outline:none;border-color:var(--accent)}
+.field input:disabled{opacity:.55;cursor:not-allowed}
+.field .hint{font-size:11.5px;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.test{display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12.5px;min-height:30px}
+.test .r.ok{color:var(--ok)}.test .r.err{color:var(--err)}
+.savebar{position:sticky;bottom:0;margin-top:16px;padding:14px 16px;background:rgba(23,26,33,.95);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.savebar .sp{flex:1}
+.notice{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.notice .sp{flex:1}
 </style>
 </head>
 <body>
@@ -93,6 +108,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
     <button data-v="calendar">Kalendar</button>
     <button data-v="history">Povijest</button>
     <button data-v="add">Dodaj</button>
+    <button data-v="settings">⚙ Postavke</button>
   </nav>
   <div class="speeds" id="speeds"></div>
 </header>
@@ -100,6 +116,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 <main>
   <!-- PREGLED -->
   <section id="v-overview">
+    <div class="notice hidden" id="setupNotice"><span>Nijedna usluga još nije podešena.</span><span class="sp"></span><button class="btn p" onclick="show('settings')">Otvori postavke</button></div>
     <div class="grid g4" id="svcCards"></div>
     <div class="grid g2" style="margin-top:16px">
       <div class="card"><h2>Aktivna preuzimanja</h2><div class="list" id="ovActive"></div></div>
@@ -169,6 +186,61 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
     </form>
     <div class="results" id="results"></div>
   </section>
+  <!-- POSTAVKE -->
+  <section id="v-settings" class="hidden">
+    <form id="setForm" autocomplete="off">
+      <div class="set-grid">
+        <div class="card" style="border-top:3px solid var(--radarr)">
+          <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
+          <div class="field"><label>URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
+          <div class="field"><label>API ključ</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="radarr">Testiraj vezu</button><span class="r"></span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--sonarr)">
+          <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2>
+          <div class="field"><label>URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
+          <div class="field"><label>API ključ</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="sonarr">Testiraj vezu</button><span class="r"></span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--qb)">
+          <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent</h2>
+          <div class="field"><label>URL Web UI-ja</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
+          <div class="row2">
+            <div class="field"><label>Korisnik</label><input name="qbittorrent.user" placeholder="admin"></div>
+            <div class="field"><label>Lozinka</label><input name="qbittorrent.pass" type="password"></div>
+          </div>
+          <div class="test"><button type="button" class="btn" data-test="qbittorrent">Testiraj vezu</button><span class="r"></span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--nzb)">
+          <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2>
+          <div class="field"><label>URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
+          <div class="row2">
+            <div class="field"><label>Korisnik</label><input name="nzbget.user" placeholder="nzbget"></div>
+            <div class="field"><label>Lozinka</label><input name="nzbget.pass" type="password"></div>
+          </div>
+          <div class="test"><button type="button" class="btn" data-test="nzbget">Testiraj vezu</button><span class="r"></span></div>
+        </div>
+        <div class="card">
+          <h2>Općenito</h2>
+          <div class="row2">
+            <div class="field"><label>Osvježavanje (sekundi)</label><input name="refresh" type="number" min="2" max="300"></div>
+            <div class="field"><label>Port</label><input name="port" type="number" min="1" max="65535"><span class="hint">Promjena zahtijeva ponovno pokretanje servisa</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Prijava u ArrHub</h2>
+          <div class="row2">
+            <div class="field"><label>Korisnik</label><input name="auth.user" placeholder="prazno = bez prijave"></div>
+            <div class="field"><label>Lozinka</label><input name="auth.pass" type="password"></div>
+          </div>
+          <span class="muted" style="font-size:12px" id="authHint"></span>
+        </div>
+      </div>
+      <div class="savebar"><span class="muted" id="setInfo"></span><span class="sp"></span>
+        <button type="button" class="btn" id="setReset">Poništi</button>
+        <button class="btn p">Spremi postavke</button></div>
+    </form>
+  </section>
 </main>
 <div id="toast"></div>
 
@@ -200,7 +272,7 @@ async function api(path, body) {
 
 // ---- dohvat podataka ----
 async function refresh() {
-  await Promise.all(Object.keys(state.cfg).filter(k => state.cfg[k]).map(async k => {
+  await Promise.all(['radarr','sonarr','nzbget','qbittorrent'].filter(k => state.cfg[k]).map(async k => {
     try { state.data[k] = await api(k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
   }));
@@ -424,17 +496,70 @@ function show(v) {
   document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'v-' + v));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   if (v === 'add') loadOptions();
+  if (v === 'settings') loadSettings();
   history.replaceState(null, '', '#' + v);
 }
 $('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
 $('#qbFilter').onchange = e => { qbFilter = e.target.value; renderQb(); };
 
-(async () => {
+// ---- postavke ----
+const setForm = $('#setForm');
+let setLoaded = null;
+async function loadSettings() {
+  try {
+    const s = await api('settings'); setLoaded = s;
+    for (const el of setForm.elements) {
+      if (!el.name) continue;
+      el.value = s.values[el.name] ?? '';
+      const locked = s.locked.includes(el.name);
+      el.disabled = locked; el.title = locked ? 'Postavljeno varijablom okruženja' : '';
+    }
+    setForm.querySelectorAll('.test .r').forEach(r => { r.textContent = ''; r.className = 'r'; });
+    $('#setInfo').textContent = 'Spremljeno u ' + s.file + (s.locked.length ? ` · ${s.locked.length} polja zaključano varijablama okruženja` : '');
+    $('#authHint').textContent = s.values['auth.user'] ? '' : 'Bez prijave svatko u mreži može mijenjati ove postavke.';
+  } catch (e) { toast('Greška: ' + e.message); }
+}
+function formValues() {
+  const v = {};
+  for (const el of setForm.elements) if (el.name && !el.disabled) v[el.name] = el.value;
+  return v;
+}
+setForm.addEventListener('click', async e => {
+  const b = e.target.closest('[data-test]'); if (!b) return;
+  const r = b.nextElementSibling; r.className = 'r'; r.textContent = 'Provjeravam…'; b.disabled = true;
+  try { const res = await api('settings/test', { service: b.dataset.test, values: formValues() }); r.className = 'r ok'; r.textContent = '✓ ' + res.message; }
+  catch (err) { r.className = 'r err'; r.textContent = '✕ ' + err.message; }
+  finally { b.disabled = false; }
+});
+$('#setReset').onclick = loadSettings;
+setForm.onsubmit = async e => {
+  e.preventDefault();
+  const v = formValues();
+  const authChanged = setLoaded && (v['auth.user'] !== setLoaded.values['auth.user'] || v['auth.pass'] !== setLoaded.values['auth.pass']);
+  try {
+    const res = await api('settings', { values: v });
+    toast(res.restartRequired ? 'Spremljeno. Novi port vrijedi nakon ponovnog pokretanja servisa.' : 'Postavke spremljene');
+    if (authChanged) { setTimeout(() => location.reload(), 1200); return; }
+    state.opts = {}; state.data = {}; state.err = {};
+    await applyConfig(); await loadSettings(); refresh();
+  } catch (err) { toast('Greška: ' + err.message); }
+};
+
+let timer;
+async function applyConfig() {
   state.cfg = await api('config');
+  const any = ['radarr','sonarr','nzbget','qbittorrent'].some(k => state.cfg[k]);
+  $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
-  show(location.hash.slice(1) || 'overview');
+  clearInterval(timer);
+  timer = setInterval(() => { if (!document.hidden) refresh(); }, (state.cfg.refresh || 5) * 1000);
+  return any;
+}
+
+(async () => {
+  const any = await applyConfig();
+  show(location.hash.slice(1) || (any ? 'overview' : 'settings'));
   await refresh();
-  setInterval(() => { if (!document.hidden) refresh(); }, 5000);
 })();
 </script>
 </body>

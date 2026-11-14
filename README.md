@@ -13,19 +13,27 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 - **Kalendar** – filmovi i epizode za sljedeća 2 tjedna
 - **Povijest** – zadnji događaji iz Radarra, Sonarra i NZBGeta
 - **Dodaj** – pretraga i dodavanje filmova/serija (odabir profila kvalitete i mape, opcionalno odmah traži)
-- Automatsko osvježavanje svakih 5 s, opcionalna Basic Auth prijava
+- **Postavke** – adrese, API ključevi i lozinke usluga, prijava u ArrHub, interval osvježavanja i port, sve kroz sučelje.
+  Gumb *Testiraj vezu* provjerava svaku uslugu prije spremanja, a promjene vrijede odmah, bez ponovnog pokretanja.
+- Automatsko osvježavanje (zadano 5 s), opcionalna Basic Auth prijava
 - Podržava qBittorrent 4.x i 5.x (stop/start i pause/resume)
 
 ## Postavljanje
 ```bash
-cp config.example.json config.json   # upiši URL-ove, API ključeve i lozinke
 node server.js                       # http://<ip>:8686
 ```
-API ključ: Radarr/Sonarr → Settings → General → Security → API Key.
-Usluge koje ne trebaš samo izbriši iz `config.json` – sučelje ih sakrije.
+Otvori stranicu: ako nijedna usluga nije podešena, odmah se otvara kartica **⚙ Postavke**. Upiši adrese i ključeve,
+klikni *Testiraj vezu* i *Spremi postavke*. Postavke se spremaju u `config.json` (prava 600). Lozinke i ključevi se u
+sučelju nikad ne prikazuju: polje s `********` znači da se postojeća vrijednost zadržava.
 
-Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS`.
+![Postavke](docs/settings.png)
+
+Umjesto sučelja možeš i ručno urediti `config.json` (predložak je `config.example.json`) i ponovno pokrenuti servis.
+Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS`. One imaju prednost pred
+datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
+
+> ⚠ Bez prijave svatko tko može otvoriti ArrHub može i mijenjati postavke. Ako je dostupan izvan LAN-a, uključi prijavu.
 
 ### Proxmox — automatska instalacija (preporučeno)
 Na Proxmox hostu, kao root:
@@ -34,7 +42,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/pro
 ```
 Skripta pita za postavke kontejnera (ID, RAM, disk, storage, bridge, VLAN, statična IP ili DHCP) i
 za adrese i ključeve usluga. Zatim stvara neprivilegirani Debian LXC (Debian 13 na PVE 9+, inače 12),
-instalira Node.js i ArrHub te ga pokreće kao systemd servis. Usluge koje ne koristiš preskoči s Enter.
+instalira Node.js i ArrHub te ga pokreće kao systemd servis. Usluge koje ne koristiš preskoči s Enter. Sve se kasnije može promijeniti u Postavkama.
 
 Bez pitanja, npr. za automatizaciju:
 ```bash
@@ -70,6 +78,7 @@ cp arrhub.service /etc/systemd/system/ && systemctl enable --now arrhub
 ```bash
 docker compose up -d --build
 ```
+Konfiguracija se čuva u volumenu `arrhub-data` (`/app/data/config.json`) i uređuje se kroz Postavke.
 
 ### Nginx Proxy Manager
 Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavezno uključi

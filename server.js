@@ -7,26 +7,112 @@ const fs = require('fs');
 const path = require('path');
 
 // ---------- Konfiguracija ----------
-function loadConfig() {
-  const file = process.env.ARRHUB_CONFIG || path.join(__dirname, 'config.json');
-  let cfg = {};
-  if (fs.existsSync(file)) cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const env = process.env;
-  const pick = (a, b) => (a !== undefined && a !== '' ? a : b);
-  cfg.port = Number(pick(env.PORT, cfg.port || 8686));
-  cfg.auth = cfg.auth || {};
-  cfg.auth.user = pick(env.ARRHUB_USER, cfg.auth.user);
-  cfg.auth.pass = pick(env.ARRHUB_PASS, cfg.auth.pass);
-  cfg.radarr = { url: pick(env.RADARR_URL, cfg.radarr?.url), apiKey: pick(env.RADARR_KEY, cfg.radarr?.apiKey) };
-  cfg.sonarr = { url: pick(env.SONARR_URL, cfg.sonarr?.url), apiKey: pick(env.SONARR_KEY, cfg.sonarr?.apiKey) };
-  cfg.nzbget = { url: pick(env.NZBGET_URL, cfg.nzbget?.url), user: pick(env.NZBGET_USER, cfg.nzbget?.user), pass: pick(env.NZBGET_PASS, cfg.nzbget?.pass) };
-  cfg.qbittorrent = { url: pick(env.QBIT_URL, cfg.qbittorrent?.url), user: pick(env.QBIT_USER, cfg.qbittorrent?.user), pass: pick(env.QBIT_PASS, cfg.qbittorrent?.pass) };
-  for (const k of ['radarr', 'sonarr', 'nzbget', 'qbittorrent']) {
-    if (cfg[k].url) cfg[k].url = cfg[k].url.replace(/\/+$/, '');
-  }
-  return cfg;
+const CONFIG_FILE = process.env.ARRHUB_CONFIG || path.join(__dirname, 'config.json');
+const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent'];
+const MASK = '********';
+// [odjeljak, polje, varijabla okruženja, tajno?]
+const FIELDS = [
+  ['', 'port', 'PORT'], ['', 'refresh', 'ARRHUB_REFRESH'],
+  ['auth', 'user', 'ARRHUB_USER'], ['auth', 'pass', 'ARRHUB_PASS', true],
+  ['radarr', 'url', 'RADARR_URL'], ['radarr', 'apiKey', 'RADARR_KEY', true],
+  ['sonarr', 'url', 'SONARR_URL'], ['sonarr', 'apiKey', 'SONARR_KEY', true],
+  ['nzbget', 'url', 'NZBGET_URL'], ['nzbget', 'user', 'NZBGET_USER'], ['nzbget', 'pass', 'NZBGET_PASS', true],
+  ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
+];
+const getF = (o, sec, f) => (sec ? o[sec]?.[f] : o[f]);
+const setF = (o, sec, f, v) => { if (sec) (o[sec] ||= {})[f] = v; else o[f] = v; };
+const envSet = name => process.env[name] !== undefined && process.env[name] !== '';
+
+function readFileConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) return {};
+  return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
 }
-const cfg = loadConfig();
+// Datoteka + varijable okruženja (okruženje ima prednost)
+function loadConfig() {
+  const file = readFileConfig();
+  const c = { auth: {} };
+  for (const k of SERVICES) c[k] = {};
+  for (const [sec, f, env] of FIELDS) {
+    const v = envSet(env) ? process.env[env] : getF(file, sec, f);
+    if (v !== undefined) setF(c, sec, f, v);
+  }
+  c.port = Number(c.port) || 8686;
+  c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
+  for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
+  return c;
+}
+let cfg = loadConfig();
+
+// Postavke za prikaz (tajne maskirane, oznaka koja polja dolaze iz okruženja)
+function settingsView() {
+  const out = { values: {}, locked: [], file: CONFIG_FILE };
+  for (const [sec, f, env, secret] of FIELDS) {
+    const key = sec ? `${sec}.${f}` : f;
+    const v = getF(cfg, sec, f);
+    out.values[key] = secret ? (v ? MASK : '') : (v ?? '');
+    if (envSet(env)) out.locked.push(key);
+  }
+  return out;
+}
+// Spaja unos iz sučelja s postojećim vrijednostima (maska = zadrži staru tajnu)
+function mergeInput(values, base = cfg) {
+  const c = { auth: {} };
+  for (const [sec, f, , secret] of FIELDS) {
+    const key = sec ? `${sec}.${f}` : f;
+    let v = values?.[key];
+    if (v === undefined || (secret && v === MASK)) v = getF(base, sec, f);
+    if (typeof v === 'string') v = v.trim();
+    if (v !== undefined && v !== '') setF(c, sec, f, v);
+  }
+  return c;
+}
+function validate(c) {
+  for (const k of SERVICES) {
+    const u = c[k]?.url;
+    if (!u) continue;
+    let p; try { p = new URL(u); } catch { throw new Error(`${k}: neispravan URL`); }
+    if (!/^https?:$/.test(p.protocol)) throw new Error(`${k}: URL mora počinjati s http:// ili https://`);
+    c[k].url = u.replace(/\/+$/, '');
+  }
+  if ((c.radarr?.url && !c.radarr.apiKey) || (c.sonarr?.url && !c.sonarr.apiKey)) throw new Error('Radarr/Sonarr trebaju API ključ');
+  if (c.auth?.user && !c.auth.pass) throw new Error('Za prijavu u ArrHub treba i lozinka');
+  if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error('Neispravan port'); c.port = n; }
+  if (c.refresh !== undefined) c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
+}
+function saveSettings(values) {
+  const merged = mergeInput(values);
+  validate(merged);
+  // polja zadana varijablama okruženja ne upisujemo u datoteku – zadržavamo što je u njoj
+  const existing = readFileConfig();
+  const file = {};
+  for (const [sec, f, env] of FIELDS) {
+    const v = envSet(env) ? getF(existing, sec, f) : getF(merged, sec, f);
+    if (v !== undefined && v !== '') setF(file, sec, f, v);
+  }
+  for (const k of SERVICES) if (file[k] && !file[k].url) delete file[k];
+  const oldPort = cfg.port;
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
+  cfg = loadConfig();
+  qb.sid = null;
+  return { ok: true, restartRequired: cfg.port !== oldPort };
+}
+async function testService(service, values) {
+  if (!SERVICES.includes(service)) throw new Error('Nepoznata usluga');
+  const c = mergeInput(values);
+  validate(c);
+  const s = c[service];
+  if (!s?.url) throw new Error('URL nije upisan');
+  if (service === 'radarr' || service === 'sonarr') {
+    const st = await arr(service, s).call('/system/status');
+    if (st.appName && st.appName.toLowerCase() !== service) throw new Error(`Na toj adresi je ${st.appName}, ne ${service}`);
+    return { message: `${st.appName || service} ${st.version}` };
+  }
+  if (service === 'qbittorrent') {
+    const client = makeQb(() => s);
+    return { message: `qBittorrent ${await client.call('/app/version')}` };
+  }
+  return { message: `NZBGet ${await makeNzb(() => s).rpc('version')}` };
+}
 
 // ---------- Pomoćne funkcije ----------
 const TIMEOUT = 10000;
@@ -47,13 +133,13 @@ async function json(url, opts) {
 function enabled(name) { return !!cfg[name]?.url; }
 
 // ---------- Radarr / Sonarr (API v3) ----------
-function arr(name) {
-  const c = cfg[name];
+function arr(name, c = cfg[name]) {
   const call = (p, opts = {}) => json(`${c.url}/api/v3${p}`, {
     ...opts,
     headers: { 'X-Api-Key': c.apiKey, 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
   return {
+    call,
     async summary() {
       const start = new Date(); start.setDate(start.getDate() - 1);
       const end = new Date(); end.setDate(end.getDate() + 14);
@@ -91,10 +177,10 @@ function arr(name) {
 }
 
 // ---------- qBittorrent (Web API v2) ----------
-const qb = {
+function makeQb(conf) { return {
   sid: null,
   async login() {
-    const c = cfg.qbittorrent;
+    const c = conf();
     const r = await req(`${c.url}/api/v2/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: c.url },
@@ -104,10 +190,10 @@ const qb = {
     const cookie = r.headers.get('set-cookie') || '';
     const m = cookie.match(/SID=([^;]+)/);
     if (m) this.sid = m[1];
-    else if (!/Ok/i.test(txt)) throw new Error('qBittorrent prijava nije uspjela: ' + txt);
+    else if (!/Ok/i.test(txt)) throw new Error(/fail/i.test(txt) ? 'Pogrešno korisničko ime ili lozinka' : 'Prijava nije uspjela: ' + txt.slice(0, 100));
   },
   async call(p, form) {
-    const c = cfg.qbittorrent;
+    const c = conf();
     if (!this.sid) await this.login().catch(e => { if (c.user) throw e; });
     const doIt = () => req(`${c.url}/api/v2${p}`, {
       method: form ? 'POST' : 'GET',
@@ -145,12 +231,13 @@ const qb = {
     if (action === 'altspeed') return this.call('/transfer/toggleSpeedLimitsMode', {});
     return this.action(action, ['all']);
   },
-};
+}; }
+const qb = makeQb(() => cfg.qbittorrent);
 
 // ---------- NZBGet (JSON-RPC) ----------
-const nzb = {
+function makeNzb(conf) { return {
   async rpc(method, params = []) {
-    const c = cfg.nzbget;
+    const c = conf();
     const headers = { 'Content-Type': 'application/json' };
     if (c.user) headers.Authorization = 'Basic ' + Buffer.from(`${c.user}:${c.pass || ''}`).toString('base64');
     const res = await json(`${c.url}/jsonrpc`, { method: 'POST', headers, body: JSON.stringify({ method, params, id: 1 }) });
@@ -170,7 +257,28 @@ const nzb = {
     if (!cmd) throw new Error('Nepoznata akcija');
     return this.rpc('editqueue', [cmd, '', ids.map(Number)]);
   },
-};
+}; }
+const nzb = makeNzb(() => cfg.nzbget);
+
+function friendlyError(e) {
+  if (e.name === 'AbortError') return 'Isteklo vrijeme čekanja (usluga ne odgovara)';
+  if (e.code === 'EACCES' || e.code === 'EROFS') return `Nema dozvole za pisanje u ${CONFIG_FILE}`;
+  const code = e.cause?.code || e.cause?.errors?.[0]?.code;
+  const net = {
+    ECONNREFUSED: 'Veza odbijena – provjeri adresu i port',
+    ENOTFOUND: 'Adresa nije pronađena (DNS)',
+    EHOSTUNREACH: 'Računalo nije dostupno',
+    ENETUNREACH: 'Mreža nije dostupna',
+    ETIMEDOUT: 'Isteklo vrijeme povezivanja',
+    ECONNRESET: 'Veza prekinuta',
+    DEPTH_ZERO_SELF_SIGNED_CERT: 'Samopotpisani TLS certifikat – koristi http:// ili valjan certifikat',
+  }[code];
+  if (net) return net;
+  if (e.message === 'fetch failed') return 'Povezivanje nije uspjelo' + (e.cause?.message ? ` (${e.cause.message})` : '');
+  if (/^401\b/.test(e.message)) return 'Neispravan API ključ ili korisničko ime/lozinka (401)';
+  if (/^404\b/.test(e.message)) return 'Nije pronađeno (404) – provjeri URL i URL Base';
+  return e.message;
+}
 
 // ---------- HTTP poslužitelj ----------
 function send(res, code, data, type = 'application/json') {
@@ -196,7 +304,10 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent') }),
+  'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent'), refresh: cfg.refresh, auth: !!cfg.auth.user }),
+  'GET /api/settings': async () => settingsView(),
+  'POST /api/settings': (q, b) => saveSettings(b.values),
+  'POST /api/settings/test': (q, b) => testService(b.service, b.values),
   'GET /api/radarr': () => arr('radarr').summary(),
   'GET /api/sonarr': () => arr('sonarr').summary(),
   'GET /api/qbittorrent': () => qb.summary(),
@@ -239,12 +350,13 @@ const server = http.createServer(async (r, res) => {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: 'Nije pronađeno' });
     const svc = u.pathname.split('/')[2];
-    if (svc !== 'config' && !enabled(svc)) return send(res, 400, { error: `${svc} nije konfiguriran` });
+    if (svc !== 'config' && svc !== 'settings' && !enabled(svc)) return send(res, 400, { error: `${svc} nije konfiguriran` });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       send(res, 200, (await m.fn(u.searchParams, body, m.params)) ?? { ok: true });
     } catch (e) {
-      send(res, 502, { error: e.name === 'AbortError' ? 'Isteklo vrijeme čekanja' : e.message });
+      const msg = friendlyError(e);
+      send(res, svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502, { error: msg });
     }
     return;
   }

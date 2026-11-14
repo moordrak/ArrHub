@@ -51,7 +51,7 @@ ask CT_PASS   "Root lozinka kontejnera (prazno = samo 'pct enter')" "" secret
 
 # ---------- postavke ArrHuba ----------
 echo
-msg "ArrHub (Enter = preskoči uslugu)"
+msg "ArrHub (Enter = preskoči; sve se može kasnije urediti u ⚙ Postavke)"
 ask PORT "Port" 8686
 ask ARRHUB_USER "Korisničko ime za ArrHub (prazno = bez prijave)"
 [[ -n "${ARRHUB_USER:-}" ]] && ask ARRHUB_PASS "Lozinka za ArrHub" "" secret
@@ -132,4 +132,4 @@ pct exec "$CTID" -- rm -rf /root/arrhub-src
 echo
 msg "Gotovo! Kontejner $CTID ($CT_NAME)"
 echo "   Nadogradnja: pct exec $CTID -- bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh)\""
-echo "   Konfiguracija: pct exec $CTID -- nano /opt/arrhub/config.json && pct exec $CTID -- systemctl restart arrhub"
+echo "   Postavke: u sučelju ArrHuba (⚙ Postavke)"

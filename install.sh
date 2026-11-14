@@ -77,7 +77,7 @@ cp -r "$SRC/server.js" "$SRC/public" "$SRC/config.example.json" "$SRC/README.md"
 if [[ -f "$APP_DIR/config.json" ]]; then
   msg "Postojeći config.json je zadržan"
 else
-  msg "Konfiguracija (Enter = preskoči uslugu)"
+  msg "Konfiguracija (Enter = preskoči; sve se može kasnije urediti u ⚙ Postavke)"
   ask PORT "Port" 8686
   ask ARRHUB_USER "Korisničko ime za ArrHub (prazno = bez prijave)"
   [[ -n "${ARRHUB_USER:-}" ]] && ask ARRHUB_PASS "Lozinka za ArrHub" "" secret
@@ -142,7 +142,7 @@ if [[ "$code" == "200" || "$code" == "401" ]]; then
   IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
   echo
   msg "ArrHub radi: http://${IP:-localhost}:$PORT_NOW"
-  echo "   Konfiguracija: $APP_DIR/config.json  (nakon izmjene: systemctl restart arrhub)"
+  echo "   Postavke:      u sučelju (⚙ Postavke) ili $APP_DIR/config.json + systemctl restart arrhub"
   echo "   Zapisi:        journalctl -u arrhub -f"
   echo "   Nadogradnja:   ponovno pokreni ovu skriptu"
 else
