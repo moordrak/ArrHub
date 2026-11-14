@@ -18,7 +18,20 @@ const FIELDS = [
   ['sonarr', 'url', 'SONARR_URL'], ['sonarr', 'apiKey', 'SONARR_KEY', true],
   ['nzbget', 'url', 'NZBGET_URL'], ['nzbget', 'user', 'NZBGET_USER'], ['nzbget', 'pass', 'NZBGET_PASS', true],
   ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
+  ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
+  ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'],
 ];
+const THEMES = ['auto', 'dark', 'oled', 'light', 'nord', 'dracula', 'catppuccin', 'tokyo', 'gruvbox', 'solarized'];
+const BACKGROUNDS = ['none', 'aurora', 'stars', 'particles', 'waves', 'posters', 'fanart'];
+function normalizeUi(u = {}) {
+  return {
+    theme: THEMES.includes(u.theme) ? u.theme : 'dark',
+    accent: /^#[0-9a-f]{6}$/i.test(u.accent || '') ? u.accent.toLowerCase() : '',
+    background: BACKGROUNDS.includes(u.background) ? u.background : 'none',
+    bgIntensity: Math.max(0, Math.min(100, Math.round(Number(u.bgIntensity ?? 60)))) || 0,
+    bgReactive: !(u.bgReactive === false || u.bgReactive === 'false'),
+  };
+}
 const getF = (o, sec, f) => (sec ? o[sec]?.[f] : o[f]);
 const setF = (o, sec, f, v) => { if (sec) (o[sec] ||= {})[f] = v; else o[f] = v; };
 const envSet = name => process.env[name] !== undefined && process.env[name] !== '';
@@ -30,7 +43,7 @@ function readFileConfig() {
 // Datoteka + varijable okruženja (okruženje ima prednost)
 function loadConfig() {
   const file = readFileConfig();
-  const c = { auth: {} };
+  const c = { auth: {}, ui: {} };
   for (const k of SERVICES) c[k] = {};
   for (const [sec, f, env] of FIELDS) {
     const v = envSet(env) ? process.env[env] : getF(file, sec, f);
@@ -39,6 +52,7 @@ function loadConfig() {
   c.port = Number(c.port) || 8686;
   c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
   for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
+  c.ui = normalizeUi(c.ui);
   return c;
 }
 let cfg = loadConfig();
@@ -56,7 +70,7 @@ function settingsView() {
 }
 // Spaja unos iz sučelja s postojećim vrijednostima (maska = zadrži staru tajnu)
 function mergeInput(values, base = cfg) {
-  const c = { auth: {} };
+  const c = { auth: {}, ui: {} };
   for (const [sec, f, , secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     let v = values?.[key];
@@ -78,6 +92,13 @@ function validate(c) {
   if (c.auth?.user && !c.auth.pass) throw new Error('Za prijavu u ArrHub treba i lozinka');
   if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error('Neispravan port'); c.port = n; }
   if (c.refresh !== undefined) c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
+  if (c.ui) {
+    if (c.ui.theme !== undefined && !THEMES.includes(c.ui.theme)) throw new Error('Nepoznata tema');
+    if (c.ui.background !== undefined && !BACKGROUNDS.includes(c.ui.background)) throw new Error('Nepoznata pozadina');
+    if (c.ui.accent && !/^#[0-9a-f]{6}$/i.test(c.ui.accent)) throw new Error('Boja mora biti u obliku #rrggbb');
+    c.ui = { ...c.ui, ...normalizeUi(c.ui) };
+    if (!c.ui.accent) delete c.ui.accent;
+  }
 }
 function saveSettings(values) {
   const merged = mergeInput(values);
@@ -90,6 +111,8 @@ function saveSettings(values) {
     if (v !== undefined && v !== '') setF(file, sec, f, v);
   }
   for (const k of SERVICES) if (file[k] && !file[k].url) delete file[k];
+  if (file.ui && !Object.keys(file.ui).length) delete file.ui;
+  mediaCache.at = 0;
   const oldPort = cfg.port;
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
@@ -260,6 +283,35 @@ function makeNzb(conf) { return {
 }; }
 const nzb = makeNzb(() => cfg.nzbget);
 
+// ---------- Slike iz knjižnice (pozadine) ----------
+const mediaCache = { at: 0, data: null };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+async function libraryMedia() {
+  if (mediaCache.data && Date.now() - mediaCache.at < 10 * 60000) return mediaCache.data;
+  const posters = [], fanart = [];
+  await Promise.all(['radarr', 'sonarr'].filter(enabled).map(async k => {
+    const list = await arr(k).call(k === 'radarr' ? '/movie' : '/series').catch(() => []);
+    for (const it of list) for (const im of it.images || []) {
+      if (!im.url || !/\/MediaCover\//.test(im.url)) continue;
+      const src = `/api/cover/${k}?p=${encodeURIComponent(im.url)}`;
+      if (im.coverType === 'poster') posters.push(src + '&s=500');
+      else if (im.coverType === 'fanart') fanart.push(src);
+    }
+  }));
+  mediaCache.data = { posters: shuffle(posters).slice(0, 120), fanart: shuffle(fanart).slice(0, 60) };
+  mediaCache.at = Date.now();
+  return mediaCache.data;
+}
+async function cover(k, q) {
+  const c = cfg[k];
+  let p = q.get('p') || '';
+  if (!/^\/[^?#]*\/?MediaCover\/[\w\-./]+(\?[\w=&.\-]*)?$/.test(p) || p.includes('..')) throw new Error('Neispravna putanja');
+  if (q.get('s') === '500') p = p.replace(/poster(\.jpg)/, 'poster-500$1');
+  const r = await req(new URL(p, new URL(c.url).origin + '/').toString(), { headers: { 'X-Api-Key': c.apiKey } });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return { __raw: Buffer.from(await r.arrayBuffer()), type: r.headers.get('content-type') || 'image/jpeg' };
+}
+
 function friendlyError(e) {
   if (e.name === 'AbortError') return 'Isteklo vrijeme čekanja (usluga ne odgovara)';
   if (e.code === 'EACCES' || e.code === 'EROFS') return `Nema dozvole za pisanje u ${CONFIG_FILE}`;
@@ -304,7 +356,9 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent'), refresh: cfg.refresh, auth: !!cfg.auth.user }),
+  'GET /api/config': async () => ({ radarr: enabled('radarr'), sonarr: enabled('sonarr'), nzbget: enabled('nzbget'), qbittorrent: enabled('qbittorrent'), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui }),
+  'GET /api/media': () => libraryMedia(),
+  'GET /api/cover/:arr': (q, b, p) => { if (!enabled(p.arr)) throw new Error('Usluga nije podešena'); return cover(p.arr, q); },
   'GET /api/settings': async () => settingsView(),
   'POST /api/settings': (q, b) => saveSettings(b.values),
   'POST /api/settings/test': (q, b) => testService(b.service, b.values),
@@ -350,10 +404,15 @@ const server = http.createServer(async (r, res) => {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: 'Nije pronađeno' });
     const svc = u.pathname.split('/')[2];
-    if (svc !== 'config' && svc !== 'settings' && !enabled(svc)) return send(res, 400, { error: `${svc} nije konfiguriran` });
+    if (!['config', 'settings', 'media', 'cover'].includes(svc) && !enabled(svc)) return send(res, 400, { error: `${svc} nije konfiguriran` });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
-      send(res, 200, (await m.fn(u.searchParams, body, m.params)) ?? { ok: true });
+      const out = await m.fn(u.searchParams, body, m.params);
+      if (out?.__raw) {
+        res.writeHead(200, { 'Content-Type': out.type, 'Cache-Control': 'private, max-age=86400' });
+        return res.end(out.__raw);
+      }
+      send(res, 200, out ?? { ok: true });
     } catch (e) {
       const msg = friendlyError(e);
       send(res, svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502, { error: msg });

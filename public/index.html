@@ -5,18 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ArrHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23e8a33d'/><path d='M9 21l7-11 7 11' stroke='%23111' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<script>try{const t=JSON.parse(localStorage.getItem('arrhub-theme'));if(t){for(const k in t.vars)document.documentElement.style.setProperty(k,t.vars[k]);document.documentElement.style.colorScheme=t.scheme;document.documentElement.dataset.scheme=t.scheme}}catch(e){}</script>
 <style>
 :root{
   --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
-  --accent:#e8a33d;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;
+  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;
   --ok:#4caf7a;--warn:#e0a63a;--err:#e05a5a;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px 24px;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px 24px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
-.logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+.logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
 nav{display:flex;gap:4px;flex-wrap:wrap}
 nav button{background:none;border:0;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer;font:inherit}
 nav button:hover{color:var(--text);background:var(--panel)}
@@ -47,11 +48,11 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 .bar{grid-column:1/-1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--c,var(--accent));transition:width .4s}
 .tag{font-size:11px;padding:1px 7px;border-radius:10px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
-.tag.ok{color:var(--ok);border-color:#2b4a3a}.tag.warn{color:var(--warn);border-color:#4d3f22}.tag.err{color:var(--err);border-color:#4d2626}
+.tag.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}.tag.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}.tag.err{color:var(--err);border-color:color-mix(in srgb,var(--err) 40%,var(--line))}
 .btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:5px 10px;cursor:pointer;font:inherit;font-size:12.5px}
 .btn:hover{border-color:var(--muted)}
 .btn.i{padding:4px 7px;line-height:1}
-.btn.p{background:var(--accent);border-color:var(--accent);color:#111;font-weight:600}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
 .btn.d:hover{border-color:var(--err);color:var(--err)}
 .empty{color:var(--muted);padding:14px 0;text-align:center;font-size:13px}
 .error{color:var(--err);font-size:13px;padding:8px 0}
@@ -77,11 +78,43 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 .seg button.on{background:var(--panel);color:var(--text)}
 .disk{margin-top:8px}
 .disk .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px}
-.health{font-size:12.5px;padding:6px 10px;border-radius:7px;margin-top:6px;background:#2a2316;color:var(--warn)}
-.health.error{background:#2a1717;color:var(--err)}
+.health{font-size:12.5px;padding:6px 10px;border-radius:7px;margin-top:6px;background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--warn)}
+.health.error{background:color-mix(in srgb,var(--err) 14%,var(--panel));color:var(--err)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none}
 #toast.show{opacity:1}
 .hidden{display:none!important}
+[data-scheme=light]{--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
+body{transition:background-color .3s}
+#bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+#bg canvas,#bg .bg-img,#bg .bg-shade{position:absolute;inset:0;transition:opacity .6s}
+#bg .bg-shade{background:var(--bg)}
+.bg-wall{display:grid;position:absolute;top:0;left:0;will-change:transform}
+.bg-wall img{width:100%;object-fit:cover;border-radius:8px;background:var(--panel2)}
+.bg-slide{position:absolute;inset:-4%;background-size:cover;background-position:center;opacity:0;transition:opacity 2.5s ease}
+.bg-slide.kb{animation:kb 22s ease-out forwards}
+@keyframes kb{from{transform:scale(1.02)}to{transform:scale(1.14) translate(-1.5%,-1%)}}
+@media (prefers-reduced-motion:reduce){.bg-slide.kb{animation:none}}
+body.has-bg{background:var(--bg)}
+body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(14px)}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.theme-opt{position:relative;cursor:pointer;border-radius:10px;border:2px solid var(--line);overflow:hidden;background:none;padding:0;text-align:left;color:inherit;font:inherit}
+.theme-opt input{position:absolute;opacity:0;pointer-events:none}
+.theme-opt:has(input:checked){border-color:var(--accent)}
+.theme-opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.theme-opt .pv{height:56px;padding:8px;display:flex;gap:6px}
+.theme-opt .pv i{flex:1;border-radius:5px;display:block}
+.theme-opt .pv b{width:14px;border-radius:4px;display:block}
+.theme-opt .nm{font-size:12px;padding:6px 8px;border-top:1px solid var(--line);background:var(--panel2)}
+.bgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.bg-opt{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--panel2);font-size:13px}
+.bg-opt:has(input:checked){border-color:var(--accent);color:var(--text);box-shadow:inset 0 0 0 1px var(--accent)}
+.bg-opt input{accent-color:var(--accent);margin:0}
+.ctl{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
+.ctl input[type=range]{accent-color:var(--accent);width:200px}
+.ctl input[type=color]{width:40px;height:30px;padding:0 2px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);cursor:pointer}
+.ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.span2{grid-column:1/-1}
 .set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media(max-width:900px){.set-grid{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
@@ -93,7 +126,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .test{display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12.5px;min-height:30px}
 .test .r.ok{color:var(--ok)}.test .r.err{color:var(--err)}
-.savebar{position:sticky;bottom:0;margin-top:16px;padding:14px 16px;background:rgba(23,26,33,.95);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.savebar{position:sticky;bottom:0;margin-top:16px;padding:14px 16px;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .savebar .sp{flex:1}
 .notice{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
 .notice .sp{flex:1}
@@ -101,7 +134,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 </head>
 <body>
 <header>
-  <div class="logo"><i><svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 22l8-13 8 13" stroke="#111" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i>ArrHub</div>
+  <div class="logo"><i><svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 22l8-13 8 13" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i>ArrHub</div>
   <nav id="nav">
     <button data-v="overview" class="on">Pregled</button>
     <button data-v="downloads">Preuzimanja</button>
@@ -190,6 +223,25 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
   <section id="v-settings" class="hidden">
     <form id="setForm" autocomplete="off">
       <div class="set-grid">
+        <div class="card span2">
+          <h2>Izgled</h2>
+          <div class="field" style="margin-bottom:6px"><label>Tema</label></div>
+          <div class="themes" id="themeList"></div>
+          <div class="ctl">
+            <span class="muted">Naglasna boja</span>
+            <input type="color" id="accentPick" title="Naglasna boja">
+            <input type="hidden" name="ui.accent">
+            <button type="button" class="btn" id="accentReset">Zadana boja teme</button>
+          </div>
+          <div class="field" style="margin:14px 0 6px"><label>Dinamička pozadina</label></div>
+          <div class="bgs" id="bgList"></div>
+          <div class="ctl">
+            <span class="muted">Intenzitet</span>
+            <input type="range" name="ui.bgIntensity" min="5" max="100" step="5"><span class="mono" id="bgIntVal"></span>
+            <label title="Animacija se ubrzava kad se nešto preuzima"><input type="checkbox" name="ui.bgReactive"> Reagira na brzinu preuzimanja</label>
+          </div>
+          <span class="muted" style="font-size:12px">Promjene se odmah vide kao pregled, a spremaju se gumbom <b>Spremi postavke</b>. „Zid postera” i „Slike iz knjižnice” koriste slike iz Radarra i Sonarra.</span>
+        </div>
         <div class="card" style="border-top:3px solid var(--radarr)">
           <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
           <div class="field"><label>URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
@@ -244,6 +296,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 24px 60px}
 </main>
 <div id="toast"></div>
 
+<script src="appearance.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -261,6 +314,7 @@ const dayFmt = new Intl.DateTimeFormat('hr-HR', { weekday: 'long', day: 'numeric
 const timeFmt = new Intl.DateTimeFormat('hr-HR', { hour: '2-digit', minute: '2-digit' });
 const ep = e => `S${String(e.seasonNumber).padStart(2,'0')}E${String(e.episodeNumber).padStart(2,'0')}`;
 
+window.toast = toast;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
 
 async function api(path, body) {
@@ -292,6 +346,7 @@ function renderSpeeds() {
   if (q) { dl += q.dl_info_speed; ul += q.up_info_speed; }
   if (n) dl += n.DownloadRate;
   $('#speeds').innerHTML = `<span>↓ <b>${speed(dl)}</b></span><span>↑ <b>${speed(ul)}</b></span>`;
+  Appearance.Bg.setActivity(dl);
 }
 
 function svcCard(k, body) {
@@ -497,6 +552,7 @@ function show(v) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   if (v === 'add') loadOptions();
   if (v === 'settings') loadSettings();
+  else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);
 }
 $('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
@@ -510,18 +566,27 @@ async function loadSettings() {
     const s = await api('settings'); setLoaded = s;
     for (const el of setForm.elements) {
       if (!el.name) continue;
-      el.value = s.values[el.name] ?? '';
+      const val = s.values[el.name];
+      if (el.type === 'radio') el.checked = el.value === String(val);
+      else if (el.type === 'checkbox') el.checked = val !== false && val !== 'false';
+      else el.value = val ?? '';
       const locked = s.locked.includes(el.name);
-      el.disabled = locked; el.title = locked ? 'Postavljeno varijablom okruženja' : '';
+      el.disabled = locked; el.dataset.locked = locked ? '1' : ''; el.title = locked ? 'Postavljeno varijablom okruženja' : '';
     }
     setForm.querySelectorAll('.test .r').forEach(r => { r.textContent = ''; r.className = 'r'; });
     $('#setInfo').textContent = 'Spremljeno u ' + s.file + (s.locked.length ? ` · ${s.locked.length} polja zaključano varijablama okruženja` : '');
     $('#authHint').textContent = s.values['auth.user'] ? '' : 'Bez prijave svatko u mreži može mijenjati ove postavke.';
+    syncAppearanceControls(); previewAppearance();
   } catch (e) { toast('Greška: ' + e.message); }
 }
 function formValues() {
   const v = {};
-  for (const el of setForm.elements) if (el.name && !el.disabled) v[el.name] = el.value;
+  for (const el of setForm.elements) {
+    if (!el.name || el.dataset.locked === '1') continue;
+    if (el.type === 'radio') { if (el.checked) v[el.name] = el.value; }
+    else if (el.type === 'checkbox') v[el.name] = el.checked;
+    else v[el.name] = el.value;
+  }
   return v;
 }
 setForm.addEventListener('click', async e => {
@@ -545,9 +610,49 @@ setForm.onsubmit = async e => {
   } catch (err) { toast('Greška: ' + err.message); }
 };
 
+// ---- izgled ----
+const { THEMES, BACKGROUNDS, applyTheme, Bg } = Appearance;
+Bg.mediaLoader = () => api('media');
+const BG_ICONS = { none: '∅', aurora: '◐', stars: '✦', particles: '⁘', waves: '≈', posters: '▦', fanart: '▣' };
+$('#themeList').innerHTML = [['auto', { name: 'Automatski', auto: true }], ...Object.entries(THEMES)].map(([id, t]) => {
+  const pv = t.auto
+    ? `<div class="pv" style="background:linear-gradient(90deg,${THEMES.light.bg} 50%,${THEMES.dark.bg} 50%)"><i style="background:linear-gradient(90deg,${THEMES.light.panel} 50%,${THEMES.dark.panel} 50%)"></i><b style="background:${THEMES.dark.accent}"></b></div>`
+    : `<div class="pv" style="background:${t.bg}"><i style="background:${t.panel};border:1px solid ${t.line}"></i><b style="background:${t.accent}"></b></div>`;
+  return `<label class="theme-opt"><input type="radio" name="ui.theme" value="${id}">${pv}<div class="nm">${esc(t.name)}</div></label>`;
+}).join('');
+$('#bgList').innerHTML = Object.entries(BACKGROUNDS).map(([id, n]) =>
+  `<label class="bg-opt"><input type="radio" name="ui.background" value="${id}"><span>${BG_ICONS[id] || ''}</span>${esc(n)}</label>`).join('');
+
+function applyUi(ui) {
+  if (!ui) return;
+  applyTheme(ui.theme, ui.accent);
+  Bg.set(ui.background, { intensity: ui.bgIntensity, reactive: ui.bgReactive });
+}
+function currentUiFromForm() {
+  const v = formValues();
+  return { theme: v['ui.theme'] || 'dark', accent: v['ui.accent'] || '', background: v['ui.background'] || 'none',
+    bgIntensity: Number(v['ui.bgIntensity'] ?? 60), bgReactive: v['ui.bgReactive'] !== false };
+}
+function syncAppearanceControls() {
+  const ui = currentUiFromForm();
+  const t = ui.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? THEMES.light : THEMES.dark) : THEMES[ui.theme] || THEMES.dark;
+  $('#accentPick').value = ui.accent || t.accent;
+  $('#accentReset').disabled = !ui.accent;
+  $('#bgIntVal').textContent = ui.bgIntensity + '%';
+  const off = ui.background === 'none';
+  setForm.elements['ui.bgIntensity'].disabled = off;
+  setForm.elements['ui.bgReactive'].disabled = off || ui.background === 'fanart';
+}
+function previewAppearance() { applyUi(currentUiFromForm()); }
+$('#accentPick').addEventListener('input', e => { setForm.elements['ui.accent'].value = e.target.value; syncAppearanceControls(); previewAppearance(); });
+$('#accentReset').onclick = () => { setForm.elements['ui.accent'].value = ''; syncAppearanceControls(); previewAppearance(); };
+setForm.addEventListener('input', e => { if (e.target.name?.startsWith('ui.')) { syncAppearanceControls(); previewAppearance(); } });
+setForm.addEventListener('change', e => { if (e.target.name?.startsWith('ui.')) { syncAppearanceControls(); previewAppearance(); } });
+
 let timer;
 async function applyConfig() {
   state.cfg = await api('config');
+  applyUi(state.cfg.ui);
   const any = ['radarr','sonarr','nzbget','qbittorrent'].some(k => state.cfg[k]);
   $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));

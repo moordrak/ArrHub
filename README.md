@@ -2,6 +2,8 @@
 
 ![ArrHub](docs/screenshot.png)
 
+![Zid postera](docs/theme-posters.png)
+
 Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet i qBittorrent**.
 Mali Node.js poslužitelj (bez ovisnosti, Node 18+) drži API ključeve i lozinke na strani poslužitelja
 i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
@@ -15,6 +17,10 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 - **Dodaj** – pretraga i dodavanje filmova/serija (odabir profila kvalitete i mape, opcionalno odmah traži)
 - **Postavke** – adrese, API ključevi i lozinke usluga, prijava u ArrHub, interval osvježavanja i port, sve kroz sučelje.
   Gumb *Testiraj vezu* provjerava svaku uslugu prije spremanja, a promjene vrijede odmah, bez ponovnog pokretanja.
+- **Teme i dinamičke pozadine** (u Postavkama): 9 tema + automatska (prati svijetli/tamni način sustava), vlastita
+  naglasna boja te animirane pozadine *Aurora, Zvjezdano nebo, Mreža čestica, Valovi, Zid postera* i *Slike iz knjižnice*.
+  Zadnje dvije koriste postere i pozadinske slike iz Radarra/Sonarra (dohvaća ih ArrHub, nije potreban internet).
+  Animacija se po želji ubrzava s brzinom preuzimanja, a poštuje i postavku sustava „smanji pokrete”.
 - Automatsko osvježavanje (zadano 5 s), opcionalna Basic Auth prijava
 - Podržava qBittorrent 4.x i 5.x (stop/start i pause/resume)
 
@@ -30,7 +36,8 @@ sučelju nikad ne prikazuju: polje s `********` znači da se postojeća vrijedno
 
 Umjesto sučelja možeš i ručno urediti `config.json` (predložak je `config.example.json`) i ponovno pokrenuti servis.
 Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS`. One imaju prednost pred
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS`, a za izgled
+`ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE`. One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
 
 > ⚠ Bez prijave svatko tko može otvoriti ArrHub može i mijenjati postavke. Ako je dostupan izvan LAN-a, uključi prijavu.
