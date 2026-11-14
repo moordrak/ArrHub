@@ -102,6 +102,9 @@ docker compose up -d
 The configuration lives in the `arrhub-data` volume (`/app/data/config.json`) and is edited from Settings.
 
 Tags: `latest` (latest release), `1.0.0` / `1.0` / `1` (versions), `edge` (latest commit on `main`).
+
+Releases are automatic: bump `version` in `package.json` (optionally add `.github/releases/vX.Y.Z.md` with release notes) and push to `main` –
+the workflow builds the images, creates the `vX.Y.Z` tag and publishes the GitHub release.
 To build it yourself: `docker build -t arrhub .`
 
 ### Nginx Proxy Manager

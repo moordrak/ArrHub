@@ -102,6 +102,9 @@ docker compose up -d
 Konfiguracija se čuva u volumenu `arrhub-data` (`/app/data/config.json`) i uređuje se kroz Postavke.
 
 Oznake: `latest` (zadnji release), `1.0.0` / `1.0` / `1` (verzije), `edge` (zadnji commit na `main`).
+
+Releaseovi su automatski: povećaj `version` u `package.json` (po želji dodaj bilješke u `.github/releases/vX.Y.Z.md`) i pushaj na `main` –
+workflow izgradi slike, stvori tag `vX.Y.Z` i objavi GitHub release.
 Za vlastitu izgradnju: `docker build -t arrhub .`
 
 ### Nginx Proxy Manager

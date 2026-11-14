@@ -1,4 +1,10 @@
-name: Docker image
+name: Docker image & release
+
+# - every push to main builds and pushes the `edge` image
+# - when the version in package.json has no git tag yet, the push to main becomes a release:
+#   images `X.Y.Z`, `X.Y`, `X` and `latest` are pushed, the tag `vX.Y.Z` is created and a GitHub release
+#   is published with the notes from .github/releases/vX.Y.Z.md (or auto-generated notes)
+# - pushing a `v*` tag by hand does the same for that tag
 
 on:
   push:
@@ -9,14 +15,40 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # create the GitHub release for v* tags
+  contents: write
   packages: write
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/arrhub
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            release=true
+          else
+            version="$(node -p "require('./package.json').version")"
+            release=false
+            if [[ "$GITHUB_EVENT_NAME" != pull_request && "$GITHUB_REF" == refs/heads/main ]] && ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+              release=true
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "Version $version, release: $release"
+
   build:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,10 +76,10 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}},value=v${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release == 'true' }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release == 'true' }}
+            type=semver,pattern={{major}},value=v${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release == 'true' }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.release == 'true' }}
             type=edge,branch=main
             type=sha,prefix=sha-
 
@@ -59,25 +91,23 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ steps.meta.outputs.version }}
+          build-args: VERSION=${{ needs.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, build]
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Create GitHub release
+      - name: Create tag and GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: v${{ needs.version.outputs.version }}
         run: |
-          notes=".github/releases/${TAG}.md"
           if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 0; fi
-          if [ -f "$notes" ]; then
-            gh release create "$TAG" --title "ArrHub ${TAG#v}" --notes-file "$notes" --verify-tag --latest
-          else
-            gh release create "$TAG" --title "ArrHub ${TAG#v}" --generate-notes --verify-tag --latest
-          fi
+          notes=".github/releases/${TAG}.md"
+          args=(--title "ArrHub ${TAG#v}" --target "$GITHUB_SHA" --latest)
+          if [ -f "$notes" ]; then args+=(--notes-file "$notes"); else args+=(--generate-notes); fi
+          gh release create "$TAG" "${args[@]}"
