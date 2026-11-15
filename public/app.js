@@ -60,10 +60,30 @@ function renderSpeeds() {
   Appearance.Bg.setActivity(dl);
 }
 
+// link to the service's own web UI (opens in a new tab)
+const LINK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+function svcLink(k) {
+  const href = state.cfg.links?.[k];
+  if (!href) return '';
+  const label = esc(t('c.openService', { svc: NAMES[k] }));
+  return `<a class="svc-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="${label}" aria-label="${label}">${LINK_ICON}</a>`;
+}
+// static cards (Downloads, History, Requests): add/refresh the link in their title
+function decorateStaticLinks() {
+  document.querySelectorAll('.card[data-icon]:not(.svc)').forEach(card => {
+    const k = card.dataset.icon, h2 = card.querySelector('h2');
+    if (!h2) return;
+    h2.querySelector('.svc-link')?.remove();
+    const html = svcLink(k);
+    if (!html) return;
+    const sp = h2.querySelector('.sp');
+    sp ? sp.insertAdjacentHTML('afterend', html) : h2.insertAdjacentHTML('beforeend', html);
+  });
+}
 function svcCard(k, body) {
   const err = state.err[k];
   return `<div class="card svc" data-icon="${k}" style="--c:${COLORS[k]}">
-    <h2><span class="dot" style="background:${err ? 'var(--err)' : 'var(--ok)'}"></span>${NAMES[k]}<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0">${esc(state.data[k]?.version || '')}</span></h2>
+    <h2><span class="dot" style="background:${err ? 'var(--err)' : 'var(--ok)'}"></span>${NAMES[k]}<span class="sp"></span><span class="muted mono" style="text-transform:none;letter-spacing:0">${esc(state.data[k]?.version || '')}</span>${svcLink(k)}</h2>
     ${err ? `<div class="error">${esc(err)}</div>` : state.data[k] ? body(state.data[k]) : `<div class="empty">${t('c.loading')}</div>`}
   </div>`;
 }
@@ -493,7 +513,7 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); render();
+  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
   if (lastResults.length && state.view === 'add') renderResults();
 }
 function applyUi(ui) {
@@ -569,6 +589,7 @@ async function applyConfig() {
   loadIcons(false);
   $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
+  decorateStaticLinks();
   clearInterval(timer);
   timer = setInterval(() => { if (!document.hidden) refresh(); }, (state.cfg.refresh || 5) * 1000);
   return any;

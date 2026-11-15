@@ -158,6 +158,9 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .span2{grid-column:1/-1}
+.svc-link{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;color:var(--muted);border:1px solid transparent;flex:none;text-decoration:none}
+.svc-link:hover,.svc-link:focus-visible{color:var(--accent-text,var(--accent));border-color:var(--line);background:var(--panel2)}
+.svc-link svg{width:15px;height:15px}
 body.card-icons .card[data-icon]{position:relative;overflow:hidden;isolation:isolate}
 body.card-icons .card[data-icon]::after{content:'';position:absolute;z-index:-1;pointer-events:none;right:0;bottom:0;height:clamp(110px,80%,190px);aspect-ratio:1;background:var(--icon) center/contain no-repeat;opacity:var(--card-icon-opacity,.1);transform:translate(16%,18%) rotate(-12deg)}
 body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opacity:calc(var(--card-icon-opacity,.1) * .7)}
@@ -336,18 +339,21 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         <div class="card" style="border-top:3px solid var(--radarr)">
           <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="radarr.link" placeholder="https://radarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="radarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--sonarr)">
           <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="sonarr.link" placeholder="https://sonarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="sonarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--qb)">
           <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent</h2>
           <div class="field"><label data-i18n="set.webUiUrl">Web UI URL</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="qbittorrent.link" placeholder="https://qbittorrent.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="row2">
             <div class="field"><label data-i18n="set.user">Username</label><input name="qbittorrent.user" placeholder="admin"></div>
             <div class="field"><label data-i18n="set.pass">Password</label><input name="qbittorrent.pass" type="password"></div>
@@ -357,6 +363,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         <div class="card" style="border-top:3px solid var(--nzb)">
           <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="nzbget.link" placeholder="https://nzbget.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="row2">
             <div class="field"><label data-i18n="set.user">Username</label><input name="nzbget.user" placeholder="nzbget"></div>
             <div class="field"><label data-i18n="set.pass">Password</label><input name="nzbget.pass" type="password"></div>
@@ -366,6 +373,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         <div class="card" style="border-top:3px solid var(--seerr)">
           <h2><span class="dot" style="background:var(--seerr)"></span>Seerr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="seerr.link" placeholder="https://seerr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
           <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>

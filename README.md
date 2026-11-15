@@ -29,6 +29,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
   NZBGet (pause/resume per item and globally, delete), Radarr/Sonarr queues (remove + blocklist)
 - **Requests (Seerr)** – user requests with poster, seasons and status, filters (pending, all, processing, available, declined),
   approve, decline and delete. The pending count is also shown on the Overview. Works with Overseerr and Jellyseerr too.
+- **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Calendar** – movies and episodes for the next 2 weeks
 - **History** – latest events from Radarr, Sonarr and NZBGet
 - **Add** – search and add movies/series (quality profile and root folder, optionally search right away)
@@ -58,7 +59,8 @@ never shown in the UI: a field showing `********` means the existing value is ke
 
 Instead of the UI you can also edit `config.json` by hand (template: `config.example.json`) and restart the service.
 Everything can also be set with environment variables: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`, and for the look
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`,
+the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`, and for the look
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.

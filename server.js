@@ -14,7 +14,7 @@ try { VERSION = require('./package.json').version || VERSION; } catch {}
 // The language of each request comes from the X-Lang header the UI sends (falls back to the configured UI language).
 const MSG = {
   en: {
-    urlInvalid: '{svc}: invalid URL', urlScheme: '{svc}: URL must start with http:// or https://',
+    urlInvalid: '{svc}: invalid URL', linkInvalid: '{svc}: the link must be a full http:// or https:// address', urlScheme: '{svc}: URL must start with http:// or https://',
     needsKey: '{svc} needs an API key', authNeedsPass: 'An ArrHub login also needs a password', badPort: 'Invalid port',
     badTheme: 'Unknown theme', badBackground: 'Unknown background', badColor: 'Colour must be in #rrggbb format', badLang: 'Unknown language',
     unknownService: 'Unknown service', urlMissing: 'URL is not set', wrongApp: 'That address is {app}, not {svc}', user: 'user',
@@ -30,7 +30,7 @@ const MSG = {
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
   },
   hr: {
-    urlInvalid: '{svc}: neispravan URL', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
+    urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
     needsKey: '{svc} treba API ključ', authNeedsPass: 'Za prijavu u ArrHub treba i lozinka', badPort: 'Neispravan port',
     badTheme: 'Nepoznata tema', badBackground: 'Nepoznata pozadina', badColor: 'Boja mora biti u obliku #rrggbb', badLang: 'Nepoznat jezik',
     unknownService: 'Nepoznata usluga', urlMissing: 'URL nije upisan', wrongApp: 'Na toj adresi je {app}, ne {svc}', user: 'korisnik',
@@ -74,6 +74,9 @@ const FIELDS = [
   ['nzbget', 'url', 'NZBGET_URL'], ['nzbget', 'user', 'NZBGET_USER'], ['nzbget', 'pass', 'NZBGET_PASS', true],
   ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
   ['seerr', 'url', 'SEERR_URL'], ['seerr', 'apiKey', 'SEERR_KEY', true],
+  // optional address the browser opens from the cards (e.g. a public reverse-proxy URL); empty = the service URL
+  ['radarr', 'link', 'RADARR_LINK'], ['sonarr', 'link', 'SONARR_LINK'], ['nzbget', 'link', 'NZBGET_LINK'],
+  ['qbittorrent', 'link', 'QBIT_LINK'], ['seerr', 'link', 'SEERR_LINK'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -147,6 +150,13 @@ function validate(c) {
     let p; try { p = new URL(u); } catch { throw new Error(T('urlInvalid', { svc: k })); }
     if (!/^https?:$/.test(p.protocol)) throw new Error(T('urlScheme', { svc: k }));
     c[k].url = u.replace(/\/+$/, '');
+  }
+  for (const k of SERVICES) {
+    const l = c[k]?.link;
+    if (!l) continue;
+    let p; try { p = new URL(l); } catch { throw new Error(T('linkInvalid', { svc: k })); }
+    if (!/^https?:$/.test(p.protocol)) throw new Error(T('linkInvalid', { svc: k }));
+    c[k].link = l.replace(/\/+$/, '');
   }
   for (const k of ['radarr', 'sonarr', 'seerr']) if (c[k]?.url && !c[k].apiKey) throw new Error(T('needsKey', { svc: k[0].toUpperCase() + k.slice(1) }));
   if (c.auth?.user && !c.auth.pass) throw new Error(T('authNeedsPass'));
@@ -327,9 +337,13 @@ const qb = makeQb(() => cfg.qbittorrent);
 function makeNzb(conf) { return {
   async rpc(method, params = []) {
     const c = conf();
+    // NZBGet URLs are often written as http://user:pass@host:6789 – move those credentials into the header
+    const u = new URL(c.url);
+    const user = c.user || decodeURIComponent(u.username), pass = c.user ? (c.pass || '') : decodeURIComponent(u.password);
+    u.username = ''; u.password = '';
     const headers = { 'Content-Type': 'application/json' };
-    if (c.user) headers.Authorization = 'Basic ' + Buffer.from(`${c.user}:${c.pass || ''}`).toString('base64');
-    const res = await json(`${c.url}/jsonrpc`, { method: 'POST', headers, body: JSON.stringify({ method, params, id: 1 }) });
+    if (user) headers.Authorization = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
+    const res = await json(`${u.toString().replace(/\/+$/, '')}/jsonrpc`, { method: 'POST', headers, body: JSON.stringify({ method, params, id: 1 }) });
     if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
     return res.result;
   },
@@ -595,6 +609,19 @@ async function about(force) {
   return { ...base, ...data };
 }
 
+function serviceLinks() {
+  const out = {};
+  for (const k of SERVICES) {
+    if (!enabled(k)) continue;
+    try {
+      const u = new URL(cfg[k].link || cfg[k].url);
+      u.username = ''; u.password = '';
+      out[k] = u.toString().replace(/\/+$/, '') + '/';
+    } catch {}
+  }
+  return out;
+}
+
 function friendlyError(e) {
   if (e.name === 'AbortError') return T('timeout');
   if (e.code === 'EACCES' || e.code === 'EROFS') return T('noWrite', { file: CONFIG_FILE });
@@ -636,7 +663,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION }),
+  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION, links: serviceLinks() }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/about': q => about(q.get('refresh') === '1'),
   'GET /api/icon/:svc': async (q, b, p) => {
