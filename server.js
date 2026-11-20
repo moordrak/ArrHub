@@ -25,8 +25,10 @@ const MSG = {
     timeout: 'Timed out (service is not responding)', noWrite: 'No permission to write {file}',
     netRefused: 'Connection refused – check the address and port', netNotFound: 'Host not found (DNS)', netHost: 'Host unreachable',
     netNet: 'Network unreachable', netTimeout: 'Connection timed out', netReset: 'Connection reset',
-    netSelfSigned: 'The certificate is self-signed or locally signed – enable “Accept self-signed certificate” for this service',
-    netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address', fetchFailed: 'Connection failed',
+    netSelfSigned: 'The certificate is self-signed or locally signed – add your CA certificate in Settings or enable “Accept self-signed certificate” for this service',
+    caInvalid: 'The CA certificate is not valid – paste the PEM text starting with -----BEGIN CERTIFICATE-----',
+    caPrivateKey: 'That is a private key – paste only the CA certificate (-----BEGIN CERTIFICATE-----), never the key',
+    netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address – the URL must use a name or IP listed in the certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
   },
@@ -42,8 +44,10 @@ const MSG = {
     timeout: 'Isteklo vrijeme čekanja (usluga ne odgovara)', noWrite: 'Nema dozvole za pisanje u {file}',
     netRefused: 'Veza odbijena – provjeri adresu i port', netNotFound: 'Adresa nije pronađena (DNS)', netHost: 'Računalo nije dostupno',
     netNet: 'Mreža nije dostupna', netTimeout: 'Isteklo vrijeme povezivanja', netReset: 'Veza prekinuta',
-    netSelfSigned: 'Certifikat je samopotpisan ili lokalno potpisan – uključi „Prihvati samopotpisani certifikat” za ovaj servis',
-    netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi', fetchFailed: 'Povezivanje nije uspjelo',
+    netSelfSigned: 'Certifikat je samopotpisan ili lokalno potpisan – dodaj svoj CA certifikat u Postavkama ili uključi „Prihvati samopotpisani certifikat” za ovaj servis',
+    caInvalid: 'CA certifikat nije ispravan – zalijepi PEM tekst koji počinje s -----BEGIN CERTIFICATE-----',
+    caPrivateKey: 'To je privatni ključ – zalijepi samo CA certifikat (-----BEGIN CERTIFICATE-----), nikad ključ',
+    netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi – URL mora koristiti ime ili IP naveden u certifikatu', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
     noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
   },
@@ -82,6 +86,8 @@ const FIELDS = [
   // accept a self-signed / locally signed TLS certificate for that service only
   ['radarr', 'insecure', 'RADARR_INSECURE'], ['sonarr', 'insecure', 'SONARR_INSECURE'], ['nzbget', 'insecure', 'NZBGET_INSECURE'],
   ['qbittorrent', 'insecure', 'QBIT_INSECURE'], ['seerr', 'insecure', 'SEERR_INSECURE'],
+  // own CA certificate(s) in PEM, trusted (together with the system CAs) for connections to the services
+  ['tls', 'ca', 'ARRHUB_CA'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -111,7 +117,7 @@ function readFileConfig() {
 // File + environment variables (environment wins)
 function loadConfig() {
   const file = readFileConfig();
-  const c = { auth: {}, ui: {} };
+  const c = { auth: {}, ui: {}, tls: {} };
   for (const k of SERVICES) c[k] = {};
   for (const [sec, f, env] of FIELDS) {
     const v = envSet(env) ? process.env[env] : getF(file, sec, f);
@@ -121,15 +127,32 @@ function loadConfig() {
   c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
   for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
   for (const k of SERVICES) c[k].insecure = toBool(c[k].insecure);
+  if (!c.tls.ca && process.env.ARRHUB_CA_FILE) { try { c.tls.ca = fs.readFileSync(process.env.ARRHUB_CA_FILE, 'utf8'); } catch (e) { console.error('ARRHUB_CA_FILE:', e.message); } }
+  try { caState = c.tls.ca ? parseCa(c.tls.ca) : null; } catch (e) { caState = null; console.error('CA certificate ignored:', e.message); }
   c.ui = normalizeUi(c.ui);
   return c;
+}
+// ---------- Own CA certificate ----------
+const crypto_ = require('crypto'), tls_ = require('tls');
+let caState = null;   // { pem: [..], info: [{ subject, issuer, validTo, ca }] } for the saved CA
+function parseCa(text) {
+  const raw = String(text || '');
+  if (/PRIVATE KEY-----/.test(raw)) throw new Error(T('caPrivateKey'));
+  const pems = raw.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) || [];
+  if (!pems.length) throw new Error(T('caInvalid'));
+  const info = pems.map(pem => {
+    let x; try { x = new crypto_.X509Certificate(pem); } catch { throw new Error(T('caInvalid')); }
+    const cn = (s) => (String(s).match(/CN=([^\n,]+)/) || [])[1] || String(s).split('\n')[0];
+    return { subject: cn(x.subject), issuer: cn(x.issuer), validTo: new Date(x.validTo).toISOString(), ca: x.ca };
+  });
+  return { pem: pems, info };
 }
 const toBool = v => v === true || v === 1 || /^(true|1|yes|on)$/i.test(String(v ?? ''));
 let cfg = loadConfig();
 
 // Settings for the UI (secrets masked, flags fields that come from the environment)
 function settingsView() {
-  const out = { values: {}, locked: [], file: CONFIG_FILE };
+  const out = { values: {}, locked: [], file: CONFIG_FILE, caInfo: caState?.info || [] };
   for (const [sec, f, env, secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     const v = getF(cfg, sec, f);
@@ -140,7 +163,7 @@ function settingsView() {
 }
 // Merges UI input with current values (mask = keep the existing secret)
 function mergeInput(values, base = cfg) {
-  const c = { auth: {}, ui: {} };
+  const c = { auth: {}, ui: {}, tls: {} };
   for (const [sec, f, , secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     let v = values?.[key];
@@ -159,6 +182,7 @@ function validate(c) {
     c[k].url = u.replace(/\/+$/, '');
   }
   for (const k of SERVICES) if (c[k] && c[k].insecure !== undefined) c[k].insecure = toBool(c[k].insecure);
+  if (c.tls?.ca) c.tls.ca = parseCa(c.tls.ca).pem.join('\n') + '\n';   // throws on junk or a private key
   for (const k of SERVICES) {
     const l = c[k]?.link;
     if (!l) continue;
@@ -206,7 +230,8 @@ async function testService(service, values) {
   if (!s?.url) throw new Error(T('urlMissing'));
   // the test follows the form's checkbox, not what is saved
   const o = originOf(s.url);
-  return tlsStore.run({ allow: new Set(s.insecure ? [o] : []), deny: new Set(s.insecure ? [] : [o]) }, () => runServiceTest(service, s));
+  const ca = c.tls?.ca ? parseCa(c.tls.ca) : null;
+  return tlsStore.run({ allow: new Set(s.insecure ? [o] : []), deny: new Set(s.insecure ? [] : [o]), origin: o, ca }, () => runServiceTest(service, s));
 }
 async function runServiceTest(service, s) {
   if (service === 'radarr' || service === 'sonarr') {
@@ -231,17 +256,23 @@ const TIMEOUT = 10000;
 const http_ = require('http'), https_ = require('https');
 const tlsStore = new AsyncLocalStorage();   // per-call override for Test connection: { allow, deny } sets of origins
 const originOf = u => { try { return new URL(u).origin; } catch { return null; } };
-// origins of services that have "accept self-signed certificate" enabled
-function allowsSelfSigned(url) {
+// TLS options for a request: null = normal fetch; otherwise used by httpsFetch.
+// Only the services' own https origins are affected: "accept self-signed" turns verification off,
+// an own CA adds trusted roots (system CAs + own CA, full verification incl. host name).
+function tlsFor(url) {
   const o = originOf(url);
-  if (!o || !o.startsWith('https:')) return false;
+  if (!o || !o.startsWith('https:')) return null;
   const t = tlsStore.getStore();
-  if (t?.deny.has(o)) return false;
-  if (t?.allow.has(o)) return true;
-  return SERVICES.some(k => cfg[k]?.insecure && cfg[k].url && originOf(cfg[k].url) === o);
+  const isService = t?.origin === o || SERVICES.some(k => cfg[k]?.url && originOf(cfg[k].url) === o);
+  if (!isService) return null;
+  const insecure = t?.deny.has(o) ? false : t?.allow.has(o) ? true : SERVICES.some(k => cfg[k]?.insecure && cfg[k].url && originOf(cfg[k].url) === o);
+  if (insecure) return { rejectUnauthorized: false };
+  const ca = t && 'ca' in t ? t.ca : caState;
+  if (ca?.pem?.length) return { ca: [...tls_.rootCertificates, ...ca.pem], rejectUnauthorized: true };
+  return null;
 }
-// fetch-compatible request over https with certificate verification off – used ONLY for those origins
-function insecureFetch(url, { method = 'GET', headers = {}, body, redirect = 'follow', signal } = {}, hops = 0) {
+// fetch-compatible request over https with custom TLS options (see tlsFor)
+function httpsFetch(url, { method = 'GET', headers = {}, body, redirect = 'follow', signal } = {}, tlsOpts = {}, hops = 0) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const h = {};
@@ -249,7 +280,7 @@ function insecureFetch(url, { method = 'GET', headers = {}, body, redirect = 'fo
     let payload = body;
     if (body instanceof URLSearchParams) { payload = body.toString(); h['Content-Type'] ??= 'application/x-www-form-urlencoded'; }
     if (payload !== undefined && payload !== null) h['Content-Length'] = Buffer.byteLength(payload);
-    const r = https_.request(u, { method, headers: h, rejectUnauthorized: false }, res => {
+    const r = https_.request(u, { method, headers: h, ...tlsOpts }, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
@@ -258,8 +289,8 @@ function insecureFetch(url, { method = 'GET', headers = {}, body, redirect = 'fo
         if (redirect === 'follow' && status >= 300 && status < 400 && loc && hops < 5) {
           const next = new URL(loc, u).toString();
           const sameOrigin = originOf(next) === u.origin;
-          const go = sameOrigin && next.startsWith('https:') ? insecureFetch : fetch;
-          return resolve(go(next, { method: status === 303 ? 'GET' : method, headers, body: status === 303 ? undefined : body, redirect, signal }, hops + 1));
+          const o2 = { method: status === 303 ? 'GET' : method, headers, body: status === 303 ? undefined : body, redirect, signal };
+          return resolve(sameOrigin && next.startsWith('https:') ? httpsFetch(next, o2, tlsOpts, hops + 1) : fetch(next, o2));
         }
         const hdrs = new Headers();
         for (const [k, v] of Object.entries(res.headers)) hdrs.set(k, Array.isArray(v) ? v.join(', ') : String(v));
@@ -281,8 +312,8 @@ async function req(url, { timeout = TIMEOUT, ...opts } = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const go = allowsSelfSigned(url) ? insecureFetch : fetch;
-    return await go(url, { ...opts, signal: ctrl.signal });
+    const tlsOpts = tlsFor(url);
+    return await (tlsOpts ? httpsFetch(url, { ...opts, signal: ctrl.signal }, tlsOpts) : fetch(url, { ...opts, signal: ctrl.signal }));
   } finally { clearTimeout(t); }
 }
 async function json(url, opts) {

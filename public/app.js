@@ -374,6 +374,10 @@ function settingsTexts() {
   const s = setLoaded;
   $('#setInfo').textContent = t('set.savedIn', { file: s.file }) + (s.locked.length ? ' · ' + t('set.lockedN', { n: s.locked.length }) : '');
   $('#authHint').textContent = s.values['auth.user'] ? '' : t('set.authHint');
+  const ci = $('#caInfo');
+  if (ci) ci.textContent = (s.caInfo || []).length
+    ? t('set.caLoaded', { list: s.caInfo.map(c => `${c.subject}${c.ca ? ' (CA)' : ''} – ${t('set.caValid', { date: new Date(c.validTo).toLocaleDateString(I18N.locale) })}`).join(' · ') })
+    : t('set.caNone');
   for (const el of setForm.elements) if (el.dataset.locked === '1') el.title = t('set.lockedTitle');
 }
 async function loadSettings() {

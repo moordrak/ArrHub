@@ -158,6 +158,9 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .span2{grid-column:1/-1}
+.field textarea{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:12px/1.45 var(--mono);resize:vertical;min-height:110px}
+.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea:disabled{opacity:.55;cursor:not-allowed}
 .svc-link{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;color:var(--muted);border:1px solid transparent;flex:none;text-decoration:none}
 .svc-link:hover,.svc-link:focus-visible{color:var(--accent-text,var(--accent));border-color:var(--line);background:var(--panel2)}
 .svc-link svg{width:15px;height:15px}
@@ -397,6 +400,15 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           </div>
           <span class="muted" style="font-size:12px" id="authHint"></span>
         </div>
+      </div>
+      <div class="card span2" style="margin-top:16px">
+        <h2 data-i18n="set.tlsTitle">SSL / TLS – own CA certificate</h2>
+        <div class="field">
+          <label for="caText" data-i18n="set.ca">CA certificate (PEM)</label>
+          <textarea id="caText" name="tls.ca" rows="6" spellcheck="false" autocomplete="off" placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"></textarea>
+          <span class="hint" data-i18n="set.caHint">Paste the certificate of your own certificate authority (the public .crt / .pem, not the private key). ArrHub then fully verifies your https:// services against it. Several certificates (a chain) can be pasted one after another.</span>
+        </div>
+        <div class="muted" style="font-size:12.5px" id="caInfo"></div>
       </div>
       <div class="card span2" style="margin-top:16px">
         <h2 data-i18n="about.title">About</h2>
