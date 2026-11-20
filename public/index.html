@@ -323,11 +323,11 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <div class="ctl">
             <span class="muted" data-i18n="set.intensity">Intensity</span>
             <input type="range" name="ui.bgIntensity" min="5" max="100" step="5"><span class="mono" id="bgIntVal"></span>
-            <label data-i18n-title="set.reactiveTitle"><input type="checkbox" name="ui.bgReactive"> <span data-i18n="set.reactive">Reacts to download speed</span></label>
+            <label data-i18n-title="set.reactiveTitle"><input type="checkbox" name="ui.bgReactive" checked> <span data-i18n="set.reactive">Reacts to download speed</span></label>
           </div>
           <div class="field" style="margin:14px 0 6px"><label data-i18n="set.cardIconsTitle">Service icons on cards</label></div>
           <div class="ctl">
-            <label><input type="checkbox" name="ui.cardIcons"> <span data-i18n="set.cardIcons">Show a large service icon behind each card</span></label>
+            <label><input type="checkbox" name="ui.cardIcons" checked> <span data-i18n="set.cardIcons">Show a large service icon behind each card</span></label>
             <span class="muted" data-i18n="set.iconStrength">Strength</span>
             <input type="range" name="ui.cardIconStrength" min="3" max="30" step="1"><span class="mono" id="iconStrVal"></span>
             <button type="button" class="btn" id="iconReload" data-i18n="set.iconReload">Reload icons</button>
@@ -340,6 +340,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="radarr.link" placeholder="https://radarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="radarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="radarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
@@ -347,6 +348,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="sonarr.link" placeholder="https://sonarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="sonarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="sonarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
@@ -354,6 +356,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent</h2>
           <div class="field"><label data-i18n="set.webUiUrl">Web UI URL</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="qbittorrent.link" placeholder="https://qbittorrent.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="qbittorrent.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="row2">
             <div class="field"><label data-i18n="set.user">Username</label><input name="qbittorrent.user" placeholder="admin"></div>
             <div class="field"><label data-i18n="set.pass">Password</label><input name="qbittorrent.pass" type="password"></div>
@@ -364,6 +367,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="nzbget.link" placeholder="https://nzbget.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="nzbget.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="row2">
             <div class="field"><label data-i18n="set.user">Username</label><input name="nzbget.user" placeholder="nzbget"></div>
             <div class="field"><label data-i18n="set.pass">Password</label><input name="nzbget.pass" type="password"></div>
@@ -374,6 +378,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--seerr)"></span>Seerr</h2>
           <div class="field"><label data-i18n="set.url">URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="seerr.link" placeholder="https://seerr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="seerr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
           <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>

@@ -70,6 +70,7 @@
       'set.iconReload': 'Reload icons', 'set.iconOfficial': 'official icon', 'set.iconGeneric': 'generic icon',
       'c.openService': 'Open {svc}', 'set.link': 'Link in cards (optional)', 'set.linkPh': 'https://service.example.com',
       'set.linkHint': 'Opened from the cards – e.g. your reverse-proxy address. Empty = the URL above.',
+      'set.insecure': 'Accept self-signed certificate', 'set.insecureHint': 'Only for your own https:// service on the local network – the certificate is not verified.',
       // themes & backgrounds
       'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light', 'theme.pastel-lavender': 'Pastel Lavender', 'theme.pastel-peach': 'Pastel Peach',
       'bg.none': 'No background', 'bg.aurora': 'Aurora', 'bg.stars': 'Starfield', 'bg.particles': 'Particle network', 'bg.waves': 'Waves',
@@ -135,6 +136,7 @@
       'set.iconReload': 'Ponovno učitaj ikone', 'set.iconOfficial': 'službena ikona', 'set.iconGeneric': 'generička ikona',
       'c.openService': 'Otvori {svc}', 'set.link': 'Poveznica u karticama (neobavezno)', 'set.linkPh': 'https://servis.primjer.hr',
       'set.linkHint': 'Otvara se iz kartica – npr. adresa preko reverse proxyja. Prazno = URL iznad.',
+      'set.insecure': 'Prihvati samopotpisani certifikat', 'set.insecureHint': 'Samo za vlastiti https:// servis u lokalnoj mreži – certifikat se ne provjerava.',
       'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla', 'theme.pastel-lavender': 'Pastel lavanda', 'theme.pastel-peach': 'Pastel breskva',
       'bg.none': 'Bez pozadine', 'bg.aurora': 'Aurora', 'bg.stars': 'Zvjezdano nebo', 'bg.particles': 'Mreža čestica', 'bg.waves': 'Valovi',
       'bg.posters': 'Zid postera', 'bg.fanart': 'Slike iz knjižnice',

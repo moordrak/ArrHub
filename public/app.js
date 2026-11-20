@@ -383,7 +383,7 @@ async function loadSettings() {
       if (!el.name) continue;
       const val = s.values[el.name];
       if (el.type === 'radio') el.checked = el.value === String(val);
-      else if (el.type === 'checkbox') el.checked = val !== false && val !== 'false';
+      else if (el.type === 'checkbox') el.checked = (val === undefined || val === '') ? el.defaultChecked : (val === true || val === 'true');
       else el.value = val ?? '';
       const locked = s.locked.includes(el.name);
       el.disabled = locked; el.dataset.locked = locked ? '1' : ''; el.title = '';

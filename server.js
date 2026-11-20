@@ -25,7 +25,8 @@ const MSG = {
     timeout: 'Timed out (service is not responding)', noWrite: 'No permission to write {file}',
     netRefused: 'Connection refused – check the address and port', netNotFound: 'Host not found (DNS)', netHost: 'Host unreachable',
     netNet: 'Network unreachable', netTimeout: 'Connection timed out', netReset: 'Connection reset',
-    netSelfSigned: 'Self-signed TLS certificate – use http:// or a valid certificate', fetchFailed: 'Connection failed',
+    netSelfSigned: 'The certificate is self-signed or locally signed – enable “Accept self-signed certificate” for this service',
+    netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
   },
@@ -41,7 +42,8 @@ const MSG = {
     timeout: 'Isteklo vrijeme čekanja (usluga ne odgovara)', noWrite: 'Nema dozvole za pisanje u {file}',
     netRefused: 'Veza odbijena – provjeri adresu i port', netNotFound: 'Adresa nije pronađena (DNS)', netHost: 'Računalo nije dostupno',
     netNet: 'Mreža nije dostupna', netTimeout: 'Isteklo vrijeme povezivanja', netReset: 'Veza prekinuta',
-    netSelfSigned: 'Samopotpisani TLS certifikat – koristi http:// ili valjan certifikat', fetchFailed: 'Povezivanje nije uspjelo',
+    netSelfSigned: 'Certifikat je samopotpisan ili lokalno potpisan – uključi „Prihvati samopotpisani certifikat” za ovaj servis',
+    netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
     noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
   },
@@ -77,6 +79,9 @@ const FIELDS = [
   // optional address the browser opens from the cards (e.g. a public reverse-proxy URL); empty = the service URL
   ['radarr', 'link', 'RADARR_LINK'], ['sonarr', 'link', 'SONARR_LINK'], ['nzbget', 'link', 'NZBGET_LINK'],
   ['qbittorrent', 'link', 'QBIT_LINK'], ['seerr', 'link', 'SEERR_LINK'],
+  // accept a self-signed / locally signed TLS certificate for that service only
+  ['radarr', 'insecure', 'RADARR_INSECURE'], ['sonarr', 'insecure', 'SONARR_INSECURE'], ['nzbget', 'insecure', 'NZBGET_INSECURE'],
+  ['qbittorrent', 'insecure', 'QBIT_INSECURE'], ['seerr', 'insecure', 'SEERR_INSECURE'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -115,9 +120,11 @@ function loadConfig() {
   c.port = Number(c.port) || 8686;
   c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
   for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
+  for (const k of SERVICES) c[k].insecure = toBool(c[k].insecure);
   c.ui = normalizeUi(c.ui);
   return c;
 }
+const toBool = v => v === true || v === 1 || /^(true|1|yes|on)$/i.test(String(v ?? ''));
 let cfg = loadConfig();
 
 // Settings for the UI (secrets masked, flags fields that come from the environment)
@@ -151,6 +158,7 @@ function validate(c) {
     if (!/^https?:$/.test(p.protocol)) throw new Error(T('urlScheme', { svc: k }));
     c[k].url = u.replace(/\/+$/, '');
   }
+  for (const k of SERVICES) if (c[k] && c[k].insecure !== undefined) c[k].insecure = toBool(c[k].insecure);
   for (const k of SERVICES) {
     const l = c[k]?.link;
     if (!l) continue;
@@ -196,6 +204,11 @@ async function testService(service, values) {
   validate(c);
   const s = c[service];
   if (!s?.url) throw new Error(T('urlMissing'));
+  // the test follows the form's checkbox, not what is saved
+  const o = originOf(s.url);
+  return tlsStore.run({ allow: new Set(s.insecure ? [o] : []), deny: new Set(s.insecure ? [] : [o]) }, () => runServiceTest(service, s));
+}
+async function runServiceTest(service, s) {
   if (service === 'radarr' || service === 'sonarr') {
     const st = await arr(service, s).call('/system/status');
     if (st.appName && st.appName.toLowerCase() !== service) throw new Error(T('wrongApp', { app: st.appName, svc: service }));
@@ -215,12 +228,61 @@ async function testService(service, values) {
 
 // ---------- Helpers ----------
 const TIMEOUT = 10000;
+const http_ = require('http'), https_ = require('https');
+const tlsStore = new AsyncLocalStorage();   // per-call override for Test connection: { allow, deny } sets of origins
+const originOf = u => { try { return new URL(u).origin; } catch { return null; } };
+// origins of services that have "accept self-signed certificate" enabled
+function allowsSelfSigned(url) {
+  const o = originOf(url);
+  if (!o || !o.startsWith('https:')) return false;
+  const t = tlsStore.getStore();
+  if (t?.deny.has(o)) return false;
+  if (t?.allow.has(o)) return true;
+  return SERVICES.some(k => cfg[k]?.insecure && cfg[k].url && originOf(cfg[k].url) === o);
+}
+// fetch-compatible request over https with certificate verification off – used ONLY for those origins
+function insecureFetch(url, { method = 'GET', headers = {}, body, redirect = 'follow', signal } = {}, hops = 0) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const h = {};
+    for (const [k, v] of Object.entries(headers instanceof Headers ? Object.fromEntries(headers) : headers)) h[k] = v;
+    let payload = body;
+    if (body instanceof URLSearchParams) { payload = body.toString(); h['Content-Type'] ??= 'application/x-www-form-urlencoded'; }
+    if (payload !== undefined && payload !== null) h['Content-Length'] = Buffer.byteLength(payload);
+    const r = https_.request(u, { method, headers: h, rejectUnauthorized: false }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const status = res.statusCode || 502;
+        const loc = res.headers.location;
+        if (redirect === 'follow' && status >= 300 && status < 400 && loc && hops < 5) {
+          const next = new URL(loc, u).toString();
+          const sameOrigin = originOf(next) === u.origin;
+          const go = sameOrigin && next.startsWith('https:') ? insecureFetch : fetch;
+          return resolve(go(next, { method: status === 303 ? 'GET' : method, headers, body: status === 303 ? undefined : body, redirect, signal }, hops + 1));
+        }
+        const hdrs = new Headers();
+        for (const [k, v] of Object.entries(res.headers)) hdrs.set(k, Array.isArray(v) ? v.join(', ') : String(v));
+        const buf = Buffer.concat(chunks);
+        resolve(new Response([101, 204, 205, 304].includes(status) ? null : buf, { status: Math.min(Math.max(status, 200), 599), headers: hdrs }));
+      });
+      res.on('error', reject);
+    });
+    r.on('error', err => reject(Object.assign(new TypeError('fetch failed'), { cause: err })));
+    if (signal) {
+      if (signal.aborted) { r.destroy(); return reject(new DOMException('aborted', 'AbortError')); }
+      signal.addEventListener('abort', () => { r.destroy(); reject(new DOMException('aborted', 'AbortError')); }, { once: true });
+    }
+    if (payload !== undefined && payload !== null) r.write(payload);
+    r.end();
+  });
+}
 async function req(url, { timeout = TIMEOUT, ...opts } = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const r = await fetch(url, { ...opts, signal: ctrl.signal });
-    return r;
+    const go = allowsSelfSigned(url) ? insecureFetch : fetch;
+    return await go(url, { ...opts, signal: ctrl.signal });
   } finally { clearTimeout(t); }
 }
 async function json(url, opts) {
@@ -629,7 +691,8 @@ function friendlyError(e) {
   const net = {
     ECONNREFUSED: 'netRefused', ENOTFOUND: 'netNotFound', EHOSTUNREACH: 'netHost', ENETUNREACH: 'netNet',
     ETIMEDOUT: 'netTimeout', ECONNRESET: 'netReset', DEPTH_ZERO_SELF_SIGNED_CERT: 'netSelfSigned',
-    SELF_SIGNED_CERT_IN_CHAIN: 'netSelfSigned',
+    SELF_SIGNED_CERT_IN_CHAIN: 'netSelfSigned', UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'netSelfSigned',
+    UNABLE_TO_GET_ISSUER_CERT_LOCALLY: 'netSelfSigned', CERT_HAS_EXPIRED: 'netCertExpired', ERR_TLS_CERT_ALTNAME_INVALID: 'netCertName',
   }[code];
   if (net) return T(net);
   if (e.message === 'fetch failed') return T('fetchFailed') + (e.cause?.message ? ` (${e.cause.message})` : '');
