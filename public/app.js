@@ -588,7 +588,8 @@ function renderAbout() {
   const st = $('#aboutStatus'), nav = $('#navVer');
   nav.textContent = 'v' + v; nav.classList.remove('hidden');
   nav.classList.toggle('upd', !!d?.updateAvailable);
-  nav.title = d?.updateAvailable ? t('about.newVersion', { v: d.latest.version }) : '';
+  nav.title = d?.updateAvailable ? t('about.newVersion', { v: d.latest.version }) : 'ArrHub v' + v;
+  nav.onclick = () => show('settings');
   if (!d) { st.className = 'st'; st.textContent = t('about.checking'); return; }
   if (d.error) { st.className = 'st'; st.textContent = t('about.checkFailed', { msg: d.error }); return; }
   if (d.updateAvailable) {
