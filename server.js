@@ -661,9 +661,13 @@ async function buildMedia() {
       if (!kind) continue;
       let local = null;
       if (im.url && /\/MediaCover\//.test(im.url) && !im.url.includes('..')) {
-        local = im.url.startsWith('http') ? im.url : null;
-        if (!local) { try { local = new URL(im.url, new URL(cfg[k].url).origin + '/').toString(); } catch {} }
-        if (local && kind === 'poster') local = local.replace(/poster(\.jpg)/, 'poster-500$1');
+        let u = im.url.startsWith('http') ? im.url : null;
+        if (!u) { try { u = new URL(im.url, new URL(cfg[k].url).origin + '/').toString(); } catch {} }
+        if (u && kind === 'poster') u = u.replace(/poster(\.jpg)/, 'poster-500$1');
+        // /api/v3/mediacover/<id>/<file> accepts the API key even when Radarr/Sonarr require a login
+        // (the plain /MediaCover/ path then redirects to the login page); the plain path stays as fallback
+        const m = u && /\/MediaCover\/(\d+)\/([^/?#]+\.(?:jpe?g|png|gif))/i.exec(u);
+        local = m ? [`${cfg[k].url}/api/v3/mediacover/${m[1]}/${m[2]}`, u] : u;
       }
       const remote = cfg.net?.offline ? null : remoteSized(im.remoteUrl, kind);
       if (!local && !remote) continue;
@@ -718,6 +722,7 @@ async function cover(id) {
       } catch (err) { m = friendlyError(err); }
     }
     errors.push(`${e.svc} ${T('local')}: ${m}`);
+    if (!fail.n) langStore.run('en', () => console.warn(`${e.svc}: local images failing – ${m}`));
     coverFail.set(e.svc, { n: fail.n + 1, last: m });
   }
   if (e.remote && cfg.net?.offline) errors.push(T('offlineNoRemote'));
@@ -952,7 +957,7 @@ async function handle(r, res) {
       if (SERVICES.includes(svc)) {
         if (r.method === 'GET' && u.pathname === `/api/${svc}`) noteService(svc, logMsg);
         else if (r.method === 'POST') console.warn(`${svc}: ${u.pathname.split('/').slice(3).join('/') || 'action'} – ${logMsg}`);
-      } else if (svc === 'logs') { /* shown in the tab */ }
+      } else if (svc === 'logs' || svc === 'cover') { /* logs: shown in the tab; covers: logged once per service in cover() */ }
       else console.warn(`${u.pathname}: ${logMsg}`);
       send(res, e.status || (svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502), { error: msg });
     }
