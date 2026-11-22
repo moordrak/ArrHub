@@ -50,10 +50,10 @@ function refresh() {
   return refreshing;
 }
 async function doRefresh() {
-  await Promise.all(SVCS.filter(k => state.cfg[k]).map(async k => {
+  await Promise.all([state.view === 'history' ? loadAllHistory() : null, ...SVCS.filter(k => state.cfg[k]).map(async k => {
     try { state.data[k] = await api(k === 'seerr' ? seerrPath() : k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
-  }));
+  })]);
   render();
 }
 
@@ -242,26 +242,89 @@ const EVT = {
   downloadFailed: ['ev.failed', 'err'], movieFileDeleted: ['ev.deleted', 'warn'], episodeFileDeleted: ['ev.deleted', 'warn'],
   movieFileRenamed: ['ev.renamed', ''], episodeFileRenamed: ['ev.renamed', ''], downloadIgnored: ['ev.ignored', 'warn'],
 };
-function renderHistory() {
-  for (const k of ['radarr', 'sonarr']) {
-    const el = $('#' + k + 'Hist'); if (!state.cfg[k]) continue;
-    const h = state.data[k]?.history || [];
-    el.innerHTML = h.length ? h.map(r => {
-      const [key, c] = EVT[r.eventType] || [null, ''];
-      const label = key ? t(key) : r.eventType;
-      const title = k === 'radarr' ? (r.movie?.title || r.sourceTitle) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.sourceTitle);
-      return `<div class="item"><div class="t" title="${esc(r.sourceTitle)}">${esc(title)}</div><div class="muted">${ago(r.date)}</div><div class="m"><span class="tag ${c}">${esc(label)}</span><span>${esc(r.quality?.quality?.name || '')}</span></div></div>`;
-    }).join('') : `<div class="empty">${t('c.noRecords')}</div>`;
+// History: every card is paged on its own (default 10 per page, size remembered per service)
+const HIST_EL = { radarr: 'radarrHist', sonarr: 'sonarrHist', nzbget: 'nzbHist', qbittorrent: 'qbitHist' };
+const PAGE_SIZES = [10, 20, 30, 50, 100];
+const hist = {};
+function histState(k) {
+  if (!hist[k]) {
+    let size = 10;
+    try { const n = Number(localStorage.getItem('arrhub-hist-size-' + k)); if (PAGE_SIZES.includes(n)) size = n; } catch {}
+    hist[k] = { page: 1, size, data: null, err: null, pagerKey: '' };
   }
-  if (state.cfg.nzbget) {
-    const h = state.data.nzbget?.history || [];
-    $('#nzbHist').innerHTML = h.length ? h.map(r => {
-      const ok = /^SUCCESS/.test(r.Status);
-      return `<div class="item"><div class="t" title="${esc(r.Name)}">${esc(r.Name)}</div><div class="muted">${ago(r.HistoryTime * 1000)}</div>
+  return hist[k];
+}
+async function loadHistory(k) {
+  const h = histState(k), page = h.page, size = h.size;
+  try {
+    const d = await api(`${k}/history?page=${page}&size=${size}`);
+    if (h.page !== page || h.size !== size) return;               // stale after a page/size change
+    if (d.page > d.pages) { h.page = d.pages; return loadHistory(k); } // page vanished (history got shorter)
+    h.data = d; h.err = null;
+  } catch (e) { if (h.page === page && h.size === size) h.err = e.message; }
+  renderHistory();
+}
+const loadAllHistory = () => Promise.all(Object.keys(HIST_EL).filter(k => state.cfg[k]).map(loadHistory));
+function pagerHtml(d, size) {
+  const from = (d.page - 1) * d.pageSize + 1, to = Math.min(d.total, from + d.records.length - 1);
+  return `<span class="muted">${esc(t('req.range', { from, to, total: d.total }))}</span><span class="sp"></span>
+    <label class="muted"><span>${esc(t('req.perPage'))}</span><select data-size>${PAGE_SIZES.map(n => `<option${n === size ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="pgbtns">
+      <button class="btn" type="button" data-pg="first" title="${esc(t('req.first'))}"${d.page <= 1 ? ' disabled' : ''}>«</button>
+      <button class="btn" type="button" data-pg="prev" title="${esc(t('req.prev'))}"${d.page <= 1 ? ' disabled' : ''}>‹</button>
+      <span class="mono pgnum">${esc(t('req.page', { page: d.page, pages: d.pages }))}</span>
+      <button class="btn" type="button" data-pg="next" title="${esc(t('req.next'))}"${d.page >= d.pages ? ' disabled' : ''}>›</button>
+      <button class="btn" type="button" data-pg="last" title="${esc(t('req.last'))}"${d.page >= d.pages ? ' disabled' : ''}>»</button>
+    </div>`;
+}
+function histRow(k, r) {
+  if (k === 'qbittorrent') {
+    const [st, c] = qbState(r.state);
+    return `<div class="item"><div class="t" title="${esc(r.name)}">${esc(r.name)}</div><div class="muted">${ago(r.completion_on * 1000)}</div>
+      <div class="m"><span class="tag ${c}">${esc(st)}</span><span>${size(r.size)}</span><span>${t('c.ratio', { r: Number(r.ratio || 0).toFixed(2) })}</span>${r.category ? `<span class="tag">${esc(r.category)}</span>` : ''}</div></div>`;
+  }
+  if (k === 'nzbget') {
+    const ok = /^SUCCESS/.test(r.Status);
+    return `<div class="item"><div class="t" title="${esc(r.Name)}">${esc(r.Name)}</div><div class="muted">${ago(r.HistoryTime * 1000)}</div>
       <div class="m"><span class="tag ${ok ? 'ok' : /FAILURE/.test(r.Status) ? 'err' : 'warn'}">${esc(r.Status.toLowerCase())}</span><span>${size(r.FileSizeMB * 1048576)}</span>${r.Category ? `<span class="tag">${esc(r.Category)}</span>` : ''}</div></div>`;
-    }).join('') : `<div class="empty">${t('c.noRecords')}</div>`;
+  }
+  const [key, c] = EVT[r.eventType] || [null, ''];
+  const label = key ? t(key) : r.eventType;
+  const title = k === 'radarr' ? (r.movie?.title || r.sourceTitle) : (r.series ? `${r.series.title} ${r.episode ? ep(r.episode) : ''}` : r.sourceTitle);
+  return `<div class="item"><div class="t" title="${esc(r.sourceTitle)}">${esc(title)}</div><div class="muted">${ago(r.date)}</div><div class="m"><span class="tag ${c}">${esc(label)}</span><span>${esc(r.quality?.quality?.name || '')}</span></div></div>`;
+}
+function renderHistory() {
+  for (const k of Object.keys(HIST_EL)) {
+    if (!state.cfg[k]) continue;
+    const h = histState(k), el = $('#' + HIST_EL[k]), pg = document.querySelector(`.pager[data-hist="${k}"]`);
+    const recs = h.data?.records || [];
+    el.innerHTML = h.err ? `<div class="error">${esc(h.err)}</div>`
+      : !h.data ? `<div class="empty">${t('c.loading')}</div>`
+      : recs.length ? recs.map(r => histRow(k, r)).join('') : `<div class="empty">${t('c.noRecords')}</div>`;
+    if (k === 'qbittorrent' && h.data && !h.err) el.insertAdjacentHTML('beforeend', `<div class="muted" style="font-size:11.5px;padding-top:8px">${esc(t('hist.qbNote'))}</div>`);
+    const show = !!(h.data && h.data.total);
+    pg.classList.toggle('hidden', !show);
+    // rebuild the pager only when it changed, so an open "per page" list isn't closed by auto-refresh
+    const key = show ? [h.data.page, h.data.pages, h.data.total, recs.length, h.size, I18N.locale].join('|') : '';
+    if (show && key !== h.pagerKey) pg.innerHTML = pagerHtml(h.data, h.size);
+    h.pagerKey = key;
   }
 }
+$('#v-history').addEventListener('click', e => {
+  const b = e.target.closest('[data-pg]'), pg = b?.closest('.pager[data-hist]');
+  if (!pg || b.disabled) return;
+  const k = pg.dataset.hist, h = histState(k), pages = h.data?.pages || 1;
+  h.page = Math.min(pages, Math.max(1, { first: 1, prev: h.page - 1, next: h.page + 1, last: pages }[b.dataset.pg]));
+  $('#' + HIST_EL[k]).style.opacity = '.5';
+  loadHistory(k).then(() => { $('#' + HIST_EL[k]).style.opacity = ''; pg.closest('.card').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+});
+$('#v-history').addEventListener('change', e => {
+  const sel = e.target.closest('select[data-size]'), pg = sel?.closest('.pager[data-hist]'); if (!pg) return;
+  const k = pg.dataset.hist, h = histState(k);
+  h.size = Number(sel.value) || 10; h.page = 1;
+  try { localStorage.setItem('arrhub-hist-size-' + k, h.size); } catch {}
+  loadHistory(k);
+});
 
 // ---- Seerr requests ----
 const REQ_STATUS = { 1: ['req.s.pending', 'warn'], 2: ['req.s.approved', 'ok'], 3: ['req.s.declined', 'err'], 4: ['req.s.failed', 'err'], 5: ['req.s.completed', 'ok'] };
@@ -404,6 +467,7 @@ function show(v) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   if (v === 'add') loadOptions();
   if (v === 'logs') { renderLogSources(); loadLogs(); }
+  if (v === 'history') loadAllHistory();
   if (v === 'settings') loadSettings();
   else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);

@@ -9,7 +9,7 @@
       'nav.requests': 'Requests', 'nav.add': 'Add', 'nav.logs': 'Logs', 'nav.settings': '⚙ Settings',
       // common
       'c.loading': 'Loading…', 'c.error': 'Error: {msg}', 'c.done': 'Done', 'c.deleted': 'Deleted', 'c.removed': 'Removed',
-      'c.empty': 'Empty', 'c.noRecords': 'No records', 'c.free': '{size} free', 'c.ratio': 'ratio {r}', 'c.notConfigured': '{svc} is not configured',
+      'hist.qbSub': 'completed torrents', 'hist.qbNote': 'qBittorrent keeps no history – torrents removed from it are not shown.', 'c.empty': 'Empty', 'c.noRecords': 'No records', 'c.free': '{size} free', 'c.ratio': 'ratio {r}', 'c.notConfigured': '{svc} is not configured',
       'c.movie': 'Movie', 'c.series': 'Series', 'c.refresh': 'Refresh', 'c.delete': 'Delete', 'c.remove': 'Remove',
       'c.start': 'Start', 'c.stop': 'Stop', 'c.downloaded': 'downloaded',
       'time.now': 'just now', 'time.min': '{n} min ago', 'time.h': '{n} h ago', 'time.d': '{n} d ago',
@@ -93,7 +93,7 @@
       'nav.overview': 'Pregled', 'nav.downloads': 'Preuzimanja', 'nav.calendar': 'Kalendar', 'nav.history': 'Povijest',
       'nav.requests': 'Zahtjevi', 'nav.add': 'Dodaj', 'nav.logs': 'Logovi', 'nav.settings': '⚙ Postavke',
       'c.loading': 'Učitavanje…', 'c.error': 'Greška: {msg}', 'c.done': 'Gotovo', 'c.deleted': 'Obrisano', 'c.removed': 'Uklonjeno',
-      'c.empty': 'Prazno', 'c.noRecords': 'Nema zapisa', 'c.free': '{size} slobodno', 'c.ratio': 'omjer {r}', 'c.notConfigured': '{svc} nije konfiguriran',
+      'hist.qbSub': 'završeni torrenti', 'hist.qbNote': 'qBittorrent ne vodi povijest – torrenti koje ukloniš ovdje se ne prikazuju.', 'c.empty': 'Prazno', 'c.noRecords': 'Nema zapisa', 'c.free': '{size} slobodno', 'c.ratio': 'omjer {r}', 'c.notConfigured': '{svc} nije konfiguriran',
       'c.movie': 'Film', 'c.series': 'Serija', 'c.refresh': 'Osvježi', 'c.delete': 'Obriši', 'c.remove': 'Ukloni',
       'c.start': 'Pokreni', 'c.stop': 'Zaustavi', 'c.downloaded': 'preuzeto',
       'time.now': 'upravo', 'time.min': 'prije {n} min', 'time.h': 'prije {n} h', 'time.d': 'prije {n} d',

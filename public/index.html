@@ -169,7 +169,9 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .pgbtns{display:flex;align-items:center;gap:6px}
 .pgbtns .btn{min-width:34px;padding:5px 10px}
 .pgbtns .btn:disabled{opacity:.35;cursor:default}
-#reqPage{padding:0 6px;white-space:nowrap}
+#reqPage,.pgnum{padding:0 6px;white-space:nowrap}
+.hsub{font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;margin-left:4px}
+.pager.in-card{background:none;border:0;border-top:1px solid var(--line);border-radius:0;padding:10px 0 0;margin-top:10px;font-size:12.5px;gap:10px}
 .logbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .logbar .seg{flex-wrap:wrap}
 .logbar .seg .dot{margin-right:6px}
@@ -330,9 +332,10 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
   <!-- HISTORY -->
   <section id="v-history" class="hidden">
     <div class="grid g2">
-      <div class="card wide" data-svc="radarr" data-icon="radarr"><h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2><div class="list" id="radarrHist"></div></div>
-      <div class="card wide" data-svc="sonarr" data-icon="sonarr"><h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2><div class="list" id="sonarrHist"></div></div>
-      <div class="card wide" data-svc="nzbget" data-icon="nzbget"><h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2><div class="list" id="nzbHist"></div></div>
+      <div class="card wide" data-svc="radarr" data-icon="radarr"><h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2><div class="list" id="radarrHist"></div><div class="pager in-card hidden" data-hist="radarr"></div></div>
+      <div class="card wide" data-svc="sonarr" data-icon="sonarr"><h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2><div class="list" id="sonarrHist"></div><div class="pager in-card hidden" data-hist="sonarr"></div></div>
+      <div class="card wide" data-svc="nzbget" data-icon="nzbget"><h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2><div class="list" id="nzbHist"></div><div class="pager in-card hidden" data-hist="nzbget"></div></div>
+      <div class="card wide" data-svc="qbittorrent" data-icon="qbittorrent"><h2><span class="dot" style="background:var(--qb)"></span>qBittorrent <span class="muted hsub" data-i18n="hist.qbSub">completed torrents</span></h2><div class="list" id="qbitHist"></div><div class="pager in-card hidden" data-hist="qbittorrent"></div></div>
     </div>
   </section>
 

@@ -388,8 +388,12 @@ function arr(name, c = cfg[name]) {
         call('/health').catch(() => []),
         call('/diskspace').catch(() => []),
       ]);
-      const history = await call('/history?pageSize=15&sortKey=date&sortDirection=descending' + (name === 'radarr' ? '&includeMovie=true' : '&includeSeries=true&includeEpisode=true')).catch(() => ({ records: [] }));
-      return { version: status.version, queue: queue.records || [], calendar, health, disk, history: history.records || [] };
+      return { version: status.version, queue: queue.records || [], calendar, health, disk };
+    },
+    // one page of history, newest first – Radarr/Sonarr do the paging
+    async history(page, size) {
+      const d = await call(`/history?page=${page}&pageSize=${size}&sortKey=date&sortDirection=descending` + (name === 'radarr' ? '&includeMovie=true' : '&includeSeries=true&includeEpisode=true'));
+      return { records: d.records || [], total: d.totalRecords ?? (d.records || []).length };
     },
     lookup(term) {
       return call(`/${name === 'radarr' ? 'movie' : 'series'}/lookup?term=${encodeURIComponent(term)}`);
@@ -417,6 +421,13 @@ function arr(name, c = cfg[name]) {
 // ---------- qBittorrent (Web API v2) ----------
 function makeQb(conf) { return {
   sid: null,
+  // qBittorrent keeps no download history: completed torrents still in the list, newest completion first
+  async history(page, size) {
+    const all = await this.call('/torrents/info?filter=completed&sort=completion_on&reverse=true');
+    const list = (Array.isArray(all) ? all : []).filter(x => x.completion_on > 0);
+    const pick = ({ name, hash, completion_on, size: sz, total_size, category, ratio, state, tags }) => ({ name, hash, completion_on, size: total_size || sz, category, ratio, state, tags });
+    return { records: list.slice((page - 1) * size, page * size).map(pick), total: list.length };
+  },
   async login() {
     const c = conf();
     const r = await req(`${c.url}/api/v2/auth/login`, {
@@ -487,10 +498,15 @@ function makeNzb(conf) { return {
     return res.result;
   },
   async summary() {
-    const [status, groups, history, version] = await Promise.all([
-      this.rpc('status'), this.rpc('listgroups', [0]), this.rpc('history', [false]), this.rpc('version').catch(() => ''),
+    const [status, groups, version] = await Promise.all([
+      this.rpc('status'), this.rpc('listgroups', [0]), this.rpc('version').catch(() => ''),
     ]);
-    return { version, status, groups, history: history.slice(0, 15) };
+    return { version, status, groups };
+  },
+  // NZBGet always returns its whole history (newest first); ArrHub cuts out the page
+  async history(page, size) {
+    const h = await this.rpc('history', [false]) || [];
+    return { records: h.slice((page - 1) * size, page * size), total: h.length };
   },
   async action(action, ids) {
     if (action === 'pauseall') return this.rpc('pausedownload');
@@ -507,7 +523,8 @@ const seerrMeta = new Map(); // 'movie:123' -> { title, year, poster, at }
 // filters accepted by the Seerr API; there is no 'declined', so we do it ourselves (status 3)
 const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'deleted', 'completed'];
 const SEERR_LOCAL = { declined: r => r.status === 3 };
-const SEERR_PAGE_SIZES = [10, 20, 30, 50, 100];
+const PAGE_SIZES = [10, 20, 30, 50, 100];
+const SEERR_PAGE_SIZES = PAGE_SIZES;
 function makeSeerr(conf) {
   const call = (p, opts = {}) => {
     const c = conf();
@@ -894,6 +911,14 @@ const routes = {
   'GET /api/nzbget': () => nzb.summary(),
   'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all', q.get('page'), q.get('size')),
   'POST /api/seerr/action': (q, b) => seerr.action(b.id, b.action),
+  'GET /api/:svc/history': async (q, b, p) => {
+    const size = PAGE_SIZES.includes(Number(q.get('size'))) ? Number(q.get('size')) : 10;
+    const page = Math.max(1, Math.floor(Number(q.get('page'))) || 1);
+    const src = p.svc === 'radarr' || p.svc === 'sonarr' ? arr(p.svc) : p.svc === 'nzbget' ? nzb : p.svc === 'qbittorrent' ? qb : null;
+    if (!src) { const e = new Error(T('notFound')); e.status = 404; throw e; }
+    const d = await src.history(page, size);
+    return { ...d, page, pageSize: size, pages: Math.max(1, Math.ceil(d.total / size)) };
+  },
   'GET /api/:arr/lookup': async (q, b, p) => lookupPosters(await arr(p.arr).lookup(q.get('term') || '')),
   'GET /api/:arr/options': (q, b, p) => arr(p.arr).options(),
   'POST /api/:arr/add': (q, b, p) => arr(p.arr).add(b.item, b.qualityProfileId, b.rootFolderPath, b.search),
