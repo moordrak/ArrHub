@@ -474,6 +474,11 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         </div>
       </div>
       <div class="card span2" style="margin-top:16px">
+        <h2 data-i18n="set.netTitle">Network</h2>
+        <div class="ctl"><label><input type="checkbox" name="net.offline"> <span data-i18n="set.offline">Offline mode – don't connect to the internet</span></label></div>
+        <span class="hint" data-i18n="set.offlineHint">ArrHub then talks only to your services: no update check on GitHub and no images from TMDB/TVDB. Posters and backgrounds come only from Radarr and Sonarr (MediaCover), request posters from Seerr's image cache. Items without a local image show a placeholder.</span>
+      </div>
+      <div class="card span2" style="margin-top:16px">
         <h2 data-i18n="set.tlsTitle">SSL / TLS – own CA certificate</h2>
         <div class="field">
           <label for="caText" data-i18n="set.ca">CA certificate (PEM)</label>

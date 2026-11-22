@@ -48,7 +48,7 @@ const MSG = {
     caPrivateKey: 'That is a private key – paste only the CA certificate (-----BEGIN CERTIFICATE-----), never the key',
     netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address – the URL must use a name or IP listed in the certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
-    noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request',
+    noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request', offlineBlocked: 'Offline mode – ArrHub does not connect to {host}', offlineNoRemote: 'offline mode – no image from the internet',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -67,7 +67,7 @@ const MSG = {
     caPrivateKey: 'To je privatni ključ – zalijepi samo CA certifikat (-----BEGIN CERTIFICATE-----), nikad ključ',
     netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi – URL mora koristiti ime ili IP naveden u certifikatu', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
-    noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev',
+    noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev', offlineBlocked: 'Način bez interneta – ArrHub se ne spaja na {host}', offlineNoRemote: 'način bez interneta – nema slike s interneta',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -106,6 +106,8 @@ const FIELDS = [
   ['qbittorrent', 'insecure', 'QBIT_INSECURE'], ['seerr', 'insecure', 'SEERR_INSECURE'],
   // own CA certificate(s) in PEM, trusted (together with the system CAs) for connections to the services
   ['tls', 'ca', 'ARRHUB_CA'],
+  // offline mode: ArrHub only talks to the configured services (no update check, no TMDB/TVDB images)
+  ['net', 'offline', 'ARRHUB_OFFLINE'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -135,7 +137,7 @@ function readFileConfig() {
 // File + environment variables (environment wins)
 function loadConfig() {
   const file = readFileConfig();
-  const c = { auth: {}, ui: {}, tls: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {} };
   for (const k of SERVICES) c[k] = {};
   for (const [sec, f, env] of FIELDS) {
     const v = envSet(env) ? process.env[env] : getF(file, sec, f);
@@ -145,6 +147,7 @@ function loadConfig() {
   c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
   for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
   for (const k of SERVICES) c[k].insecure = toBool(c[k].insecure);
+  c.net.offline = toBool(c.net.offline);
   if (!c.tls.ca && process.env.ARRHUB_CA_FILE) { try { c.tls.ca = fs.readFileSync(process.env.ARRHUB_CA_FILE, 'utf8'); } catch (e) { console.error('ARRHUB_CA_FILE:', e.message); } }
   try { caState = c.tls.ca ? parseCa(c.tls.ca) : null; } catch (e) { caState = null; console.error('CA certificate ignored:', e.message); }
   c.ui = normalizeUi(c.ui);
@@ -181,7 +184,7 @@ function settingsView() {
 }
 // Merges UI input with current values (mask = keep the existing secret)
 function mergeInput(values, base = cfg) {
-  const c = { auth: {}, ui: {}, tls: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {} };
   for (const [sec, f, , secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     let v = values?.[key];
@@ -200,6 +203,7 @@ function validate(c) {
     c[k].url = u.replace(/\/+$/, '');
   }
   for (const k of SERVICES) if (c[k] && c[k].insecure !== undefined) c[k].insecure = toBool(c[k].insecure);
+  if (c.net && c.net.offline !== undefined) c.net.offline = toBool(c.net.offline);
   if (c.tls?.ca) c.tls.ca = parseCa(c.tls.ca).pem.join('\n') + '\n';   // throws on junk or a private key
   for (const k of SERVICES) {
     const l = c[k]?.link;
@@ -238,7 +242,8 @@ function saveSettings(values) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
   qb.sid = null;
-  console.log('Settings saved');
+  mediaCache.at = 0; aboutCache.at = 0;   // offline mode / service URLs may have changed
+  console.log('Settings saved' + (cfg.net?.offline ? ' (offline mode)' : ''));
   return { ok: true, restartRequired: cfg.port !== oldPort };
 }
 async function testService(service, values) {
@@ -343,7 +348,13 @@ function httpsFetch(url, { method = 'GET', headers = {}, body, redirect = 'follo
     r.end();
   });
 }
+// in offline mode only the configured services (and the one being tested) may be contacted
+function isServiceUrl(url) {
+  const o = originOf(url);
+  return !!o && (tlsStore.getStore()?.origin === o || SERVICES.some(k => cfg[k]?.url && originOf(cfg[k].url) === o));
+}
 async function req(url, { timeout = TIMEOUT, ...opts } = {}) {
+  if (cfg.net?.offline && !isServiceUrl(url)) throw new Error(T('offlineBlocked', { host: originOf(url) || url }));
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeout);
   try {
@@ -515,14 +526,19 @@ function makeSeerr(conf) {
       return m;
     } catch { return { title: `TMDB ${tmdbId}`, year: '', poster: null, at: 0 }; }
   }
+  // Seerr's own image proxy/cache: /imageproxy/tmdb/... (Seerr, Jellyseerr 2.x) or /imageproxy/... (Overseerr)
+  function seerrProxy(tmdbPath) {
+    const base = cfg.seerr?.url; if (!base) return null;
+    return [`${base}/imageproxy/tmdb${tmdbPath}`, `${base}/imageproxy${tmdbPath}`];
+  }
   function posterUrl(path) {
     if (!path) return null;
     const id = hashId('seerr' + path);
-    coverMap.set(id, { svc: 'seerr', local: null, remote: `https://image.tmdb.org/t/p/w154${path}`, kind: 'poster' });
+    coverMap.set(id, { svc: 'seerr', local: seerrProxy(`/t/p/w154${path}`), remote: `https://image.tmdb.org/t/p/w154${path}`, kind: 'poster' });
     return `/api/cover/${id}`;
   }
   return {
-    call,
+    call, seerrProxy,
     async summary(filter = 'all', page = 1, size = 30) {
       const local = SEERR_LOCAL[filter];
       if (!local && !SEERR_FILTERS.includes(filter)) filter = 'all';
@@ -567,6 +583,23 @@ function makeSeerr(conf) {
   };
 }
 const seerr = makeSeerr(() => cfg.seerr);
+
+// Add tab: normally the browser loads lookup posters straight from TMDB/TVDB. In offline mode they go
+// through ArrHub instead – via Seerr's image proxy for TMDB posters, otherwise no poster.
+function lookupPosters(list) {
+  if (!cfg.net?.offline || !Array.isArray(list)) return list;
+  return list.map(r => {
+    const remote = r.remotePoster || r.images?.find(x => x.coverType === 'poster')?.remoteUrl || '';
+    const m = /image\.tmdb\.org\/t\/p\/[^/]+(\/[^/?#]+)/.exec(remote);
+    let poster = null;
+    if (m && enabled('seerr')) {
+      const id = hashId('lookup' + m[1]);
+      coverMap.set(id, { svc: 'seerr', local: seerr.seerrProxy(`/t/p/w154${m[1]}`), remote: null, kind: 'poster' });
+      poster = `/api/cover/${id}`;
+    }
+    return { ...r, arrhubPoster: poster };
+  });
+}
 
 // ---------- Logs (ArrHub + the services' own logs, normalised) ----------
 const lvl = v => { v = String(v || '').toLowerCase(); return /fatal|error|crit/.test(v) ? 'error' : /warn/.test(v) ? 'warn' : /debug|trace|detail/.test(v) ? 'debug' : 'info'; };
@@ -632,7 +665,7 @@ async function buildMedia() {
         if (!local) { try { local = new URL(im.url, new URL(cfg[k].url).origin + '/').toString(); } catch {} }
         if (local && kind === 'poster') local = local.replace(/poster(\.jpg)/, 'poster-500$1');
       }
-      const remote = remoteSized(im.remoteUrl, kind);
+      const remote = cfg.net?.offline ? null : remoteSized(im.remoteUrl, kind);
       if (!local && !remote) continue;
       const id = hashId(k + (im.url || im.remoteUrl));
       coverMap.set(id, { svc: k, local, remote, kind });
@@ -671,21 +704,24 @@ async function cover(id) {
   const c = cfg[e.svc];
   const errors = [];
   const fail = coverFail.get(e.svc) || { n: 0, last: '' };
-  if (e.local && fail.n >= 5) errors.push(`${e.svc} ${T('local')}: ${fail.last}`);
-  if (e.local && fail.n < 5) {
-    try {
-      const u = new URL(e.local);
-      u.searchParams.set('apikey', c.apiKey);
-      const img = await fetchImage(u.toString(), { 'X-Api-Key': c.apiKey });
-      coverFail.delete(e.svc);
-      return img;
-    } catch (err) {
-      const m = friendlyError(err);
-      errors.push(`${e.svc} ${T('local')}: ${m}`);
-      coverFail.set(e.svc, { n: fail.n + 1, last: m });
+  const locals = [].concat(e.local || []);
+  if (locals.length && fail.n >= 5) errors.push(`${e.svc} ${T('local')}: ${fail.last}`);
+  if (locals.length && fail.n < 5) {
+    let m = '';
+    for (const l of locals) {
+      try {
+        const u = new URL(l);
+        u.searchParams.set('apikey', c.apiKey);
+        const img = await fetchImage(u.toString(), { 'X-Api-Key': c.apiKey });
+        coverFail.delete(e.svc);
+        return img;
+      } catch (err) { m = friendlyError(err); }
     }
+    errors.push(`${e.svc} ${T('local')}: ${m}`);
+    coverFail.set(e.svc, { n: fail.n + 1, last: m });
   }
-  if (e.remote) {
+  if (e.remote && cfg.net?.offline) errors.push(T('offlineNoRemote'));
+  else if (e.remote) {
     try { return await fetchImage(e.remote, { 'User-Agent': 'ArrHub' }); }
     catch (err) { errors.push('TMDB/TVDB: ' + friendlyError(err)); }
   } else errors.push(T('noRemote'));
@@ -763,6 +799,7 @@ const semver = v => String(v || '').replace(/^v/, '').split(/[.-]/).slice(0, 3).
 function newer(a, b) { const x = semver(a), y = semver(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; }
 async function about(force) {
   const base = { version: VERSION, repo: `https://github.com/${REPO}`, releaseUrl: VERSION === 'dev' ? null : `https://github.com/${REPO}/releases/tag/v${VERSION}` };
+  if (cfg.net?.offline) return { ...base, offline: true, latest: null, updateAvailable: false, error: null };
   if (!force && aboutCache.data && Date.now() - aboutCache.at < aboutCache.ttl) return { ...base, ...aboutCache.data };
   let data;
   try {
@@ -852,7 +889,7 @@ const routes = {
   'GET /api/nzbget': () => nzb.summary(),
   'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all', q.get('page'), q.get('size')),
   'POST /api/seerr/action': (q, b) => seerr.action(b.id, b.action),
-  'GET /api/:arr/lookup': (q, b, p) => arr(p.arr).lookup(q.get('term') || ''),
+  'GET /api/:arr/lookup': async (q, b, p) => lookupPosters(await arr(p.arr).lookup(q.get('term') || '')),
   'GET /api/:arr/options': (q, b, p) => arr(p.arr).options(),
   'POST /api/:arr/add': (q, b, p) => arr(p.arr).add(b.item, b.qualityProfileId, b.rootFolderPath, b.search),
   'POST /api/:arr/queue/remove': (q, b, p) => arr(p.arr).removeQueue(b.id, b.blocklist),

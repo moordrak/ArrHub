@@ -373,7 +373,7 @@ $('#addType').onclick = e => {
 function renderResults() {
   const k = state.addType;
   $('#results').innerHTML = lastResults.length ? lastResults.slice(0, 24).map((r, i) => {
-    const poster = r.remotePoster || r.images?.find(x => x.coverType === 'poster')?.remoteUrl || '';
+    const poster = 'arrhubPoster' in r ? (r.arrhubPoster || '') : (r.remotePoster || r.images?.find(x => x.coverType === 'poster')?.remoteUrl || '');
     const exists = r.id > 0;
     return `<div class="res"><img src="${esc(poster)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
     <div class="info"><div><b>${esc(r.title)}</b> <span class="muted">${r.year || ''}</span></div>
@@ -529,7 +529,7 @@ setForm.onsubmit = async e => {
     toast(res.restartRequired ? t('set.savedRestart') : t('set.saved'));
     if (authChanged) { setTimeout(() => location.reload(), 1200); return; }
     state.opts = {}; state.data = {}; state.err = {};
-    await applyConfig(); await loadSettings(); refresh();
+    await applyConfig(); await loadSettings(); refresh(); loadAbout(true);
   } catch (err) { toast(t('c.error', { msg: err.message })); }
 };
 
@@ -591,6 +591,7 @@ function renderAbout() {
   nav.title = d?.updateAvailable ? t('about.newVersion', { v: d.latest.version }) : 'ArrHub v' + v;
   nav.onclick = () => show('settings');
   if (!d) { st.className = 'st'; st.textContent = t('about.checking'); return; }
+  if (d.offline) { st.className = 'st'; st.textContent = t('about.offline'); return; }
   if (d.error) { st.className = 'st'; st.textContent = t('about.checkFailed', { msg: d.error }); return; }
   if (d.updateAvailable) {
     st.className = 'st upd';
