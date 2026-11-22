@@ -1,6 +1,6 @@
 {
   "name": "arrhub",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "One dashboard for Radarr, Sonarr, NZBGet, qBittorrent and Seerr",
   "main": "server.js",
   "scripts": { "start": "node server.js" },

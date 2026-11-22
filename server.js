@@ -496,6 +496,7 @@ const seerrMeta = new Map(); // 'movie:123' -> { title, year, poster, at }
 // filters accepted by the Seerr API; there is no 'declined', so we do it ourselves (status 3)
 const SEERR_FILTERS = ['all', 'pending', 'approved', 'processing', 'available', 'unavailable', 'failed', 'deleted', 'completed'];
 const SEERR_LOCAL = { declined: r => r.status === 3 };
+const SEERR_PAGE_SIZES = [10, 20, 30, 50, 100];
 function makeSeerr(conf) {
   const call = (p, opts = {}) => {
     const c = conf();
@@ -522,15 +523,21 @@ function makeSeerr(conf) {
   }
   return {
     call,
-    async summary(filter = 'all') {
+    async summary(filter = 'all', page = 1, size = 30) {
       const local = SEERR_LOCAL[filter];
       if (!local && !SEERR_FILTERS.includes(filter)) filter = 'all';
+      size = SEERR_PAGE_SIZES.includes(Number(size)) ? Number(size) : 30;
+      page = Math.max(1, Math.floor(Number(page)) || 1);
+      const skip = (page - 1) * size;
       const [status, count, list] = await Promise.all([
         call('/status').catch(() => ({})),
         call('/request/count').catch(() => ({})),
-        call(`/request?take=${local ? 200 : 40}&skip=0&sort=added&filter=${local ? 'all' : filter}`),
+        // Seerr pages for us; filters it doesn't know (declined) are filtered here from the newest 1000
+        call(local ? '/request?take=1000&skip=0&sort=added&filter=all' : `/request?take=${size}&skip=${skip}&sort=added&filter=${filter}`),
       ]);
-      const results = (list.results || []).filter(local || (() => true)).slice(0, 40);
+      const matched = local ? (list.results || []).filter(local) : null;
+      const total = local ? matched.length : (list.pageInfo?.results ?? (list.results || []).length);
+      const results = local ? matched.slice(skip, skip + size) : (list.results || []).slice(0, size);
       // titles and posters are fetched separately (max 6 at a time), cached for 24 h
       const metas = new Array(results.length);
       let i = 0;
@@ -548,7 +555,7 @@ function makeSeerr(conf) {
         title: metas[n].title, year: metas[n].year, poster: posterUrl(metas[n].poster),
         tmdbId: r.media?.tmdbId,
       }));
-      return { version: status.version || '', updateAvailable: !!status.updateAvailable, count, filter, total: local ? requests.length : list.pageInfo?.results ?? requests.length, requests };
+      return { version: status.version || '', updateAvailable: !!status.updateAvailable, count, filter, total, page, pageSize: size, pages: Math.max(1, Math.ceil(total / size)), requests };
     },
     action(id, action) {
       id = Number(id);
@@ -843,7 +850,7 @@ const routes = {
   'GET /api/sonarr': () => arr('sonarr').summary(),
   'GET /api/qbittorrent': () => qb.summary(),
   'GET /api/nzbget': () => nzb.summary(),
-  'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all'),
+  'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all', q.get('page'), q.get('size')),
   'POST /api/seerr/action': (q, b) => seerr.action(b.id, b.action),
   'GET /api/:arr/lookup': (q, b, p) => arr(p.arr).lookup(q.get('term') || ''),
   'GET /api/:arr/options': (q, b, p) => arr(p.arr).options(),

@@ -78,6 +78,7 @@
       'log.search': 'Search the log…', 'log.auto': 'Auto-refresh', 'log.reload': 'Refresh', 'log.download': 'Download',
       'log.info': '{shown} of {total} entries · newest first · updated {time}', 'log.empty': 'No entries match.', 'log.loading': 'Loading…',
       'log.arrhubNote': 'ArrHub keeps its last 1000 messages in memory; they are cleared on restart.',
+      'req.perPage': 'Per page', 'req.page': 'Page {page} of {pages}', 'req.range': '{from}–{to} of {total}', 'req.first': 'First page', 'req.prev': 'Previous page', 'req.next': 'Next page', 'req.last': 'Last page',
       // themes & backgrounds
       'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light', 'theme.pastel-lavender': 'Pastel Lavender', 'theme.pastel-peach': 'Pastel Peach',
       'bg.none': 'No background', 'bg.aurora': 'Aurora', 'bg.stars': 'Starfield', 'bg.particles': 'Particle network', 'bg.waves': 'Waves',
@@ -151,6 +152,7 @@
       'log.search': 'Pretraži log…', 'log.auto': 'Automatski osvježi', 'log.reload': 'Osvježi', 'log.download': 'Preuzmi',
       'log.info': '{shown} od {total} zapisa · najnoviji prvi · osvježeno {time}', 'log.empty': 'Nema zapisa koji odgovaraju.', 'log.loading': 'Učitavanje…',
       'log.arrhubNote': 'ArrHub čuva zadnjih 1000 poruka u memoriji; brišu se pri ponovnom pokretanju.',
+      'req.perPage': 'Po stranici', 'req.page': 'Stranica {page} od {pages}', 'req.range': '{from}–{to} od {total}', 'req.first': 'Prva stranica', 'req.prev': 'Prethodna stranica', 'req.next': 'Sljedeća stranica', 'req.last': 'Zadnja stranica',
       'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla', 'theme.pastel-lavender': 'Pastel lavanda', 'theme.pastel-peach': 'Pastel breskva',
       'bg.none': 'Bez pozadine', 'bg.aurora': 'Aurora', 'bg.stars': 'Zvjezdano nebo', 'bg.particles': 'Mreža čestica', 'bg.waves': 'Valovi',
       'bg.posters': 'Zid postera', 'bg.fanart': 'Slike iz knjižnice',

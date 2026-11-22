@@ -2,7 +2,9 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {}, seerrFilter: 'pending' };
+const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {}, seerrFilter: 'pending', seerrPage: 1, seerrSize: 30 };
+try { const n = Number(localStorage.getItem('arrhub-req-size')); if ([10, 20, 30, 50, 100].includes(n)) state.seerrSize = n; } catch {}
+const seerrPath = () => `seerr?filter=${state.seerrFilter}&page=${state.seerrPage}&size=${state.seerrSize}`;
 const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)' };
 const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr' };
 const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
@@ -49,7 +51,7 @@ function refresh() {
 }
 async function doRefresh() {
   await Promise.all(SVCS.filter(k => state.cfg[k]).map(async k => {
-    try { state.data[k] = await api(k === 'seerr' ? `seerr?filter=${state.seerrFilter}` : k); delete state.err[k]; }
+    try { state.data[k] = await api(k === 'seerr' ? seerrPath() : k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
   }));
   render();
@@ -276,7 +278,10 @@ function renderRequests() {
   const el = $('#reqList');
   if (state.err.seerr) { el.innerHTML = `<div class="error">${esc(state.err.seerr)}</div>`; return; }
   const d = state.data.seerr; if (!d) { el.innerHTML = `<div class="empty">${t('c.loading')}</div>`; return; }
-  if (d.filter !== state.seerrFilter) return; // stale response after a filter change
+  if (d.filter !== state.seerrFilter || (d.page && (d.page !== state.seerrPage || d.pageSize !== state.seerrSize))) return; // stale response after a filter/page change
+  // the current page no longer exists (e.g. after deleting the last request on it): go to the last one
+  if (d.pages && state.seerrPage > d.pages) { state.seerrPage = d.pages; loadRequests(); return; }
+  renderReqPager(d);
   $('#seerrVer').textContent = d.version || '';
   const c = d.count || {};
   const cnt = (key, v) => `<span>${t(key)} <b>${v ?? 0}</b></span>`;
@@ -303,13 +308,41 @@ function seerrAct(id, action) {
   if (action === 'decline' && !confirm(t('req.confirmDecline'))) return;
   run('seerr/action', { id, action }, t({ approve: 'req.approvedToast', decline: 'req.declinedToast', delete: 'req.deletedToast' }[action]));
 }
-$('#reqFilter').onclick = async e => {
-  const b = e.target.closest('button'); if (!b) return;
-  state.seerrFilter = b.dataset.f;
-  [...$('#reqFilter').children].forEach(x => x.classList.toggle('on', x === b));
+async function loadRequests(scroll) {
   $('#reqList').innerHTML = `<div class="empty">${t('c.loading')}</div>`;
-  try { state.data.seerr = await api(`seerr?filter=${state.seerrFilter}`); delete state.err.seerr; } catch (err) { state.err.seerr = err.message; }
+  $('#reqPager').classList.add('hidden');
+  if (scroll) $('#v-requests').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  try { state.data.seerr = await api(seerrPath()); delete state.err.seerr; } catch (err) { state.err.seerr = err.message; }
   renderRequests(); renderCards();
+}
+function renderReqPager(d) {
+  const pg = $('#reqPager');
+  if (!d.total) { pg.classList.add('hidden'); return; }
+  pg.classList.remove('hidden');
+  const from = (d.page - 1) * d.pageSize + 1, to = Math.min(d.total, from + d.requests.length - 1);
+  $('#reqRange').textContent = t('req.range', { from, to, total: d.total });
+  $('#reqPage').textContent = t('req.page', { page: d.page, pages: d.pages });
+  $('#reqSize').value = String(state.seerrSize);
+  pg.querySelectorAll('[data-pg]').forEach(b => { b.disabled = (b.dataset.pg === 'first' || b.dataset.pg === 'prev') ? d.page <= 1 : d.page >= d.pages; });
+  pg.dataset.pages = d.pages;
+}
+$('#reqFilter').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.seerrFilter = b.dataset.f; state.seerrPage = 1;
+  [...$('#reqFilter').children].forEach(x => x.classList.toggle('on', x === b));
+  loadRequests();
+};
+$('#reqPager').onclick = e => {
+  const b = e.target.closest('[data-pg]'); if (!b || b.disabled) return;
+  const pages = Number($('#reqPager').dataset.pages) || 1;
+  state.seerrPage = { first: 1, prev: state.seerrPage - 1, next: state.seerrPage + 1, last: pages }[b.dataset.pg];
+  state.seerrPage = Math.min(pages, Math.max(1, state.seerrPage));
+  loadRequests(true);
+};
+$('#reqSize').onchange = e => {
+  state.seerrSize = Number(e.target.value) || 30; state.seerrPage = 1;
+  try { localStorage.setItem('arrhub-req-size', state.seerrSize); } catch {}
+  loadRequests();
 };
 
 // ---- actions ----
