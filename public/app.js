@@ -36,7 +36,18 @@ async function api(path, body) {
 }
 
 // ---- data ----
-async function refresh() {
+// one refresh at a time: timer ticks are skipped while one is running,
+// an explicit refresh (e.g. after an action) runs once more when it finishes
+let refreshing = null, refreshAgain = false;
+function refresh() {
+  if (refreshing) { refreshAgain = true; return refreshing; }
+  refreshing = (async () => {
+    try { do { refreshAgain = false; await doRefresh(); } while (refreshAgain); }
+    finally { refreshing = null; }
+  })();
+  return refreshing;
+}
+async function doRefresh() {
   await Promise.all(SVCS.filter(k => state.cfg[k]).map(async k => {
     try { state.data[k] = await api(k === 'seerr' ? `seerr?filter=${state.seerrFilter}` : k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
@@ -595,7 +606,7 @@ async function applyConfig() {
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
   decorateStaticLinks();
   clearInterval(timer);
-  timer = setInterval(() => { if (!document.hidden) refresh(); }, (state.cfg.refresh || 5) * 1000);
+  timer = setInterval(() => { if (!document.hidden && !refreshing) refresh(); }, (state.cfg.refresh || 5) * 1000);
   return any;
 }
 

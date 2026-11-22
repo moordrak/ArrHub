@@ -30,7 +30,7 @@ const MSG = {
     caPrivateKey: 'That is a private key – paste only the CA certificate (-----BEGIN CERTIFICATE-----), never the key',
     netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address – the URL must use a name or IP listed in the certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
-    noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden',
+    noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -49,7 +49,7 @@ const MSG = {
     caPrivateKey: 'To je privatni ključ – zalijepi samo CA certifikat (-----BEGIN CERTIFICATE-----), nikad ključ',
     netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi – URL mora koristiti ime ili IP naveden u certifikatu', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
-    noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno',
+    noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -283,7 +283,7 @@ function httpsFetch(url, { method = 'GET', headers = {}, body, redirect = 'follo
     const r = https_.request(u, { method, headers: h, ...tlsOpts }, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => {
+      res.on('end', () => { try {
         const status = res.statusCode || 502;
         const loc = res.headers.location;
         if (redirect === 'follow' && status >= 300 && status < 400 && loc && hops < 5) {
@@ -296,7 +296,7 @@ function httpsFetch(url, { method = 'GET', headers = {}, body, redirect = 'follo
         for (const [k, v] of Object.entries(res.headers)) hdrs.set(k, Array.isArray(v) ? v.join(', ') : String(v));
         const buf = Buffer.concat(chunks);
         resolve(new Response([101, 204, 205, 304].includes(status) ? null : buf, { status: Math.min(Math.max(status, 200), 599), headers: hdrs }));
-      });
+      } catch (e) { reject(Object.assign(new TypeError('fetch failed'), { cause: e })); } });
       res.on('error', reject);
     });
     r.on('error', err => reject(Object.assign(new TypeError('fetch failed'), { cause: err })));
@@ -803,7 +803,15 @@ function match(method, pathname) {
   return null;
 }
 
-const server = http.createServer((r, res) => langStore.run(requestLang(r), () => handle(r, res)));
+const server = http.createServer((r, res) => langStore.run(requestLang(r), () => handle(r, res).catch(e => {
+  // never let one bad request take the whole server down
+  console.error(new Date().toISOString(), 'request failed:', r.method, String(r.url).slice(0, 200), '-', e?.message || e);
+  try { if (!res.headersSent) send(res, 400, { error: T('badRequest') }); else res.end(); } catch {}
+})));
+server.on('clientError', (err, socket) => { try { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch {} });
+// last line of defence: log and keep running instead of exiting
+process.on('uncaughtException', e => console.error(new Date().toISOString(), 'uncaught error (ArrHub keeps running):', e?.stack || e));
+process.on('unhandledRejection', e => console.error(new Date().toISOString(), 'unhandled rejection (ArrHub keeps running):', e?.stack || e));
 async function handle(r, res) {
   if (!checkAuth(r)) {
     res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="ArrHub"' });
