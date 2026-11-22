@@ -31,6 +31,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
   approve, decline and delete. The pending count is also shown on the Overview. Works with Overseerr and Jellyseerr too.
 - **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
+- **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download
 - **Own CA certificate** – paste your certificate authority's certificate (PEM) in Settings → *SSL / TLS* and ArrHub fully verifies your `https://` services against it, including the host name. Also `ARRHUB_CA` (PEM text) or `ARRHUB_CA_FILE` (path to a .crt/.pem)
 - **Calendar** – movies and episodes for the next 2 weeks
 - **History** – latest events from Radarr, Sonarr and NZBGet

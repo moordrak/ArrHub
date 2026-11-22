@@ -6,7 +6,7 @@
     en: {
       // navigation
       'nav.overview': 'Overview', 'nav.downloads': 'Downloads', 'nav.calendar': 'Calendar', 'nav.history': 'History',
-      'nav.requests': 'Requests', 'nav.add': 'Add', 'nav.settings': '⚙ Settings',
+      'nav.requests': 'Requests', 'nav.add': 'Add', 'nav.logs': 'Logs', 'nav.settings': '⚙ Settings',
       // common
       'c.loading': 'Loading…', 'c.error': 'Error: {msg}', 'c.done': 'Done', 'c.deleted': 'Deleted', 'c.removed': 'Removed',
       'c.empty': 'Empty', 'c.noRecords': 'No records', 'c.free': '{size} free', 'c.ratio': 'ratio {r}', 'c.notConfigured': '{svc} is not configured',
@@ -74,6 +74,10 @@
       'set.tlsTitle': 'SSL / TLS – own CA certificate', 'set.ca': 'CA certificate (PEM)',
       'set.caHint': 'Paste the certificate of your own certificate authority (the public .crt / .pem, not the private key). ArrHub then fully verifies your https:// services against it. Several certificates (a chain) can be pasted one after another.',
       'set.caLoaded': 'Trusted: {list}', 'set.caValid': 'valid until {date}', 'set.caNone': 'No own CA certificate – only the system certificate authorities are trusted.',
+      'log.level': 'Level', 'log.lv.all': 'All levels', 'log.lv.info': 'Info and above', 'log.lv.warn': 'Warnings and errors', 'log.lv.error': 'Errors only',
+      'log.search': 'Search the log…', 'log.auto': 'Auto-refresh', 'log.reload': 'Refresh', 'log.download': 'Download',
+      'log.info': '{shown} of {total} entries · newest first · updated {time}', 'log.empty': 'No entries match.', 'log.loading': 'Loading…',
+      'log.arrhubNote': 'ArrHub keeps its last 1000 messages in memory; they are cleared on restart.',
       // themes & backgrounds
       'theme.auto': 'Automatic', 'theme.dark': 'Dark', 'theme.oled': 'OLED black', 'theme.light': 'Light', 'theme.pastel-lavender': 'Pastel Lavender', 'theme.pastel-peach': 'Pastel Peach',
       'bg.none': 'No background', 'bg.aurora': 'Aurora', 'bg.stars': 'Starfield', 'bg.particles': 'Particle network', 'bg.waves': 'Waves',
@@ -83,7 +87,7 @@
     },
     hr: {
       'nav.overview': 'Pregled', 'nav.downloads': 'Preuzimanja', 'nav.calendar': 'Kalendar', 'nav.history': 'Povijest',
-      'nav.requests': 'Zahtjevi', 'nav.add': 'Dodaj', 'nav.settings': '⚙ Postavke',
+      'nav.requests': 'Zahtjevi', 'nav.add': 'Dodaj', 'nav.logs': 'Logovi', 'nav.settings': '⚙ Postavke',
       'c.loading': 'Učitavanje…', 'c.error': 'Greška: {msg}', 'c.done': 'Gotovo', 'c.deleted': 'Obrisano', 'c.removed': 'Uklonjeno',
       'c.empty': 'Prazno', 'c.noRecords': 'Nema zapisa', 'c.free': '{size} slobodno', 'c.ratio': 'omjer {r}', 'c.notConfigured': '{svc} nije konfiguriran',
       'c.movie': 'Film', 'c.series': 'Serija', 'c.refresh': 'Osvježi', 'c.delete': 'Obriši', 'c.remove': 'Ukloni',
@@ -143,6 +147,10 @@
       'set.tlsTitle': 'SSL / TLS – vlastiti CA certifikat', 'set.ca': 'CA certifikat (PEM)',
       'set.caHint': 'Zalijepi certifikat svog izdavatelja certifikata (javni .crt / .pem, ne privatni ključ). ArrHub će njime potpuno provjeravati tvoje https:// servise. Može se zalijepiti i više certifikata (lanac) jedan za drugim.',
       'set.caLoaded': 'Vjeruje se: {list}', 'set.caValid': 'vrijedi do {date}', 'set.caNone': 'Nema vlastitog CA certifikata – vjeruje se samo sistemskim izdavateljima certifikata.',
+      'log.level': 'Razina', 'log.lv.all': 'Sve razine', 'log.lv.info': 'Info i više', 'log.lv.warn': 'Upozorenja i greške', 'log.lv.error': 'Samo greške',
+      'log.search': 'Pretraži log…', 'log.auto': 'Automatski osvježi', 'log.reload': 'Osvježi', 'log.download': 'Preuzmi',
+      'log.info': '{shown} od {total} zapisa · najnoviji prvi · osvježeno {time}', 'log.empty': 'Nema zapisa koji odgovaraju.', 'log.loading': 'Učitavanje…',
+      'log.arrhubNote': 'ArrHub čuva zadnjih 1000 poruka u memoriji; brišu se pri ponovnom pokretanju.',
       'theme.auto': 'Automatski', 'theme.dark': 'Tamna', 'theme.oled': 'OLED crna', 'theme.light': 'Svijetla', 'theme.pastel-lavender': 'Pastel lavanda', 'theme.pastel-peach': 'Pastel breskva',
       'bg.none': 'Bez pozadine', 'bg.aurora': 'Aurora', 'bg.stars': 'Zvjezdano nebo', 'bg.particles': 'Mreža čestica', 'bg.waves': 'Valovi',
       'bg.posters': 'Zid postera', 'bg.fanart': 'Slike iz knjižnice',

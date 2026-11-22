@@ -31,6 +31,7 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
   odobravanje, odbijanje i brisanje. Broj zahtjeva na čekanju vidi se i u Pregledu. Radi i s Overseerrom i Jellyseerrom.
 - **Poveznice na svaki servis** – svaka kartica ima gumb ↗ koji otvara web sučelje servisa u novoj kartici. Zadano vodi na URL servisa, a u Postavkama se za svaki servis može upisati zasebna javna poveznica (npr. adresa preko reverse proxyja)
 - **Samopotpisani certifikati** – za servis na `https://` sa samopotpisanim ili lokalno potpisanim certifikatom uključi *Prihvati samopotpisani certifikat* u Postavkama. Provjera se preskače samo za adresu tog servisa; sve ostalo (npr. provjera ažuriranja na GitHubu) i dalje provjerava certifikate
+- **Logovi** – log ArrHuba i logovi Radarra, Sonarra, qBittorrenta, NZBGeta i Seerra u jednom tabu, s filtrom razine, pretragom, automatskim osvježavanjem i preuzimanjem
 - **Vlastiti CA certifikat** – zalijepi certifikat svog izdavatelja (PEM) u Postavke → *SSL / TLS* i ArrHub će njime potpuno provjeravati tvoje `https://` servise, uključujući ime. Također `ARRHUB_CA` (PEM tekst) ili `ARRHUB_CA_FILE` (putanja do .crt/.pem)
 - **Kalendar** – filmovi i epizode za sljedeća 2 tjedna
 - **Povijest** – zadnji događaji iz Radarra, Sonarra i NZBGeta

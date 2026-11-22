@@ -158,6 +158,31 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .span2{grid-column:1/-1}
+.logbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.logbar .seg{flex-wrap:wrap}
+.logbar .seg .dot{margin-right:6px}
+.logbar input[type=search]{flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:inherit}
+.logauto{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.loginfo{font-size:12.5px;margin-bottom:8px}
+.loglist{font:12.5px/1.5 var(--mono);max-height:calc(100vh - 260px);min-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.logrow{display:grid;grid-template-columns:auto 52px 1fr;gap:10px;padding:4px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);align-items:start}
+.logrow:last-child{border-bottom:0}
+.logrow:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.logrow .lt{color:var(--muted);white-space:nowrap}
+.logrow .ll{font-weight:700;font-size:11px;letter-spacing:.04em;padding-top:1px}
+.logrow .lm{white-space:pre-wrap;word-break:break-word;min-width:0}
+.logrow .ls{color:var(--muted)}
+.logrow details summary{cursor:pointer;list-style:none}
+.logrow details summary::-webkit-details-marker{display:none}
+.logrow details summary::after{content:' ▸';color:var(--muted)}
+.logrow details[open] summary::after{content:' ▾'}
+.logrow details pre{margin:6px 0 2px;padding:8px;background:var(--panel);border-radius:6px;overflow:auto;font:inherit;font-size:11.5px;color:var(--muted);white-space:pre-wrap}
+.lv-error .ll{color:var(--err)}.lv-error{background:color-mix(in srgb,var(--err) 7%,transparent)}
+.lv-warn .ll{color:var(--warn)}
+.lv-info .ll{color:var(--accent-text,var(--accent))}
+.lv-debug .ll,.lv-debug .lm{color:var(--muted)}
+.logempty{padding:30px;text-align:center;color:var(--muted);font-family:var(--font,inherit)}
+@media(max-width:700px){.logrow{grid-template-columns:1fr;gap:0}.logrow .ll{display:inline}}
 .field textarea{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:12px/1.45 var(--mono);resize:vertical;min-height:110px}
 .field textarea:focus{outline:none;border-color:var(--accent)}
 .field textarea:disabled{opacity:.55;cursor:not-allowed}
@@ -203,6 +228,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     <button data-v="history" data-i18n="nav.history">History</button>
     <button data-v="requests" data-svc="seerr" data-i18n="nav.requests">Requests</button>
     <button data-v="add" data-i18n="nav.add">Add</button>
+    <button data-v="logs" data-i18n="nav.logs">Logs</button>
     <button data-v="settings"><span data-i18n="nav.settings">⚙ Settings</span> <span class="vbadge hidden" id="navVer"></span></button>
   </nav>
   <div class="speeds" id="speeds"></div>
@@ -299,6 +325,27 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     </form>
     <div class="results" id="results"></div>
   </section>
+  <!-- LOGS -->
+  <section id="v-logs" class="hidden">
+    <div class="card wide">
+      <div class="logbar">
+        <div class="seg" id="logSrc"></div>
+        <select id="logLevel" title="Level" data-i18n-title="log.level">
+          <option value="debug" data-i18n="log.lv.all">All levels</option>
+          <option value="info" selected data-i18n="log.lv.info">Info and above</option>
+          <option value="warn" data-i18n="log.lv.warn">Warnings and errors</option>
+          <option value="error" data-i18n="log.lv.error">Errors only</option>
+        </select>
+        <input id="logSearch" type="search" placeholder="Search…" data-i18n-ph="log.search" autocomplete="off">
+        <label class="logauto"><input type="checkbox" id="logAuto" checked> <span data-i18n="log.auto">Auto-refresh</span></label>
+        <button class="btn" type="button" id="logReload" data-i18n="log.reload">Refresh</button>
+        <button class="btn" type="button" id="logDownload" data-i18n="log.download">Download</button>
+      </div>
+      <div class="muted loginfo" id="logInfo"></div>
+      <div class="loglist" id="logList"></div>
+    </div>
+  </section>
+
   <!-- SETTINGS -->
   <section id="v-settings" class="hidden">
     <form id="setForm" autocomplete="off">

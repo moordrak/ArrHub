@@ -370,12 +370,73 @@ function show(v) {
   document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'v-' + v));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   if (v === 'add') loadOptions();
+  if (v === 'logs') { renderLogSources(); loadLogs(); }
   if (v === 'settings') loadSettings();
   else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);
 }
 $('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
 $('#qbFilter').onchange = e => { qbFilter = e.target.value; renderQb(); };
+
+// ---- logs ----
+const LOG_RANK = { debug: 0, info: 1, warn: 2, error: 3 };
+const log = { src: 'arrhub', entries: [], at: null, err: null, busy: false, timer: null };
+function logSources() { return ['arrhub', ...SVCS.filter(k => state.cfg[k])]; }
+function renderLogSources() {
+  const el = $('#logSrc'); if (!el) return;
+  if (!logSources().includes(log.src)) log.src = 'arrhub';
+  el.innerHTML = logSources().map(k => `<button type="button" data-src="${k}" class="${k === log.src ? 'on' : ''}">${k === 'arrhub' ? '' : `<span class="dot" style="background:${COLORS[k]}"></span>`}${k === 'arrhub' ? 'ArrHub' : NAMES[k]}</button>`).join('');
+}
+async function loadLogs() {
+  if (log.busy) return;
+  log.busy = true;
+  const src = log.src;
+  if (!log.entries.length) $('#logInfo').textContent = t('log.loading');
+  try { const d = await api('logs/' + src); if (src === log.src) { log.entries = d.entries || []; log.err = null; log.at = new Date(); } }
+  catch (e) { if (src === log.src) log.err = e.message; }
+  finally { log.busy = false; }
+  if (src === log.src) renderLogs();
+}
+function logFiltered() {
+  const min = LOG_RANK[$('#logLevel').value] ?? 1;
+  const q = $('#logSearch').value.trim().toLowerCase();
+  return log.entries.filter(e => (LOG_RANK[e.level] ?? 1) >= min && (!q || `${e.source || ''} ${e.message} ${e.detail || ''}`.toLowerCase().includes(q)));
+}
+const fmtLogTime = d => new Intl.DateTimeFormat(I18N.locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(d));
+function renderLogs() {
+  const list = $('#logList'); if (!list || state.view !== 'logs') return;
+  const rows = logFiltered();
+  const info = log.at ? t('log.info', { shown: rows.length, total: log.entries.length, time: fmtTime(log.at) }) : '';
+  $('#logInfo').innerHTML = log.err ? `<span class="error">${esc(log.err)}</span>` : esc(info) + (log.src === 'arrhub' && info ? ' · ' + esc(t('log.arrhubNote')) : '');
+  if (!rows.length) { list.innerHTML = log.err ? '' : `<div class="logempty">${esc(log.at ? t('log.empty') : t('log.loading'))}</div>`; return; }
+  const top = list.scrollTop;
+  list.innerHTML = rows.slice(0, 1000).map(e => {
+    const msg = String(e.message ?? ''), nl = msg.indexOf('\n');
+    const head = nl < 0 ? msg : msg.slice(0, nl);
+    const more = [nl < 0 ? '' : msg.slice(nl + 1), e.detail || ''].filter(Boolean).join('\n');
+    const src = e.source ? `<span class="ls">${esc(e.source)}: </span>` : '';
+    const body = more ? `<details><summary>${src}${esc(head)}</summary><pre>${esc(more)}</pre></details>` : src + esc(head);
+    return `<div class="logrow lv-${esc(e.level)}"><span class="lt">${esc(fmtLogTime(e.time))}</span><span class="ll">${esc(String(e.level).toUpperCase())}</span><div class="lm">${body}</div></div>`;
+  }).join('');
+  list.scrollTop = top;
+}
+$('#logSrc').onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.src === log.src) return;
+  log.src = b.dataset.src; log.entries = []; log.at = null; log.err = null;
+  renderLogSources(); renderLogs(); loadLogs();
+};
+$('#logLevel').onchange = renderLogs;
+$('#logSearch').oninput = renderLogs;
+$('#logReload').onclick = loadLogs;
+$('#logDownload').onclick = () => {
+  const lines = logFiltered().slice().reverse().map(e => `${e.time} [${String(e.level).toUpperCase()}] ${e.source ? e.source + ': ' : ''}${e.message}${e.detail ? '\n' + e.detail : ''}`);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/plain' }));
+  a.download = `${log.src}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+// while the Logs tab is open: refresh every 10 s (never while the tab is hidden or a load is running)
+setInterval(() => { if (state.view === 'logs' && $('#logAuto').checked && !document.hidden) loadLogs(); }, 10000);
 
 // ---- settings ----
 const setForm = $('#setForm');
@@ -528,7 +589,7 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
+  I18N.apply(); renderLogSources(); renderLogs(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
   if (lastResults.length && state.view === 'add') renderResults();
 }
 function applyUi(ui) {

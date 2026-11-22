@@ -6,6 +6,24 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
+const util = require('util');
+
+// ---------- ArrHub's own log: everything written to the console is also kept in memory for the Logs tab ----------
+const LOG_MAX = 1000;
+const logBuf = [];
+let logSeq = 0;
+for (const [m, level] of [['log', 'info'], ['info', 'info'], ['warn', 'warn'], ['error', 'error']]) {
+  const orig = console[m].bind(console);
+  console[m] = (...args) => {
+    orig(...args);
+    try {
+      const message = args.map(a => a instanceof Error ? (a.stack || a.message) : typeof a === 'string' ? a : util.inspect(a, { depth: 3 }))
+        .join(' ').replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z\s+/, '');
+      logBuf.push({ id: ++logSeq, time: new Date().toISOString(), level, message });
+      if (logBuf.length > LOG_MAX) logBuf.shift();
+    } catch {}
+  };
+}
 
 let VERSION = 'dev';
 try { VERSION = require('./package.json').version || VERSION; } catch {}
@@ -220,6 +238,7 @@ function saveSettings(values) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
   qb.sid = null;
+  console.log('Settings saved');
   return { ok: true, restartRequired: cfg.port !== oldPort };
 }
 async function testService(service, values) {
@@ -266,10 +285,26 @@ function tlsFor(url) {
   const isService = t?.origin === o || SERVICES.some(k => cfg[k]?.url && originOf(cfg[k].url) === o);
   if (!isService) return null;
   const insecure = t?.deny.has(o) ? false : t?.allow.has(o) ? true : SERVICES.some(k => cfg[k]?.insecure && cfg[k].url && originOf(cfg[k].url) === o);
-  if (insecure) return { rejectUnauthorized: false };
+  if (insecure) return { agent: tlsAgent('insecure', { rejectUnauthorized: false }) };
   const ca = t && 'ca' in t ? t.ca : caState;
-  if (ca?.pem?.length) return { ca: [...tls_.rootCertificates, ...ca.pem], rejectUnauthorized: true };
+  if (ca?.pem?.length) {
+    const key = 'ca:' + crypto_.createHash('sha256').update(ca.pem.join('')).digest('hex');
+    return { agent: tlsAgent(key, () => ({ secureContext: tls_.createSecureContext({ ca: [...tls_.rootCertificates, ...ca.pem] }), rejectUnauthorized: true })) };
+  }
   return null;
+}
+// One agent per TLS setup. The trusted set (system CAs + own CA) is built once, not on every connection,
+// and each setup has its own connection pool and TLS session cache, so a session verified (or not verified)
+// under one setup is never reused under another.
+const tlsAgents = new Map();
+function tlsAgent(key, opts) {
+  let a = tlsAgents.get(key);
+  if (!a) {
+    if (tlsAgents.size >= 8) { const [k0, a0] = tlsAgents.entries().next().value; a0.destroy(); tlsAgents.delete(k0); }
+    a = new https_.Agent({ keepAlive: true, ...(typeof opts === 'function' ? opts() : opts) });
+    tlsAgents.set(key, a);
+  }
+  return a;
 }
 // fetch-compatible request over https with custom TLS options (see tlsFor)
 function httpsFetch(url, { method = 'GET', headers = {}, body, redirect = 'follow', signal } = {}, tlsOpts = {}, hops = 0) {
@@ -526,6 +561,40 @@ function makeSeerr(conf) {
 }
 const seerr = makeSeerr(() => cfg.seerr);
 
+// ---------- Logs (ArrHub + the services' own logs, normalised) ----------
+const lvl = v => { v = String(v || '').toLowerCase(); return /fatal|error|crit/.test(v) ? 'error' : /warn/.test(v) ? 'warn' : /debug|trace|detail/.test(v) ? 'debug' : 'info'; };
+const LOG_SOURCES = ['arrhub', ...SERVICES];
+async function serviceLogs(src) {
+  if (!LOG_SOURCES.includes(src)) { const e = new Error(T('notFound')); e.status = 404; throw e; }
+  if (src !== 'arrhub' && !enabled(src)) { const e = new Error(T('notConfigured', { svc: src })); e.status = 400; throw e; }
+  let entries;
+  if (src === 'arrhub') entries = logBuf.slice().reverse().map(e => ({ time: e.time, level: e.level, message: e.message }));
+  else if (src === 'radarr' || src === 'sonarr') {
+    const d = await arr(src).call('/log?page=1&pageSize=250&sortKey=time&sortDirection=descending');
+    entries = (d.records || []).map(r => ({ time: r.time, level: lvl(r.level), source: r.logger, message: r.message, detail: r.exception || undefined }));
+  } else if (src === 'qbittorrent') {
+    const d = await qb.call('/log/main?last_known_id=-1');
+    entries = (Array.isArray(d) ? d : []).slice(-250).reverse().map(r => ({
+      time: new Date(r.timestamp * 1000).toISOString(), message: r.message,
+      level: r.type & 8 ? 'error' : r.type & 4 ? 'warn' : 'info',
+    }));
+  } else if (src === 'nzbget') {
+    const d = await nzb.rpc('log', [0, 250]);
+    entries = (d || []).slice().reverse().map(r => ({ time: new Date(r.Time * 1000).toISOString(), level: lvl(r.Kind), message: r.Text }));
+  } else if (src === 'seerr') {
+    const d = await seerr.call('/settings/logs?take=250&skip=0&filter=debug');
+    entries = (d.results || []).map(r => ({ time: r.timestamp, level: lvl(r.level), source: r.label, message: r.message, detail: r.data && Object.keys(r.data).length ? JSON.stringify(r.data, null, 2) : undefined }));
+  }
+  return { source: src, entries };
+}
+// note in ArrHub's own log when a service goes down or comes back (once per change, not on every refresh)
+const svcState = {};
+function noteService(svc, err) {
+  const prev = svcState[svc];
+  if (err) { if (prev !== err) console.warn(`${svc}: ${err}`); svcState[svc] = err; }
+  else { if (prev) console.log(`${svc}: connection restored`); svcState[svc] = ''; }
+}
+
 // ---------- Library images (backgrounds) ----------
 // The client only gets /api/cover/<id>; real URLs (local MediaCover + remote TMDB/TVDB) stay on the server.
 const mediaCache = { at: 0, data: null, pending: null };
@@ -767,6 +836,7 @@ const routes = {
   },
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
+  'GET /api/logs/:src': (q, b, p) => serviceLogs(p.src),
   'POST /api/settings': (q, b) => saveSettings(b.values),
   'POST /api/settings/test': (q, b) => testService(b.service, b.values),
   'GET /api/radarr': () => arr('radarr').summary(),
@@ -822,7 +892,7 @@ async function handle(r, res) {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: T('notFound') });
     const svc = u.pathname.split('/')[2];
-    if (!['config', 'settings', 'media', 'cover', 'about', 'icon'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
+    if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);
@@ -830,9 +900,16 @@ async function handle(r, res) {
         res.writeHead(200, { 'Content-Type': out.type, 'Cache-Control': 'private, max-age=86400', ...(out.headers || {}) });
         return res.end(out.__raw);
       }
+      if (r.method === 'GET' && SERVICES.includes(svc) && u.pathname === `/api/${svc}`) noteService(svc);
       send(res, 200, out ?? { ok: true });
     } catch (e) {
       const msg = friendlyError(e);
+      const logMsg = langStore.run('en', () => friendlyError(e));   // ArrHub's own log is always English
+      if (SERVICES.includes(svc)) {
+        if (r.method === 'GET' && u.pathname === `/api/${svc}`) noteService(svc, logMsg);
+        else if (r.method === 'POST') console.warn(`${svc}: ${u.pathname.split('/').slice(3).join('/') || 'action'} – ${logMsg}`);
+      } else if (svc === 'logs') { /* shown in the tab */ }
+      else console.warn(`${u.pathname}: ${logMsg}`);
       send(res, e.status || (svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502), { error: msg });
     }
     return;
