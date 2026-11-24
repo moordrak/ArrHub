@@ -13,7 +13,7 @@
 <style>
 :root{
   --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
-  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;--seerr:#8b7cf6;
+  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;--seerr:#8b7cf6;--docker:#2496ed;
   --ok:#4caf7a;--warn:#e0a63a;--err:#e05a5a;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
@@ -131,6 +131,7 @@ main>section{background:var(--glass-hi),var(--glass);-webkit-backdrop-filter:blu
 [data-tint="1"] .card[data-icon=nzbget],[data-tint="1"] .card[data-svc=nzbget]{--tc:var(--nzb)}
 [data-tint="1"] .card[data-icon=qbittorrent],[data-tint="1"] .card[data-svc=qbittorrent]{--tc:var(--qb)}
 [data-tint="1"] .card[data-icon=seerr],[data-tint="1"] .card[data-svc=seerr]{--tc:var(--seerr)}
+[data-tint="1"] .card[data-icon=docker]{--tc:var(--docker)}
 [data-tint="1"] .card{background:color-mix(in srgb,var(--tc,var(--accent)) 10%,var(--panel))}
 [data-tint="1"] .card[data-icon],[data-tint="1"] .card[data-svc]{background:color-mix(in srgb,var(--tc) 14%,var(--panel))}
 [data-tint="1"] .card.svc{background:color-mix(in srgb,var(--tc) 22%,var(--panel));border-color:color-mix(in srgb,var(--tc) 45%,var(--line))}
@@ -162,7 +163,7 @@ body.has-bg .req{background:color-mix(in srgb,var(--panel) 80%,transparent);back
 .counts{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .counts b{color:var(--text);font-family:var(--mono)}
 .svc .link{margin-top:10px}
-[data-scheme=light]{--seerr:#6d5bd0;--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
+[data-scheme=light]{--docker:#1d7fd0;--seerr:#6d5bd0;--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
 body{transition:background-color .3s}
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 #bg canvas,#bg .bg-img,#bg .bg-shade{position:absolute;inset:0;transition:opacity .6s}
@@ -194,6 +195,44 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .ctl label{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ctl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .span2{grid-column:1/-1}
+/* ---- Docker ---- */
+.dkbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dkbar input[type=search]{flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 12px;font:inherit}
+.dkchips{display:flex;gap:8px;flex-wrap:wrap}
+.dkchip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px}
+.dkchip b{font-family:var(--mono);font-size:13px}
+.dkgrp{margin-top:16px}
+.dkgrp>h3{margin:0 0 8px 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+.dkrow{display:grid;grid-template-columns:minmax(210px,1.4fr) minmax(170px,1fr) 150px 150px auto;gap:14px;align-items:center;padding:12px 16px;margin-bottom:8px}
+.dkrow>div{min-width:0}
+.dkrow .nm{display:flex;align-items:center;gap:10px;min-width:0}
+.dkrow .nm b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dkrow .img{font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dkrow .st{font-size:12.5px;color:var(--muted)}
+.dkrow .meter{font:12px var(--mono);color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.dkrow .meter .bar{height:4px}
+.dkrow .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.dkrow .acts .btn{padding:6px 10px;font-size:12.5px}
+.dkrow .acts .btn.upd{border-color:color-mix(in srgb,var(--accent) 60%,var(--line));color:var(--accent-text,var(--accent))}
+.dkrow .job{grid-column:1/-1;font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dkrow .job .bar{flex:1;min-width:120px;height:5px}
+.dkrow .job.err{color:var(--err)}
+.dkrow .job details{width:100%}
+.dkrow .job pre{margin:6px 0 0;padding:8px;background:var(--panel2);border-radius:6px;font:11.5px/1.45 var(--mono);white-space:pre-wrap;color:var(--muted)}
+.sdot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--muted)}
+.sdot.running{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.sdot.paused,.sdot.restarting{background:var(--warn)}.sdot.exited,.sdot.dead{background:var(--err)}
+.dktls{margin:4px 0 12px}.dktls summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8px}
+.dktls textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:11.5px/1.4 var(--mono);resize:vertical}
+.notice.warn{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));color:var(--warn)}
+#dkModal{position:fixed;inset:0;z-index:40;background:rgb(0 0 0/.45);display:grid;place-items:center;padding:20px}
+#dkModal.hidden{display:none}
+.dkm{width:min(1100px,100%);height:min(780px,100%);display:flex;flex-direction:column;padding:16px;gap:12px}
+.dkm-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.dkm-h b{font-size:15px}
+.dkm-b{flex:1;max-height:none;min-height:0}
+.logrow.lv-stderr .lm{color:color-mix(in srgb,var(--err) 80%,var(--text))}
+@media(max-width:1100px){.dkrow{grid-template-columns:1fr 1fr}.dkrow .acts{grid-column:1/-1;justify-content:flex-start}}
+@media(max-width:560px){.dkrow{grid-template-columns:1fr}}
 .pager{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px}
 .pager .sp{flex:1}
 .pager label{display:flex;align-items:center;gap:8px}
@@ -239,7 +278,7 @@ body.card-icons .card[data-icon]{position:relative;overflow:hidden;isolation:iso
 body.card-icons .card[data-icon]::after{content:'';position:absolute;z-index:-1;pointer-events:none;right:0;bottom:0;height:clamp(110px,80%,190px);aspect-ratio:1;background:var(--icon) center/contain no-repeat;opacity:var(--card-icon-opacity,.1);transform:translate(16%,18%) rotate(-12deg)}
 body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opacity:calc(var(--card-icon-opacity,.1) * .7)}
 .card[data-icon=radarr]{--icon:var(--icon-radarr)}.card[data-icon=sonarr]{--icon:var(--icon-sonarr)}.card[data-icon=qbittorrent]{--icon:var(--icon-qbittorrent)}
-.card[data-icon=nzbget]{--icon:var(--icon-nzbget)}.card[data-icon=seerr]{--icon:var(--icon-seerr)}
+.card[data-icon=nzbget]{--icon:var(--icon-nzbget)}.card[data-icon=seerr]{--icon:var(--icon-seerr)}.card[data-icon=docker]{--icon:var(--icon-docker)}
 .about{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .about .ver{font-family:var(--mono);font-size:15px;font-weight:700;padding:6px 12px;border-radius:9px;background:color-mix(in srgb,var(--accent) 16%,var(--panel2));color:var(--text);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
 .about .st{font-size:13px;color:var(--muted);flex:1;min-width:200px}
@@ -279,6 +318,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     <button data-v="history"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span data-i18n="nav.history">History</span></button>
     <button data-v="requests" data-svc="seerr"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/></svg><span data-i18n="nav.requests">Requests</span></button>
     <button data-v="add"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span data-i18n="nav.add">Add</span></button>
+    <button data-v="docker" data-svc="docker"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span data-i18n="nav.docker">Docker</span></button>
     <button data-v="logs"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span data-i18n="nav.logs">Logs</span></button>
     <button data-v="settings"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span data-i18n="nav.settings">Settings</span></button>
   </nav>
@@ -390,6 +430,31 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     </form>
     <div class="results" id="results"></div>
   </section>
+  <!-- DOCKER -->
+  <section id="v-docker" class="hidden">
+    <div class="card" data-icon="docker" style="--c:var(--docker)">
+      <h2><span class="dot" style="background:var(--docker)"></span>Docker <span class="muted hsub mono" id="dkHost"></span><span class="sp"></span></h2>
+      <div class="dkbar">
+        <div class="dkchips" id="dkChips"></div>
+        <span class="sp"></span>
+        <span class="muted" id="dkChecked"></span>
+        <button class="btn" type="button" id="dkCheck" data-i18n="dk.check">Check for updates</button>
+        <button class="btn p hidden" type="button" id="dkUpdAll"></button>
+      </div>
+      <div class="dkbar" style="margin-top:10px">
+        <div class="seg" id="dkFilter">
+          <button type="button" data-f="all" class="on" data-i18n="dk.f.all">All</button>
+          <button type="button" data-f="running" data-i18n="dk.f.running">Running</button>
+          <button type="button" data-f="stopped" data-i18n="dk.f.stopped">Stopped</button>
+          <button type="button" data-f="updates" data-i18n="dk.f.updates">Updates</button>
+        </div>
+        <input id="dkSearch" type="search" placeholder="Search containers…" data-i18n-ph="dk.search" autocomplete="off">
+      </div>
+      <div class="notice warn hidden" id="dkAuthWarn" data-i18n="dk.authWarn" style="margin-top:12px">ArrHub login is off – anyone on your network can stop or update your containers. Set a username and password in Settings.</div>
+    </div>
+    <div id="dkList"></div>
+  </section>
+
   <!-- LOGS -->
   <section id="v-logs" class="hidden">
     <div class="card wide">
@@ -497,6 +562,18 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
           <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
+        <div class="card" style="border-top:3px solid var(--docker)">
+          <h2><span class="dot" style="background:var(--docker)"></span>Docker</h2>
+          <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
+          <div class="ctl" style="margin:2px 0 10px"><label><input type="checkbox" name="docker.cleanup" checked> <span data-i18n="set.dockerCleanup">Remove the old image after an update</span></label></div>
+          <details class="dktls"><summary data-i18n="set.dockerTls">TLS client certificates (only for https://)</summary>
+            <div class="field"><label data-i18n="set.dockerCa">CA certificate (ca.pem)</label><textarea name="docker.ca" rows="3" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
+            <div class="field"><label data-i18n="set.dockerCert">Client certificate (cert.pem)</label><textarea name="docker.cert" rows="3" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
+            <div class="field"><label data-i18n="set.dockerKey">Client key (key.pem)</label><textarea name="docker.key" rows="3" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----"></textarea><span class="hint" data-i18n="set.dockerKeyHint">Stored like a password and never shown again.</span></div>
+          </details>
+          <div class="test"><button type="button" class="btn" data-test="docker" data-i18n="set.test">Test connection</button><span class="r"></span></div>
+        </div>
         <div class="card">
           <h2 data-i18n="set.general">General</h2>
           <div class="row2">
@@ -543,6 +620,16 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     </form>
   </section>
 </main>
+<div id="dkModal" class="hidden" role="dialog" aria-modal="true">
+  <div class="dkm glass">
+    <div class="dkm-h"><b id="dkmTitle"></b><span class="sp"></span>
+      <select id="dkmTail"><option>100</option><option selected>300</option><option>1000</option></select>
+      <label class="logauto"><input type="checkbox" id="dkmAuto" checked> <span data-i18n="log.auto">Auto-refresh</span></label>
+      <button class="btn" type="button" id="dkmDl" data-i18n="log.download">Download</button>
+      <button class="btn" type="button" id="dkmClose" aria-label="Close">✕</button></div>
+    <div class="loglist dkm-b" id="dkmBody"></div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script src="i18n.js"></script>

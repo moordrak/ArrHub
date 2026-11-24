@@ -32,6 +32,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
 - **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
 - **Offline mode** – Settings → *Network*: ArrHub then talks only to your services – no update check, no images from TMDB/TVDB; posters come from Radarr/Sonarr and Seerr's image cache (also `ARRHUB_OFFLINE=true`)
+- **Docker control** – every container on your Docker host with state, health, CPU/RAM and update status; start, stop, restart, logs and one-click updates with automatic rollback (see [Docker control](#docker-control))
 - **Glass layout** – menu on the left and a frosted, 70 % transparent glass frame behind the cards, so the dynamic background shows through; on phones the menu opens with ☰
 - **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download
 - **Own CA certificate** – paste your certificate authority's certificate (PEM) in Settings → *SSL / TLS* and ArrHub fully verifies your `https://` services against it, including the host name. Also `ARRHUB_CA` (PEM text) or `ARRHUB_CA_FILE` (path to a .crt/.pem)
@@ -68,7 +69,8 @@ SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USE
 the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
 self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 own CA `ARRHUB_CA` (PEM) or `ARRHUB_CA_FILE` (path),
-offline mode `ARRHUB_OFFLINE` (`true`/`false`), and for the look
+offline mode `ARRHUB_OFFLINE` (`true`/`false`),
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, and for the look
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
@@ -136,6 +138,43 @@ To build it yourself: `docker build -t arrhub .`
 ### Nginx Proxy Manager
 Add a Proxy Host → `http://<lxc-ip>:8686`. If it is reachable outside your LAN, make sure to enable the
 `auth` login in config.json or an Access List in NPM – the dashboard can delete and add content.
+
+## Docker control
+
+The **Docker** tab shows every container on your Docker host – grouped by compose project – with its state, health, uptime, CPU and RAM, ports and whether a newer image is available. You can start, stop and restart containers, read their logs and **update** them one by one or all at once.
+
+**Updating** works like Watchtower, but only when you click: the Docker host pulls the new image, then ArrHub recreates the container with exactly the same settings (environment, volumes, networks and aliases, ports, labels, restart policy). If the new container does not keep running (or reports itself unhealthy), the old one is put back automatically. Containers that share another container's network (e.g. qBittorrent behind a VPN container with `network_mode: service:vpn`) are recreated along with it. Images pinned to a digest are left alone. The update check is done by the Docker host, so ArrHub itself still does not go to the internet in offline mode.
+
+**Setup (recommended): a socket proxy on the Docker host.** It gives ArrHub only the parts of the Docker API it needs instead of the full socket. Add it to the compose file on your Docker VM:
+
+```yaml
+services:
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    container_name: socket-proxy
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - NETWORKS=1
+      - DISTRIBUTION=1
+      - INFO=1
+      - POST=1
+      - ALLOW_START=1
+      - ALLOW_STOP=1
+      - ALLOW_RESTARTS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 2375:2375
+    read_only: true
+    tmpfs:
+      - /run
+    restart: unless-stopped
+```
+
+Then in ArrHub → **Settings → Docker** enter `http://<docker-vm-ip>:2375` and click *Test connection*. Alternatives: `https://<host>:2376` with TLS client certificates (paste `ca.pem`, `cert.pem` and `key.pem`, or set `ARRHUB_DOCKER_CERT_PATH`), or `unix:///var/run/docker.sock` when ArrHub runs on the Docker host itself.
+
+> **Security:** control over Docker means control over the Docker host. Turn on the ArrHub login (Settings → *Login*), and make port 2375 reachable only from ArrHub (e.g. a firewall rule on the Docker VM), never from the internet.
 
 ## qBittorrent note
 If *Bypass authentication for clients on localhost / whitelisted subnets* is enabled in qBittorrent,

@@ -49,6 +49,14 @@ const MSG = {
     netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address – the URL must use a name or IP listed in the certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request', offlineBlocked: 'Offline mode – ArrHub does not connect to {host}', offlineNoRemote: 'offline mode – no image from the internet',
+    dockerNotConfigured: 'Docker is not configured', dockerBadUrl: 'Docker address must start with http://, https://, tcp:// or unix:///',
+    dockerBadCert: 'The Docker certificate must be PEM text starting with -----BEGIN CERTIFICATE-----', dockerBadKey: 'The Docker client key must be a PEM private key',
+    dockerForbidden: 'The Docker socket proxy refused this request – allow CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO and POST',
+    dockerNoSocket: 'Docker socket {path} not found', dockerSocketPerm: 'No permission for the Docker socket {path}',
+    dockerOk: 'Connected – Docker {version}, {n} containers', dockerSelf: 'This is ArrHub\'s own container – it cannot stop or replace itself',
+    dockerPinned: 'The image is pinned to a fixed version (digest) – change it in your compose file', dockerNoImage: 'The image could not be found after pulling',
+    dockerAutoRemove: 'The container was started with --rm and would disappear when stopped – recreate it with docker compose',
+    dockerCrashed: 'The new container stopped or kept restarting right after starting (exit code {code})', dockerUnhealthy: 'The new container reports itself as unhealthy',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -68,6 +76,14 @@ const MSG = {
     netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi – URL mora koristiti ime ili IP naveden u certifikatu', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
     noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev', offlineBlocked: 'Način bez interneta – ArrHub se ne spaja na {host}', offlineNoRemote: 'način bez interneta – nema slike s interneta',
+    dockerNotConfigured: 'Docker nije podešen', dockerBadUrl: 'Adresa Dockera mora počinjati s http://, https://, tcp:// ili unix:///',
+    dockerBadCert: 'Docker certifikat mora biti PEM tekst koji počinje s -----BEGIN CERTIFICATE-----', dockerBadKey: 'Docker klijentski ključ mora biti PEM privatni ključ',
+    dockerForbidden: 'Docker socket proxy je odbio zahtjev – dopusti CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO i POST',
+    dockerNoSocket: 'Docker socket {path} nije pronađen', dockerSocketPerm: 'Nema dozvole za Docker socket {path}',
+    dockerOk: 'Spojeno – Docker {version}, {n} kontejnera', dockerSelf: 'Ovo je ArrHubov vlastiti kontejner – ne može sam sebe zaustaviti ni zamijeniti',
+    dockerPinned: 'Image je vezan na fiksnu verziju (digest) – promijeni ga u compose datoteci', dockerNoImage: 'Image nije pronađen nakon preuzimanja',
+    dockerAutoRemove: 'Kontejner je pokrenut s --rm i nestao bi kad se zaustavi – ponovno ga stvori s docker compose',
+    dockerCrashed: 'Novi kontejner se zaustavio ili se stalno ponovno pokreće odmah nakon pokretanja (izlazni kod {code})', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -108,6 +124,9 @@ const FIELDS = [
   ['tls', 'ca', 'ARRHUB_CA'],
   // offline mode: ArrHub only talks to the configured services (no update check, no TMDB/TVDB images)
   ['net', 'offline', 'ARRHUB_OFFLINE'],
+  // Docker Engine API on the Docker host: http://host:2375 (socket proxy), https://host:2376 (TLS) or unix:///var/run/docker.sock
+  ['docker', 'url', 'ARRHUB_DOCKER_URL'], ['docker', 'ca', 'ARRHUB_DOCKER_CA'], ['docker', 'cert', 'ARRHUB_DOCKER_CERT'],
+  ['docker', 'key', 'ARRHUB_DOCKER_KEY', true], ['docker', 'cleanup', 'ARRHUB_DOCKER_CLEANUP'], ['docker', 'link', 'ARRHUB_DOCKER_LINK'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -137,7 +156,7 @@ function readFileConfig() {
 // File + environment variables (environment wins)
 function loadConfig() {
   const file = readFileConfig();
-  const c = { auth: {}, ui: {}, tls: {}, net: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {} };
   for (const k of SERVICES) c[k] = {};
   for (const [sec, f, env] of FIELDS) {
     const v = envSet(env) ? process.env[env] : getF(file, sec, f);
@@ -148,6 +167,12 @@ function loadConfig() {
   for (const k of SERVICES) if (c[k].url) c[k].url = String(c[k].url).trim().replace(/\/+$/, '');
   for (const k of SERVICES) c[k].insecure = toBool(c[k].insecure);
   c.net.offline = toBool(c.net.offline);
+  // Docker TLS files the Docker way: a directory with ca.pem, cert.pem and key.pem
+  if (process.env.ARRHUB_DOCKER_CERT_PATH) for (const [f, file] of [['ca', 'ca.pem'], ['cert', 'cert.pem'], ['key', 'key.pem']]) {
+    if (!c.docker[f]) try { c.docker[f] = fs.readFileSync(path.join(process.env.ARRHUB_DOCKER_CERT_PATH, file), 'utf8'); } catch {}
+  }
+  if (c.docker.url) c.docker.url = String(c.docker.url).trim().replace(/\/+$/, '');
+  c.docker.cleanup = c.docker.cleanup === undefined || c.docker.cleanup === '' ? true : toBool(c.docker.cleanup);
   if (!c.tls.ca && process.env.ARRHUB_CA_FILE) { try { c.tls.ca = fs.readFileSync(process.env.ARRHUB_CA_FILE, 'utf8'); } catch (e) { console.error('ARRHUB_CA_FILE:', e.message); } }
   try { caState = c.tls.ca ? parseCa(c.tls.ca) : null; } catch (e) { caState = null; console.error('CA certificate ignored:', e.message); }
   c.ui = normalizeUi(c.ui);
@@ -184,7 +209,7 @@ function settingsView() {
 }
 // Merges UI input with current values (mask = keep the existing secret)
 function mergeInput(values, base = cfg) {
-  const c = { auth: {}, ui: {}, tls: {}, net: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {} };
   for (const [sec, f, , secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     let v = values?.[key];
@@ -204,6 +229,15 @@ function validate(c) {
   }
   for (const k of SERVICES) if (c[k] && c[k].insecure !== undefined) c[k].insecure = toBool(c[k].insecure);
   if (c.net && c.net.offline !== undefined) c.net.offline = toBool(c.net.offline);
+  if (c.docker?.url) {
+    const u = String(c.docker.url).trim();
+    if (!/^(unix:\/\/\/|\/|tcp:\/\/|https?:\/\/)/i.test(u)) throw new Error(T('dockerBadUrl'));
+    if (/^(tcp|https?):/i.test(u)) { try { new URL(u.replace(/^tcp:/i, 'http:')); } catch { throw new Error(T('dockerBadUrl')); } }
+  }
+  if (c.docker?.cert && !/-----BEGIN CERTIFICATE-----/.test(c.docker.cert)) throw new Error(T('dockerBadCert'));
+  if (c.docker?.key && c.docker.key !== MASK && !/PRIVATE KEY-----/.test(c.docker.key)) throw new Error(T('dockerBadKey'));
+  if (c.docker?.ca && !/-----BEGIN CERTIFICATE-----/.test(c.docker.ca)) throw new Error(T('dockerBadCert'));
+  if (c.docker && c.docker.cleanup !== undefined) c.docker.cleanup = toBool(c.docker.cleanup);
   if (c.tls?.ca) c.tls.ca = parseCa(c.tls.ca).pem.join('\n') + '\n';   // throws on junk or a private key
   for (const k of SERVICES) {
     const l = c[k]?.link;
@@ -847,6 +881,7 @@ function serviceLinks() {
       out[k] = u.toString().replace(/\/+$/, '') + '/';
     } catch {}
   }
+  if (cfg.docker?.link) { try { const u = new URL(cfg.docker.link); out.docker = u.toString().replace(/\/+$/, '') + '/'; } catch {} }
   return out;
 }
 
@@ -866,6 +901,404 @@ function friendlyError(e) {
   if (/^403\b/.test(e.message)) return T('e403');
   if (/^404\b/.test(e.message)) return T('e404');
   return e.message;
+}
+
+
+// ---------- Docker (Engine API) ----------
+// Talks to the Docker daemon on the Docker host – normally through a socket proxy (http://host:2375),
+// or directly over TLS with client certificates (https://host:2376), or a local unix socket.
+const os_ = require('os');
+const dockerOn = () => !!cfg.docker?.url;
+function dockerTarget(d = cfg.docker || {}) {
+  const raw = String(d.url || '').trim();
+  if (!raw) return null;
+  if (/^unix:\/\//i.test(raw) || raw.startsWith('/')) return { socketPath: raw.replace(/^unix:\/\//i, '') };
+  const url = new URL(raw.replace(/^tcp:\/\//i, d.cert ? 'https://' : 'http://'));
+  const tls = url.protocol === 'https:' ? {
+    ...(d.ca ? { ca: [...tls_.rootCertificates, ...(parseCa(d.ca).pem)] } : caState?.pem?.length ? { ca: [...tls_.rootCertificates, ...caState.pem] } : {}),
+    ...(d.cert ? { cert: d.cert } : {}), ...(d.key && d.key !== MASK ? { key: d.key } : {}),
+  } : null;
+  return { url, tls };
+}
+const dockerErr = (msg, extra = {}) => Object.assign(new Error(msg), extra);
+function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, target } = {}) {
+  target = target || dockerTarget();
+  return new Promise((resolve, reject) => {
+    if (!target) return reject(dockerErr(T('dockerNotConfigured'), { status: 400 }));
+    const isTls = !!target.url && target.url.protocol === 'https:';
+    const mod = isTls ? https_ : http_;
+    const base = target.url ? target.url.pathname.replace(/\/+$/, '') : '';
+    const o = { method, path: base + p, headers: { Host: target.url ? target.url.host : 'docker', Accept: 'application/json' } };
+    if (target.socketPath) o.socketPath = target.socketPath;
+    else { o.hostname = target.url.hostname; o.port = target.url.port || (isTls ? 443 : 80); }
+    if (isTls) Object.assign(o, target.tls);
+    let payload;
+    if (body !== undefined) { payload = Buffer.from(JSON.stringify(body)); o.headers['Content-Type'] = 'application/json'; o.headers['Content-Length'] = payload.length; }
+    let done = false;
+    const finish = (fn, v) => { if (!done) { done = true; clearTimeout(tm); fn(v); } };
+    const r = mod.request(o, res => {
+      const chunks = [];
+      res.on('data', c => { if (onData && res.statusCode < 400) onData(c); else chunks.push(c); });
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        if (res.statusCode >= 400) {
+          let msg = buf.toString().trim().slice(0, 400);
+          try { msg = JSON.parse(buf).message || msg; } catch {}
+          if (res.statusCode === 403 && !msg.includes(' ')) msg = '';
+          return finish(reject, dockerErr(res.statusCode === 403 ? T('dockerForbidden') + (msg ? ` (${msg})` : '') : msg || `HTTP ${res.statusCode}`, { dockerStatus: res.statusCode }));
+        }
+        if (raw) return finish(resolve, buf);
+        if (!buf.length) return finish(resolve, null);
+        try { finish(resolve, JSON.parse(buf)); } catch { finish(resolve, buf.toString()); }
+      });
+      res.on('error', e => finish(reject, Object.assign(new TypeError('fetch failed'), { cause: e })));
+    });
+    const tm = setTimeout(() => { r.destroy(); finish(reject, Object.assign(new TypeError('fetch failed'), { cause: { code: 'ETIMEDOUT' } })); }, timeout);
+    r.on('error', e => {
+      if (target.socketPath && e.code === 'ENOENT') return finish(reject, dockerErr(T('dockerNoSocket', { path: target.socketPath })));
+      if (target.socketPath && e.code === 'EACCES') return finish(reject, dockerErr(T('dockerSocketPerm', { path: target.socketPath })));
+      finish(reject, Object.assign(new TypeError('fetch failed'), { cause: e }));
+    });
+    if (payload) r.write(payload);
+    r.end();
+  });
+}
+const enc = encodeURIComponent;
+// "lscr.io/linuxserver/sonarr:latest" -> { repo: "lscr.io/linuxserver/sonarr", tag: "latest" }
+function parseRef(ref) {
+  ref = String(ref || '');
+  if (/^sha256:/.test(ref) || ref.includes('@')) return { pinned: true, repo: ref.split('@')[0], tag: '' };
+  const slash = ref.lastIndexOf('/'), colon = ref.lastIndexOf(':');
+  return colon > slash ? { repo: ref.slice(0, colon), tag: ref.slice(colon + 1) } : { repo: ref, tag: 'latest' };
+}
+const refName = ref => { const r = parseRef(ref); return r.pinned ? ref : `${r.repo}:${r.tag}`; };
+// is this container ArrHub itself? (then it must not stop or replace itself)
+const selfIds = [os_.hostname()].filter(Boolean);
+const isSelf = id => selfIds.some(h => h.length >= 12 && id.startsWith(h));
+
+// ---- update check: the Docker host asks the registry, ArrHub itself never goes to the internet ----
+const imgCache = new Map();      // image id -> { repoDigests }
+const refState = new Map();      // image ref -> { remote, localId, error, at }
+const dk = { checking: false, checkedAt: 0, info: null, infoAt: 0, version: null };
+async function imageInfo(id) {
+  if (imgCache.has(id)) return imgCache.get(id);
+  const i = await dockerApi('GET', `/images/${enc(id)}/json`);
+  const v = { id: i.Id, repoDigests: (i.RepoDigests || []).map(d => d.split('@')[1]).filter(Boolean), config: i.Config || {}, created: i.Created };
+  if (imgCache.size > 300) imgCache.delete(imgCache.keys().next().value);
+  imgCache.set(id, v);
+  return v;
+}
+function checkUpdates(force = false) {
+  if (dk.checkRun) return dk.checkRun;
+  if (!force && Date.now() - dk.checkedAt < 6 * 3600e3) return Promise.resolve();
+  dk.checkRun = runCheck().finally(() => { dk.checkRun = null; });
+  return dk.checkRun;
+}
+// the image name a container was created from; when its tag has since moved to a newer image the list only
+// shows the image ID, so ask the container itself (cached per container + image)
+const refCache = new Map();
+async function containerRef(c) {
+  if (!/^sha256:/.test(c.Image || '')) return c.Image;
+  const key = c.Id + c.ImageID;
+  if (!refCache.has(key)) {
+    try { refCache.set(key, (await dockerApi('GET', `/containers/${c.Id}/json`)).Config.Image); } catch { return c.Image; }
+    if (refCache.size > 500) refCache.delete(refCache.keys().next().value);
+  }
+  return refCache.get(key);
+}
+async function runCheck() {
+  dk.checking = true;
+  try {
+    const list = await dockerApi('GET', '/containers/json?all=1');
+    const refs = [...new Set((await Promise.all(list.map(containerRef))).filter(r => r && !parseRef(r).pinned).map(refName))];
+    let i = 0;
+    const worker = async () => {
+      while (i < refs.length) {
+        const ref = refs[i++];
+        const st = { at: Date.now() };
+        try { st.localId = (await dockerApi('GET', `/images/${enc(ref)}/json`)).Id; } catch {}
+        try { st.remote = (await dockerApi('GET', `/distribution/${enc(ref)}/json`, { timeout: 30000 }))?.Descriptor?.digest || null; }
+        catch (e) { st.error = langStore.run('en', () => friendlyError(e)); }
+        refState.set(ref, st);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    dk.checkedAt = Date.now();
+    const errs = [...refState.values()].filter(x => x.error);
+    if (errs.length) console.warn(`docker: update check failed for ${errs.length} image(s) – ${errs[0].error}`);
+  } catch (e) { console.warn('docker: update check failed – ' + langStore.run('en', () => friendlyError(e))); }
+  finally { dk.checking = false; }
+}
+async function updateStateFor(ref, imageId) {
+  if (parseRef(ref).pinned) return { state: 'pinned' };
+  const st = refState.get(refName(ref));
+  if (!st) return { state: 'unknown' };
+  if (st.localId && st.localId !== imageId) return { state: 'available', local: true };   // newer image already pulled
+  if (st.error && !st.remote) return { state: 'error', error: st.error };
+  if (!st.remote) return { state: 'unknown' };
+  try { const img = await imageInfo(imageId); return { state: img.repoDigests.includes(st.remote) ? 'current' : 'available' }; }
+  catch { return { state: 'unknown' }; }
+}
+
+// ---- containers ----
+const prevCpu = new Map();
+function calcStats(id, s) {
+  const cpu = s.cpu_stats || {}, pre = s.precpu_stats || {};
+  const cur = { total: cpu.cpu_usage?.total_usage || 0, sys: cpu.system_cpu_usage || 0 };
+  const p = pre.system_cpu_usage ? { total: pre.cpu_usage?.total_usage || 0, sys: pre.system_cpu_usage } : prevCpu.get(id);
+  prevCpu.set(id, cur);
+  let cpuPct = null;
+  if (p && cur.sys > p.sys) cpuPct = Math.max(0, ((cur.total - p.total) / (cur.sys - p.sys)) * (cpu.online_cpus || cpu.cpu_usage?.percpu_usage?.length || 1) * 100);
+  const m = s.memory_stats || {};
+  const cache = m.stats?.inactive_file ?? m.stats?.total_inactive_file ?? m.stats?.cache ?? 0;
+  let rx = 0, tx = 0;
+  for (const n of Object.values(s.networks || {})) { rx += n.rx_bytes || 0; tx += n.tx_bytes || 0; }
+  return { cpu: cpuPct === null ? null : Math.round(cpuPct * 10) / 10, mem: m.usage ? Math.max(0, m.usage - cache) : null, memLimit: m.limit || null, rx, tx };
+}
+async function dockerContainers(withStats) {
+  const list = await dockerApi('GET', '/containers/json?all=1');
+  const chk = checkUpdates().catch(() => {});           // refresh update info in the background (every 6 h)
+  if (!dk.checkedAt) await Promise.race([chk, new Promise(r => setTimeout(r, 4000))]);   // first time: wait a moment for it
+  const out = await Promise.all(list.map(async c => {
+    const image = await containerRef(c);
+    const ports = [...new Set((c.Ports || []).filter(x => x.PublicPort).map(x => `${x.PublicPort}:${x.PrivatePort}/${x.Type}`))];
+    return {
+      id: c.Id, name: (c.Names?.[0] || '').replace(/^\//, ''), image, state: c.State, status: c.Status, created: c.Created,
+      project: c.Labels?.['com.docker.compose.project'] || '', service: c.Labels?.['com.docker.compose.service'] || '',
+      health: (/\((healthy|unhealthy|health: starting)\)/.exec(c.Status || '') || [])[1]?.replace('health: ', '') || '',
+      ports, networkMode: c.HostConfig?.NetworkMode || '', self: isSelf(c.Id), update: await updateStateFor(image, c.ImageID),
+    };
+  }));
+  if (withStats) {
+    await Promise.all(out.filter(c => c.state === 'running').map(async c => {
+      try { c.stats = calcStats(c.id, await dockerApi('GET', `/containers/${c.id}/stats?stream=false&one-shot=true`, { timeout: 8000 })); } catch {}
+    }));
+  }
+  for (const c of out) c.job = [...jobs.values()].reverse().find(j => j.name === c.name && (!j.finishedAt || Date.now() - j.finishedAt < 60000)) || null;
+  out.sort((a, b) => (a.project || '~').localeCompare(b.project || '~') || a.name.localeCompare(b.name));
+  return out;
+}
+async function dockerInfo(force) {
+  if (!force && dk.info && Date.now() - dk.infoAt < 60000) return dk.info;
+  const [i, v] = await Promise.all([dockerApi('GET', '/info'), dockerApi('GET', '/version').catch(() => ({}))]);
+  dk.info = { name: i.Name, version: i.ServerVersion || v.Version, api: v.ApiVersion, os: i.OperatingSystem, cpus: i.NCPU, mem: i.MemTotal,
+    containers: i.Containers, running: i.ContainersRunning, images: i.Images };
+  dk.infoAt = Date.now();
+  return dk.info;
+}
+async function dockerSummary() {
+  const list = await dockerContainers(false);
+  const info = await dockerInfo().catch(() => null);
+  return {
+    version: info?.version || '', host: info?.name || '', total: list.length,
+    running: list.filter(c => c.state === 'running').length, stopped: list.filter(c => c.state !== 'running').length,
+    unhealthy: list.filter(c => c.health === 'unhealthy').length, updates: list.filter(c => c.update.state === 'available').length,
+    checkedAt: dk.checkedAt || null,
+  };
+}
+async function dockerTest(values) {
+  const c = mergeInput(values || {});
+  const target = dockerTarget(c.docker || {});
+  if (!target) throw new Error(T('dockerNotConfigured'));
+  await dockerApi('GET', '/_ping', { target });
+  const v = await dockerApi('GET', '/version', { target });
+  const n = await dockerApi('GET', '/containers/json?all=1', { target });
+  return { ok: true, version: v?.Version || '', message: T('dockerOk', { version: v?.Version || '?', n: n.length }) };
+}
+const ACTIONS = ['start', 'stop', 'restart', 'pause', 'unpause'];
+async function dockerAction(id, action) {
+  if (!ACTIONS.includes(action)) throw dockerErr(T('notFound'), { status: 404 });
+  if (isSelf(id) && action !== 'start' && action !== 'restart') throw dockerErr(T('dockerSelf'), { status: 400 });
+  const name = await containerName(id);
+  await dockerApi('POST', `/containers/${enc(id)}/${action}${action === 'stop' || action === 'restart' ? '?t=30' : ''}`, { timeout: 60000 });
+  console.log(`docker: ${action} ${name}`);
+  return { ok: true };
+}
+async function containerName(id) { try { return (await dockerApi('GET', `/containers/${enc(id)}/json`)).Name.replace(/^\//, ''); } catch { return id.slice(0, 12); } }
+// logs: multiplexed stream (8-byte frame headers) unless the container has a TTY
+async function dockerLogs(id, tail = 300) {
+  tail = Math.max(10, Math.min(5000, Number(tail) || 300));
+  const ins = await dockerApi('GET', `/containers/${enc(id)}/json`);
+  const buf = await dockerApi('GET', `/containers/${enc(id)}/logs?stdout=1&stderr=1&timestamps=1&tail=${tail}`, { raw: true, timeout: 30000 });
+  const parts = [];
+  if (ins.Config?.Tty) parts.push(['out', buf.toString('utf8')]);
+  else for (let i = 0; i + 8 <= buf.length;) {
+    const type = buf[i], size = buf.readUInt32BE(i + 4);
+    parts.push([type === 2 ? 'err' : 'out', buf.slice(i + 8, i + 8 + size).toString('utf8')]);
+    i += 8 + size;
+  }
+  const lines = [];
+  for (const [stream, text] of parts) for (const l of text.split('\n')) {
+    if (!l) continue;
+    const m = /^(\d{4}-\d\d-\d\dT[\d:.]+Z) ?(.*)$/.exec(l);
+    lines.push({ stream, time: m ? m[1] : null, text: (m ? m[2] : l).replace(/\x1b\[[0-9;]*m/g, '') });
+  }
+  return { name: ins.Name.replace(/^\//, ''), lines: lines.slice(-tail) };
+}
+
+// ---- update = pull the image, then recreate the container with the same settings ----
+const jobs = new Map();
+function newJob(name) {
+  const job = { id: crypto_.randomBytes(6).toString('hex'), name, step: 'queued', progress: null, log: [], state: 'running', startedAt: Date.now() };
+  jobs.set(job.id, job);
+  if (jobs.size > 50) jobs.delete(jobs.keys().next().value);
+  return job;
+}
+const jlog = (job, msg) => { job.log.push(`${new Date().toISOString().slice(11, 19)} ${msg}`); };
+async function pullImage(ref, job) {
+  const { repo, tag } = parseRef(ref);
+  const layers = {};
+  let pullErr = null, pending = '';
+  await dockerApi('POST', `/images/create?fromImage=${enc(repo)}&tag=${enc(tag)}`, {
+    timeout: 20 * 60e3,
+    onData: c => {
+      pending += c.toString();
+      const lines = pending.split('\n'); pending = lines.pop();
+      for (const l of lines) {
+        let m; try { m = JSON.parse(l); } catch { continue; }
+        if (m.error) pullErr = m.error;
+        if (m.id && m.progressDetail?.total) layers[m.id] = { cur: m.progressDetail.current || 0, total: m.progressDetail.total, st: m.status };
+        if (m.id && /complete|already exists/i.test(m.status || '') && layers[m.id]) layers[m.id].cur = layers[m.id].total;
+        const ls = Object.values(layers), tot = ls.reduce((a, x) => a + x.total, 0);
+        if (tot) job.progress = Math.min(100, Math.round(ls.reduce((a, x) => a + Math.min(x.cur, x.total), 0) / tot * 100));
+        if (m.status && !m.id) jlog(job, m.status);
+      }
+    },
+  });
+  if (pullErr) throw new Error(pullErr);
+}
+// the old container's settings, minus what came from the old image (so the new image's defaults apply)
+function createBody(old, oldImg, image, networkMode) {
+  const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const img = oldImg?.config || {};
+  const C = JSON.parse(JSON.stringify(old.Config || {}));
+  C.Image = image;
+  if (img.Env) C.Env = (C.Env || []).filter(e => !img.Env.includes(e));
+  if (img.Labels && C.Labels) for (const [k, v] of Object.entries(img.Labels)) if (C.Labels[k] === v) delete C.Labels[k];
+  for (const k of ['Cmd', 'Entrypoint', 'WorkingDir', 'User', 'Healthcheck', 'StopSignal', 'Shell', 'OnBuild', 'ArgsEscaped']) if (same(C[k], img[k])) delete C[k];
+  for (const k of ['ExposedPorts', 'Volumes']) if (img[k] && C[k]) { for (const x of Object.keys(img[k])) delete C[k][x]; if (!Object.keys(C[k]).length) delete C[k]; }
+  if (!C.Hostname || old.Id.startsWith(C.Hostname)) delete C.Hostname;
+  if (!C.Domainname) delete C.Domainname;
+  delete C.MacAddress;
+  const H = JSON.parse(JSON.stringify(old.HostConfig || {}));
+  if (networkMode) H.NetworkMode = networkMode;
+  // keep anonymous volumes: reattach them by name, the way docker compose does
+  const used = new Set([...(H.Binds || []).map(b => b.split(':')[1]), ...(H.Mounts || []).map(m => m.Target)]);
+  for (const m of old.Mounts || []) {
+    if (m.Type === 'volume' && /^[0-9a-f]{64}$/.test(m.Name || '') && !used.has(m.Destination)) (H.Binds ||= []).push(`${m.Name}:${m.Destination}${m.RW === false ? ':ro' : ''}`);
+  }
+  const shared = /^container:/.test(H.NetworkMode || '');
+  if (shared) { delete C.Hostname; delete C.Domainname; delete C.ExposedPorts; H.PortBindings = {}; H.PublishAllPorts = false; H.Dns = []; H.DnsSearch = []; H.ExtraHosts = []; }
+  const nets = old.NetworkSettings?.Networks || {};
+  const names = Object.keys(nets);
+  const ep = n => ({
+    Aliases: (n.Aliases || []).filter(a => !old.Id.startsWith(a)), Links: n.Links || null,
+    ...(n.IPAMConfig && Object.values(n.IPAMConfig).some(Boolean) ? { IPAMConfig: n.IPAMConfig } : {}), DriverOpts: n.DriverOpts || null,
+  });
+  let first = null, extra = [];
+  if (!shared && !/^(host|none)$/.test(H.NetworkMode || '') && names.length) {
+    first = nets[H.NetworkMode] ? H.NetworkMode : names[0];
+    extra = names.filter(x => x !== first).map(x => [x, ep(nets[x])]);
+  }
+  return { body: { ...C, HostConfig: H, ...(first ? { NetworkingConfig: { EndpointsConfig: { [first]: ep(nets[first]) } } } : {}) }, extra };
+}
+// is the new container healthy? it must keep running for a few seconds without restarting (restart policies would
+// hide a crash loop) and, if it has a health check, become healthy. Returns null when fine, otherwise the reason.
+async function checkStarted(id) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let ins, healthUntil = Date.now() + 90000;
+  for (const end = Date.now() + 8000; Date.now() < end; await sleep(700)) {
+    ins = await dockerApi('GET', `/containers/${id}/json`);
+    const st = ins.State;
+    if (st.Restarting || ins.RestartCount > 0 || (!st.Running && !st.Paused)) return T('dockerCrashed', { code: st.ExitCode }) + (st.Error ? ` – ${st.Error}` : '');
+  }
+  while (ins.State.Health && ins.State.Health.Status === 'starting' && Date.now() < healthUntil) { await sleep(2000); ins = await dockerApi('GET', `/containers/${id}/json`); }
+  if (ins.State.Health?.Status === 'unhealthy') return T('dockerUnhealthy');
+  return null;
+}
+// stop + rename the old one, create + start the new one; any failure puts the old container back
+async function recreate(old, image, job, networkMode) {
+  const name = old.Name.replace(/^\//, '');
+  const wasRunning = old.State?.Running || old.State?.Restarting;
+  if (old.HostConfig?.AutoRemove) throw new Error(T('dockerAutoRemove'));
+  let oldImg = null; try { oldImg = await imageInfo(old.Image); } catch {}
+  const { body, extra } = createBody(old, oldImg, image, networkMode);
+  const tmp = `${name}-arrhub-old-${Date.now().toString(36)}`;
+  let created = null, renamed = false;
+  try {
+    if (wasRunning) { job.step = 'stopping'; jlog(job, `stop ${name}`); await dockerApi('POST', `/containers/${old.Id}/stop?t=30`, { timeout: 90000 }); }
+    await dockerApi('POST', `/containers/${old.Id}/rename?name=${enc(tmp)}`); renamed = true;
+    job.step = 'creating'; jlog(job, `create ${name} (${image})`);
+    created = (await dockerApi('POST', `/containers/create?name=${enc(name)}`, { body, timeout: 60000 })).Id;
+    for (const [net, cfgEp] of extra) await dockerApi('POST', `/networks/${enc(net)}/connect`, { body: { Container: created, EndpointConfig: cfgEp } });
+    if (wasRunning) {
+      job.step = 'starting'; jlog(job, `start ${name}`);
+      await dockerApi('POST', `/containers/${created}/start`, { timeout: 60000 });
+      job.step = 'verifying';
+      const bad = await checkStarted(created);
+      if (bad) throw new Error(bad);
+    }
+  } catch (e) {
+    jlog(job, `failed: ${e.message} – restoring the previous container`);
+    try { if (created) await dockerApi('DELETE', `/containers/${created}?force=1`); } catch {}
+    try { if (renamed) await dockerApi('POST', `/containers/${old.Id}/rename?name=${enc(name)}`); } catch {}
+    try { if (wasRunning) await dockerApi('POST', `/containers/${old.Id}/start`); } catch {}
+    e.rolledBack = true;
+    throw e;
+  }
+  job.step = 'cleanup';
+  try { await dockerApi('DELETE', `/containers/${old.Id}?v=0`); } catch (e) { jlog(job, `could not remove the old container: ${e.message}`); }
+  return created;
+}
+async function updateContainer(id, job) {
+  const old = await dockerApi('GET', `/containers/${enc(id)}/json`);
+  const name = old.Name.replace(/^\//, '');
+  const image = old.Config.Image;
+  if (isSelf(old.Id)) throw new Error(T('dockerSelf'));
+  if (parseRef(image).pinned) throw new Error(T('dockerPinned'));
+  job.step = 'pulling'; jlog(job, `pull ${refName(image)}`);
+  let pullErr = null;
+  try { await pullImage(image, job); } catch (e) { pullErr = e; jlog(job, `pull failed: ${e.message}`); }
+  const fresh = await dockerApi('GET', `/images/${enc(refName(image))}/json`).catch(() => null);
+  if (!fresh) throw pullErr || new Error(T('dockerNoImage'));
+  if (fresh.Id === old.Image) {
+    if (pullErr) throw pullErr;
+    jlog(job, 'already up to date'); job.result = 'current';
+    refState.set(refName(image), { ...(refState.get(refName(image)) || {}), localId: fresh.Id, at: Date.now() });
+    return;
+  }
+  // containers that share this one's network (network_mode: container:<this>) must be recreated too
+  const all = await dockerApi('GET', '/containers/json?all=1');
+  const deps = all.filter(c => [`container:${old.Id}`, `container:${name}`].includes(c.HostConfig?.NetworkMode));
+  const newId = await recreate(old, image, job, null);
+  for (const d of deps) {
+    const dIns = await dockerApi('GET', `/containers/${d.Id}/json`);
+    const mode = dIns.HostConfig.NetworkMode === `container:${name}` ? null : `container:${newId}`;
+    jlog(job, `recreate ${dIns.Name.replace(/^\//, '')} (shares the network of ${name})`);
+    try { await recreate(dIns, dIns.Config.Image, job, mode); } catch (e) { jlog(job, `could not recreate ${dIns.Name}: ${e.message}`); }
+  }
+  if (cfg.docker?.cleanup !== false) {
+    try { await dockerApi('DELETE', `/images/${old.Image}`); jlog(job, 'old image removed'); } catch { /* still used by another container */ }
+  }
+  imgCache.delete(old.Image);
+  refState.set(refName(image), { ...(refState.get(refName(image)) || {}), localId: fresh.Id, at: Date.now() });
+  job.result = 'updated';
+}
+function startUpdate(id) {
+  const job = newJob(id);
+  (async () => {
+    try {
+      job.name = await containerName(id);
+      console.log(`docker: updating ${job.name}`);
+      await updateContainer(id, job);
+      job.state = 'done'; job.step = 'done';
+      console.log(`docker: ${job.name} ${job.result === 'current' ? 'already up to date' : 'updated'}`);
+    } catch (e) {
+      job.state = 'error'; job.error = langStore.run('en', () => friendlyError(e)) + (e.rolledBack ? ' – the previous container was restored' : '');
+      console.warn(`docker: update of ${job.name} failed – ${job.error}`);
+    } finally { job.finishedAt = Date.now(); }
+  })();
+  return job;
 }
 
 // ---------- HTTP server ----------
@@ -892,7 +1325,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION, links: serviceLinks() }),
+  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), docker: dockerOn(), refresh: cfg.refresh, auth: !!cfg.auth.user, ui: cfg.ui, version: VERSION, links: serviceLinks() }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/about': q => about(q.get('refresh') === '1'),
   'GET /api/icon/:svc': async (q, b, p) => {
@@ -904,7 +1337,14 @@ const routes = {
   'GET /api/settings': async () => settingsView(),
   'GET /api/logs/:src': (q, b, p) => serviceLogs(p.src),
   'POST /api/settings': (q, b) => saveSettings(b.values),
-  'POST /api/settings/test': (q, b) => testService(b.service, b.values),
+  'POST /api/settings/test': (q, b) => b.service === 'docker' ? dockerTest(b.values) : testService(b.service, b.values),
+  'GET /api/docker': () => dockerSummary(),
+  'GET /api/docker/containers': async q => ({ containers: await dockerContainers(q.get('stats') === '1'), info: await dockerInfo().catch(() => null), checkedAt: dk.checkedAt || null, checking: dk.checking }),
+  'POST /api/docker/check': async () => { checkUpdates(true).catch(() => {}); return { checking: true }; },
+  'POST /api/docker/containers/:id/update': (q, b, p) => startUpdate(p.id),
+  'POST /api/docker/containers/:id/:action': (q, b, p) => dockerAction(p.id, p.action),
+  'GET /api/docker/containers/:id/logs': (q, b, p) => dockerLogs(p.id, q.get('tail')),
+  'GET /api/docker/jobs/:id': (q, b, p) => { const j = jobs.get(p.id); if (!j) throw dockerErr(T('notFound'), { status: 404 }); return j; },
   'GET /api/radarr': () => arr('radarr').summary(),
   'GET /api/sonarr': () => arr('sonarr').summary(),
   'GET /api/qbittorrent': () => qb.summary(),
@@ -966,7 +1406,8 @@ async function handle(r, res) {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: T('notFound') });
     const svc = u.pathname.split('/')[2];
-    if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
+    if (svc === 'docker' && !dockerOn()) return send(res, 400, { error: T('dockerNotConfigured') });
+    if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs', 'docker'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);
@@ -974,7 +1415,7 @@ async function handle(r, res) {
         res.writeHead(200, { 'Content-Type': out.type, 'Cache-Control': 'private, max-age=86400', ...(out.headers || {}) });
         return res.end(out.__raw);
       }
-      if (r.method === 'GET' && SERVICES.includes(svc) && u.pathname === `/api/${svc}`) noteService(svc);
+      if (r.method === 'GET' && (SERVICES.includes(svc) || svc === 'docker') && u.pathname === `/api/${svc}`) noteService(svc);
       send(res, 200, out ?? { ok: true });
     } catch (e) {
       const msg = friendlyError(e);
@@ -982,7 +1423,11 @@ async function handle(r, res) {
       if (SERVICES.includes(svc)) {
         if (r.method === 'GET' && u.pathname === `/api/${svc}`) noteService(svc, logMsg);
         else if (r.method === 'POST') console.warn(`${svc}: ${u.pathname.split('/').slice(3).join('/') || 'action'} – ${logMsg}`);
-      } else if (svc === 'logs' || svc === 'cover') { /* logs: shown in the tab; covers: logged once per service in cover() */ }
+      } else if (svc === 'docker') {
+        if (u.pathname === '/api/docker') noteService('docker', logMsg);
+        else console.warn(`docker: ${u.pathname.split('/').slice(3).join('/')} – ${logMsg}`);
+      }
+      else if (svc === 'logs' || svc === 'cover') { /* logs: shown in the tab; covers: logged once per service in cover() */ }
       else console.warn(`${u.pathname}: ${logMsg}`);
       send(res, e.status || (svc === 'settings' && !u.pathname.endsWith('/test') ? 400 : 502), { error: msg });
     }

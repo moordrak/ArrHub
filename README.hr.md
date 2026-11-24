@@ -32,6 +32,7 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 - **Poveznice na svaki servis** – svaka kartica ima gumb ↗ koji otvara web sučelje servisa u novoj kartici. Zadano vodi na URL servisa, a u Postavkama se za svaki servis može upisati zasebna javna poveznica (npr. adresa preko reverse proxyja)
 - **Samopotpisani certifikati** – za servis na `https://` sa samopotpisanim ili lokalno potpisanim certifikatom uključi *Prihvati samopotpisani certifikat* u Postavkama. Provjera se preskače samo za adresu tog servisa; sve ostalo (npr. provjera ažuriranja na GitHubu) i dalje provjerava certifikate
 - **Bez interneta** – Postavke → *Mreža*: ArrHub tada razgovara samo s tvojim servisima – nema provjere verzije ni slika s TMDB-a/TVDB-a; posteri dolaze iz Radarra/Sonarra i Seerrove predmemorije slika (također `ARRHUB_OFFLINE=true`)
+- **Upravljanje Dockerom** – svi kontejneri na Docker hostu sa stanjem, zdravljem, CPU/RAM-om i statusom ažuriranja; pokretanje, zaustavljanje, restart, logovi i ažuriranje jednim klikom s automatskim vraćanjem (vidi [Upravljanje Dockerom](#upravljanje-dockerom))
 - **Stakleni izgled** – izbornik lijevo i zamućena, 70 % prozirna staklena ploča iza pločica kroz koju se vidi dinamička pozadina; na mobitelu se izbornik otvara gumbom ☰
 - **Logovi** – log ArrHuba i logovi Radarra, Sonarra, qBittorrenta, NZBGeta i Seerra u jednom tabu, s filtrom razine, pretragom, automatskim osvježavanjem i preuzimanjem
 - **Vlastiti CA certifikat** – zalijepi certifikat svog izdavatelja (PEM) u Postavke → *SSL / TLS* i ArrHub će njime potpuno provjeravati tvoje `https://` servise, uključujući ime. Također `ARRHUB_CA` (PEM tekst) ili `ARRHUB_CA_FILE` (putanja do .crt/.pem)
@@ -68,7 +69,8 @@ SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USE
 za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
 za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 vlastiti CA `ARRHUB_CA` (PEM) ili `ARRHUB_CA_FILE` (putanja),
-način bez interneta `ARRHUB_OFFLINE` (`true`/`false`), a za izgled
+način bez interneta `ARRHUB_OFFLINE` (`true`/`false`),
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, a za izgled
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30). One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
@@ -136,6 +138,43 @@ Za vlastitu izgradnju: `docker build -t arrhub .`
 ### Nginx Proxy Manager
 Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavezno uključi
 `auth` u config.json ili Access List u NPM-u – ploča može brisati i dodavati sadržaj.
+
+## Upravljanje Dockerom
+
+Tab **Docker** prikazuje sve kontejnere na tvom Docker hostu – grupirane po compose projektu – sa stanjem, zdravljem, vremenom rada, procesorom i RAM-om, portovima i oznakom ima li novija verzija image-a. Kontejnere možeš pokretati, zaustavljati i ponovno pokretati, čitati njihove logove te ih **ažurirati** jedan po jedan ili sve odjednom.
+
+**Ažuriranje** radi kao Watchtower, ali samo kad ti klikneš: Docker host preuzme novi image, a ArrHub ponovno stvori kontejner s potpuno istim postavkama (varijable okoline, volumeni, mreže i aliasi, portovi, oznake, politika ponovnog pokretanja). Ako novi kontejner ne nastavi raditi (ili javlja da nije zdrav), stari se automatski vraća. Kontejneri koji dijele mrežu drugog kontejnera (npr. qBittorrent iza VPN kontejnera s `network_mode: service:vpn`) ponovno se stvaraju zajedno s njim. Image-i vezani na digest ostaju netaknuti. Provjeru novih verzija radi Docker host, pa ArrHub ni tada ne izlazi na internet u načinu bez interneta.
+
+**Postavljanje (preporuka): socket proxy na Docker hostu.** ArrHubu daje samo one dijelove Docker API-ja koji mu trebaju, umjesto cijelog socketa. Dodaj ga u compose datoteku na Docker VM-u:
+
+```yaml
+services:
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    container_name: socket-proxy
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - NETWORKS=1
+      - DISTRIBUTION=1
+      - INFO=1
+      - POST=1
+      - ALLOW_START=1
+      - ALLOW_STOP=1
+      - ALLOW_RESTARTS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 2375:2375
+    read_only: true
+    tmpfs:
+      - /run
+    restart: unless-stopped
+```
+
+Zatim u ArrHubu → **Postavke → Docker** upiši `http://<ip-docker-vm-a>:2375` i klikni *Testiraj vezu*. Alternative: `https://<host>:2376` s TLS klijentskim certifikatima (zalijepi `ca.pem`, `cert.pem` i `key.pem` ili postavi `ARRHUB_DOCKER_CERT_PATH`) ili `unix:///var/run/docker.sock` ako ArrHub radi na samom Docker hostu.
+
+> **Sigurnost:** upravljanje Dockerom znači upravljanje Docker hostom. Uključi prijavu u ArrHub (Postavke → *Prijava*) i učini port 2375 dostupnim samo ArrHubu (npr. pravilom vatrozida na Docker VM-u), nikad s interneta.
 
 ## qBittorrent napomena
 Ako je u qBittorrentu uključeno *Bypass authentication for clients on localhost / whitelisted subnets*,

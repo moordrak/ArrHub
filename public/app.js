@@ -5,8 +5,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {}, seerrFilter: 'pending', seerrPage: 1, seerrSize: 30 };
 try { const n = Number(localStorage.getItem('arrhub-req-size')); if ([10, 20, 30, 50, 100].includes(n)) state.seerrSize = n; } catch {}
 const seerrPath = () => `seerr?filter=${state.seerrFilter}&page=${state.seerrPage}&size=${state.seerrSize}`;
-const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)' };
-const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr' };
+const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)', docker: 'var(--docker)' };
+const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr', docker: 'Docker' };
 const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
 
 // ---- formatting ----
@@ -50,7 +50,9 @@ function refresh() {
   return refreshing;
 }
 async function doRefresh() {
-  await Promise.all([state.view === 'history' ? loadAllHistory() : null, ...SVCS.filter(k => state.cfg[k]).map(async k => {
+  await Promise.all([state.view === 'history' ? loadAllHistory() : null, state.view === 'docker' ? loadDocker() : null,
+    state.cfg.docker ? api('docker').then(d => { state.data.docker = d; delete state.err.docker; }, e => { state.err.docker = e.message; }) : null,
+    ...SVCS.filter(k => state.cfg[k]).map(async k => {
     try { state.data[k] = await api(k === 'seerr' ? seerrPath() : k); delete state.err[k]; }
     catch (e) { state.err[k] = e.message; }
   })]);
@@ -130,6 +132,10 @@ function renderCards() {
     ${row(t('card.approved'), c.approved ?? 0)}${row(t('card.processing'), c.processing ?? 0)}${row(t('card.available'), c.available ?? 0)}
     <div class="link"><button class="btn" onclick="show('requests')">${t('card.openRequests')}</button></div>`;
   }));
+  if (state.cfg.docker) out.push(svcCard('docker', d => `<div class="big">${d.running}<span class="muted" style="font-size:.55em"> / ${d.total}</span></div><div class="sub">${t('dk.runningOf')}</div>
+    ${row(t('dk.stoppedN'), d.stopped ? `<span class="tag err">${d.stopped}</span>` : 0)}${row(t('dk.unhealthyN'), d.unhealthy ? `<span class="tag err">${d.unhealthy}</span>` : 0)}
+    ${row(t('dk.updatesN'), d.updates ? `<span class="tag warn">${d.updates}</span>` : 0)}
+    <div class="link"><button class="btn" onclick="show('docker')">${t('dk.open')}</button></div>`));
   $('#svcCards').innerHTML = out.join('');
 }
 
@@ -468,6 +474,7 @@ function show(v) {
   if (v === 'add') loadOptions();
   if (v === 'logs') { renderLogSources(); loadLogs(); }
   if (v === 'history') loadAllHistory();
+  if (v === 'docker') { $('#dkList').innerHTML ||= `<div class="empty">${t('c.loading')}</div>`; loadDocker(); }
   if (v === 'settings') loadSettings();
   else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);
@@ -539,6 +546,149 @@ $('#logDownload').onclick = () => {
 // while the Logs tab is open: refresh every 10 s (never while the tab is hidden or a load is running)
 setInterval(() => { if (state.view === 'logs' && $('#logAuto').checked && !document.hidden) loadLogs(); }, 10000);
 
+// ---- Docker ----
+const dk = { list: [], info: null, filter: 'all', q: '', checkedAt: null, checking: false, err: null, busy: false, jobs: {}, queue: [] };
+async function loadDocker() {
+  if (dk.busy) return;
+  dk.busy = true;
+  try {
+    const d = await api('docker/containers?stats=1');
+    dk.list = d.containers; dk.info = d.info; dk.checkedAt = d.checkedAt; dk.checking = d.checking; dk.err = null;
+    for (const c of dk.list) if (c.job && !dk.jobs[c.name]) dk.jobs[c.name] = c.job;   // jobs started elsewhere / before a reload
+  } catch (e) { dk.err = e.message; }
+  finally { dk.busy = false; }
+  renderDocker();
+}
+const dkUptime = c => c.status || '';
+function dkFiltered() {
+  const q = dk.q.toLowerCase();
+  return dk.list.filter(c => (dk.filter === 'all' || (dk.filter === 'running' ? c.state === 'running' : dk.filter === 'stopped' ? c.state !== 'running' : c.update.state === 'available'))
+    && (!q || `${c.name} ${c.image} ${c.project}`.toLowerCase().includes(q)));
+}
+function dkUpdBadge(c) {
+  const u = c.update || {};
+  if (u.state === 'available') return `<span class="tag warn" title="${esc(u.local ? t('dk.updLocal') : '')}">${t('dk.updAvailable')}</span>`;
+  if (u.state === 'current') return `<span class="tag ok">${t('dk.updCurrent')}</span>`;
+  if (u.state === 'pinned') return `<span class="tag" title="${esc(t('dk.pinnedHint'))}">${t('dk.pinned')}</span>`;
+  if (u.state === 'error') return `<span class="tag" title="${esc(u.error || '')}">${t('dk.updUnknown')}</span>`;
+  return '';
+}
+function dkJob(c) {
+  const j = dk.jobs[c.name];
+  if (!j) return '';
+  const log = j.log?.length ? `<details><summary>${t('dk.showLog')}</summary><pre>${esc(j.log.join('\n'))}</pre></details>` : '';
+  if (j.state === 'running') return `<div class="job"><span>${esc(t('dk.step.' + (j.step || 'queued')))}${j.step === 'pulling' && j.progress != null ? ` ${j.progress}%` : ''}</span>
+    <div class="bar"><i style="width:${j.step === 'pulling' ? (j.progress || 3) : { stopping: 70, creating: 80, starting: 88, verifying: 94, cleanup: 98 }[j.step] || 5}%"></i></div>${log}</div>`;
+  if (j.state === 'error') return `<div class="job err">✕ ${esc(j.error || '')}${log}</div>`;
+  return `<div class="job" style="color:var(--ok)">✓ ${esc(j.result === 'current' ? t('dk.alreadyCurrent') : t('dk.updated'))}${log}</div>`;
+}
+function dkRow(c) {
+  const run = c.state === 'running', busy = dk.jobs[c.name]?.state === 'running';
+  const st = c.stats;
+  const cpu = st && st.cpu != null ? `${st.cpu.toFixed(1)} %` : '–';
+  const mem = st && st.mem != null ? size(st.mem) : '–';
+  const memPct = st?.mem && st?.memLimit ? Math.min(100, st.mem / st.memLimit * 100) : 0;
+  const dis = busy ? ' disabled' : '';
+  const acts = [
+    run ? `<button class="btn" data-dk="stop"${dis || (c.self ? ' disabled' : '')}>${t('dk.stop')}</button>` : `<button class="btn" data-dk="start"${dis}>${t('dk.start')}</button>`,
+    `<button class="btn" data-dk="restart"${dis}>${t('dk.restart')}</button>`,
+    `<button class="btn" data-dk="logs">${t('dk.logs')}</button>`,
+    c.update.state !== 'pinned' && !c.self ? `<button class="btn${c.update.state === 'available' ? ' upd' : ''}" data-dk="update"${dis}>${t('dk.update')}</button>` : '',
+  ].join('');
+  return `<div class="card dkrow" data-id="${esc(c.id)}" data-name="${esc(c.name)}">
+    <div><div class="nm"><span class="sdot ${esc(c.state)}" title="${esc(c.state)}"></span><b title="${esc(c.name)}">${esc(c.name)}</b>
+      ${c.health ? `<span class="tag ${c.health === 'healthy' ? 'ok' : c.health === 'unhealthy' ? 'err' : 'warn'}">${esc(t('dk.h.' + c.health))}</span>` : ''}${c.self ? `<span class="tag">ArrHub</span>` : ''}</div>
+      <div class="img" title="${esc(c.image)}">${esc(c.image)}</div></div>
+    <div><div class="st">${esc(dkUptime(c))}</div><div class="m" style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">${dkUpdBadge(c)}${c.ports.slice(0, 3).map(p => `<span class="tag mono">${esc(p)}</span>`).join('')}${/^container:/.test(c.networkMode) ? `<span class="tag" title="${esc(c.networkMode)}">${t('dk.sharedNet')}</span>` : ''}</div></div>
+    <div class="meter"><span>CPU ${cpu}</span><div class="bar"><i style="width:${Math.min(100, st?.cpu || 0)}%"></i></div></div>
+    <div class="meter"><span>RAM ${mem}</span><div class="bar"><i style="width:${memPct}%"></i></div></div>
+    <div class="acts">${acts}</div>
+    ${dkJob(c)}
+  </div>`;
+}
+function renderDocker() {
+  if (state.view !== 'docker') return;
+  $('#dkAuthWarn').classList.toggle('hidden', !!state.cfg.auth);
+  if (dk.err) { $('#dkList').innerHTML = `<div class="card" style="margin-top:16px"><div class="error">${esc(dk.err)}</div></div>`; return; }
+  const L = dk.list, upd = L.filter(c => c.update.state === 'available' && !c.self);
+  $('#dkHost').textContent = dk.info ? `${dk.info.name} · Docker ${dk.info.version}` : '';
+  $('#dkChips').innerHTML = [
+    [t('dk.f.running'), L.filter(c => c.state === 'running').length, 'var(--ok)'], [t('dk.f.stopped'), L.filter(c => c.state !== 'running').length, 'var(--err)'],
+    [t('dk.unhealthyN'), L.filter(c => c.health === 'unhealthy').length, 'var(--warn)'], [t('dk.f.updates'), upd.length, 'var(--accent)'],
+  ].map(([l, n, col]) => `<span class="dkchip"><span class="dot" style="background:${col}"></span>${esc(l)} <b>${n}</b></span>`).join('');
+  $('#dkChecked').textContent = dk.checking ? t('dk.checking') : dk.checkedAt ? t('dk.checkedAgo', { ago: ago(dk.checkedAt) }) : '';
+  const ua = $('#dkUpdAll'); ua.classList.toggle('hidden', !upd.length); ua.textContent = t('dk.updateAll', { n: upd.length }); ua.disabled = dk.queue.length > 0;
+  const rows = dkFiltered();
+  if (!rows.length) { $('#dkList').innerHTML = `<div class="card" style="margin-top:16px"><div class="empty">${t('c.noRecords')}</div></div>`; return; }
+  const groups = {};
+  for (const c of rows) (groups[c.project || ''] ||= []).push(c);
+  // keep open "log" details open across refreshes
+  const open = new Set([...document.querySelectorAll('.dkrow details[open]')].map(d => d.closest('.dkrow').dataset.name));
+  $('#dkList').innerHTML = Object.entries(groups).map(([g, cs]) => `<div class="dkgrp"><h3>${esc(g || t('dk.noProject'))} <span>${cs.length}</span></h3>${cs.map(dkRow).join('')}</div>`).join('');
+  open.forEach(n => document.querySelector(`.dkrow[data-name="${CSS.escape(n)}"] details`)?.setAttribute('open', ''));
+}
+async function dkUpdate(c) {
+  try {
+    const j = await api(`docker/containers/${encodeURIComponent(c.id)}/update`, {});
+    dk.jobs[c.name] = j; renderDocker();
+    while (true) {
+      await new Promise(r => setTimeout(r, 1200));
+      const s = await api('docker/jobs/' + j.id);
+      dk.jobs[c.name] = s; renderDocker();
+      if (s.state !== 'running') { toast(s.state === 'done' ? `${c.name}: ${s.result === 'current' ? t('dk.alreadyCurrent') : t('dk.updated')}` : `${c.name}: ${s.error}`); break; }
+    }
+  } catch (e) { toast(t('c.error', { msg: e.message })); }
+  loadDocker();
+}
+$('#dkList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-dk]'); if (!b) return;
+  const row = b.closest('.dkrow'), c = dk.list.find(x => x.id === row.dataset.id); if (!c) return;
+  const a = b.dataset.dk;
+  if (a === 'logs') return dkOpenLogs(c);
+  if (a === 'update') { if (confirm(t('dk.confirmUpdate', { name: c.name }))) dkUpdate(c); return; }
+  if ((a === 'stop' || a === 'restart') && !confirm(t('dk.confirm.' + a, { name: c.name }))) return;
+  b.disabled = true;
+  try { await api(`docker/containers/${encodeURIComponent(c.id)}/${a}`, {}); toast(`${c.name}: ${t('dk.done.' + a)}`); }
+  catch (err) { toast(t('c.error', { msg: err.message })); }
+  loadDocker();
+});
+$('#dkFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; dk.filter = b.dataset.f; [...$('#dkFilter').children].forEach(x => x.classList.toggle('on', x === b)); renderDocker(); };
+$('#dkSearch').oninput = e => { dk.q = e.target.value.trim(); renderDocker(); };
+$('#dkCheck').onclick = async () => { try { await api('docker/check', {}); dk.checking = true; renderDocker(); setTimeout(loadDocker, 2500); setTimeout(loadDocker, 8000); } catch (e) { toast(t('c.error', { msg: e.message })); } };
+$('#dkUpdAll').onclick = async () => {
+  const list = dk.list.filter(c => c.update.state === 'available' && !c.self);
+  if (!list.length || !confirm(t('dk.confirmUpdateAll', { n: list.length, names: list.map(c => c.name).join(', ') }))) return;
+  dk.queue = list.map(c => c.name); renderDocker();
+  for (const c of list) { await dkUpdate(c); dk.queue.shift(); }
+  dk.queue = []; renderDocker();
+};
+// container logs in a dialog
+const dkm = { c: null, lines: [], timer: null };
+async function dkLoadLogs() {
+  if (!dkm.c) return;
+  try { dkm.lines = (await api(`docker/containers/${encodeURIComponent(dkm.c.id)}/logs?tail=${$('#dkmTail').value}`)).lines; }
+  catch (e) { dkm.lines = [{ stream: 'err', time: null, text: e.message }]; }
+  const box = $('#dkmBody'), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.innerHTML = dkm.lines.length ? dkm.lines.map(l => `<div class="logrow ${l.stream === 'err' ? 'lv-stderr' : ''}"><span class="lt">${l.time ? esc(fmtLogTime(l.time)) : ''}</span><span class="ll">${l.stream === 'err' ? 'ERR' : 'OUT'}</span><div class="lm">${esc(l.text)}</div></div>`).join('')
+    : `<div class="logempty">${t('log.empty')}</div>`;
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+function dkOpenLogs(c) {
+  dkm.c = c; $('#dkmTitle').textContent = c.name; $('#dkModal').classList.remove('hidden'); $('#dkmBody').innerHTML = `<div class="logempty">${t('log.loading')}</div>`;
+  dkLoadLogs().then(() => { $('#dkmBody').scrollTop = 1e9; });
+  clearInterval(dkm.timer); dkm.timer = setInterval(() => { if ($('#dkmAuto').checked && !document.hidden) dkLoadLogs(); }, 3000);
+}
+function dkCloseLogs() { $('#dkModal').classList.add('hidden'); clearInterval(dkm.timer); dkm.c = null; }
+$('#dkmClose').onclick = dkCloseLogs;
+$('#dkModal').onclick = e => { if (e.target.id === 'dkModal') dkCloseLogs(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && dkm.c) dkCloseLogs(); });
+$('#dkmTail').onchange = dkLoadLogs;
+$('#dkmDl').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([dkm.lines.map(l => `${l.time || ''} ${l.stream === 'err' ? 'ERR' : 'OUT'} ${l.text}`).join('\n') + '\n'], { type: 'text/plain' }));
+  a.download = `${dkm.c?.name || 'container'}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`; a.click();
+};
+
 // ---- settings ----
 const setForm = $('#setForm');
 let setLoaded = null;
@@ -609,8 +759,9 @@ const GENERIC_ICONS = {
   qbittorrent: '<path d="M10 6v16a14 14 0 0 0 28 0V6"/><path d="M10 6h8v16a6 6 0 0 0 12 0V6h8"/><path d="M10 14h8M30 14h8"/>',
   nzbget: '<path d="M14 36h-2a9 9 0 0 1-1-17.9A12 12 0 0 1 34 16a8 8 0 0 1 2 15.8"/><path d="M24 22v20M17 35l7 7 7-7"/>',
   seerr: '<path d="M6 26l6-18h24l6 18v14H6z"/><path d="M6 26h11l2 5h10l2-5h11"/><path d="M24 10v10M19 15l5 5 5-5"/>',
+  docker: '<path d="M24 4 42 14v20L24 44 6 34V14z"/><path d="M6 14l18 10 18-10M24 24v20"/><path d="M15 9l18 10"/>',
 };
-const ICON_VARS = { radarr: '--radarr', sonarr: '--sonarr', qbittorrent: '--qb', nzbget: '--nzb', seerr: '--seerr' };
+const ICON_VARS = { radarr: '--radarr', sonarr: '--sonarr', qbittorrent: '--qb', nzbget: '--nzb', seerr: '--seerr', docker: '--docker' };
 const iconState = {}; // svc -> 'official' | 'generic'
 let iconStamp = Date.now();
 function genericIcon(k) {
@@ -622,7 +773,7 @@ function setIconVar(k) {
   const v = iconState[k] === 'official' ? `url("/api/icon/${k}?v=${iconStamp}")` : genericIcon(k);
   document.documentElement.style.setProperty('--icon-' + k, v);
 }
-function refreshGenericIcons() { SVCS.forEach(k => { if (iconState[k] !== 'official') setIconVar(k); }); }
+function refreshGenericIcons() { [...SVCS, 'docker'].forEach(k => { if (iconState[k] !== 'official') setIconVar(k); }); }
 async function loadIcons(force) {
   if (force) iconStamp = Date.now();
   await Promise.all(SVCS.filter(k => state.cfg[k]).map(k => new Promise(done => {
@@ -764,7 +915,8 @@ async function applyConfig() {
   state.cfg = await api('config');
   $('.logo').title = 'ArrHub ' + (state.cfg.version || '');
   applyUi(state.cfg.ui);
-  const any = SVCS.some(k => state.cfg[k]);
+  const any = SVCS.some(k => state.cfg[k]) || state.cfg.docker;
+  iconState.docker = 'generic'; setIconVar('docker');
   loadIcons(false);
   $('#setupNotice').classList.toggle('hidden', any);
   document.querySelectorAll('[data-svc]').forEach(el => el.classList.toggle('hidden', !state.cfg[el.dataset.svc]));
