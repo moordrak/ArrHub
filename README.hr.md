@@ -162,6 +162,7 @@ services:
       - ALLOW_START=1
       - ALLOW_STOP=1
       - ALLOW_RESTARTS=1
+      - ALLOW_LOGS=1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:

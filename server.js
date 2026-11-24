@@ -51,7 +51,7 @@ const MSG = {
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request', offlineBlocked: 'Offline mode – ArrHub does not connect to {host}', offlineNoRemote: 'offline mode – no image from the internet',
     dockerNotConfigured: 'Docker is not configured', dockerBadUrl: 'Docker address must start with http://, https://, tcp://, ssh:// or unix:///',
     dockerBadCert: 'The Docker certificate must be PEM text starting with -----BEGIN CERTIFICATE-----', dockerBadKey: 'The Docker client key must be a PEM private key',
-    dockerForbidden: 'The Docker socket proxy refused this request – allow CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO and POST',
+    dockerForbidden: 'The Docker socket proxy refused this request – allow CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO, POST and ALLOW_LOGS',
     dockerForbiddenVar: 'The Docker socket proxy refused {what} – set {vars} on the socket-proxy container and recreate it',
     dockerNoSocket: 'Docker socket {path} not found', dockerSocketPerm: 'No permission for the Docker socket {path}',
     dockerOk: 'Connected – Docker {version}, {n} containers', dockerSelf: 'This is ArrHub\'s own container – it cannot stop or replace itself',
@@ -84,7 +84,7 @@ const MSG = {
     noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev', offlineBlocked: 'Način bez interneta – ArrHub se ne spaja na {host}', offlineNoRemote: 'način bez interneta – nema slike s interneta',
     dockerNotConfigured: 'Docker nije podešen', dockerBadUrl: 'Adresa Dockera mora počinjati s http://, https://, tcp://, ssh:// ili unix:///',
     dockerBadCert: 'Docker certifikat mora biti PEM tekst koji počinje s -----BEGIN CERTIFICATE-----', dockerBadKey: 'Docker klijentski ključ mora biti PEM privatni ključ',
-    dockerForbidden: 'Docker socket proxy je odbio zahtjev – dopusti CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO i POST',
+    dockerForbidden: 'Docker socket proxy je odbio zahtjev – dopusti CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO, POST i ALLOW_LOGS',
     dockerForbiddenVar: 'Docker socket proxy je odbio {what} – postavi {vars} na socket-proxy kontejneru i ponovno ga pokreni',
     dockerNoSocket: 'Docker socket {path} nije pronađen', dockerSocketPerm: 'Nema dozvole za Docker socket {path}',
     dockerOk: 'Spojeno – Docker {version}, {n} kontejnera', dockerSelf: 'Ovo je ArrHubov vlastiti kontejner – ne može sam sebe zaustaviti ni zamijeniti',
@@ -1047,6 +1047,7 @@ const dockerErr = (msg, extra = {}) => Object.assign(new Error(msg), extra);
 function proxyVars(method, p) {
   const path = p.split('?')[0].replace(/^\/v[\d.]+/, '');
   const sec = { _ping: 'PING', version: 'VERSION', info: 'INFO', containers: 'CONTAINERS', images: 'IMAGES', distribution: 'DISTRIBUTION', networks: 'NETWORKS' }[path.split('/')[1]] || path.split('/')[1].toUpperCase();
+  if (/^\/containers\/[^/]+\/logs$/.test(path)) return 'ALLOW_LOGS=1';   // linuxserver socket-proxy: logs have their own switch
   const act = /^\/containers\/[^/]+\/(start|stop|restart|pause|unpause)$/.exec(path)?.[1];
   if (act) return `${sec}=1 + ALLOW_${{ start: 'START', stop: 'STOP', restart: 'RESTARTS', pause: 'PAUSE', unpause: 'UNPAUSE' }[act]}=1`;
   return method === 'GET' || method === 'HEAD' ? `${sec}=1` : `${sec}=1 + POST=1`;
