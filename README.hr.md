@@ -177,11 +177,11 @@ Zatim u ArrHubu → **Postavke → Docker** upiši `http://<ip-docker-vm-a>:2375
 **Ili preko SSH-a – bez otvorenog porta.** ArrHub se spaja SSH ključem i na Docker hostu pokreće samo `docker system dial-stdio` (isto što radi `DOCKER_HOST=ssh://…`):
 
 1. U ArrHubu → **Postavke → Docker** upiši `ssh://arrhub@<ip-docker-vm-a>`, otvori *SSH* i klikni **Stvori par ključeva** – ArrHub upiše novi ključ i prikaže gotov redak za `authorized_keys`.
-2. Na Docker VM-u dodaj taj redak korisniku u grupi `docker`, npr.:
+2. Klikni **Kopiraj** ispod tog retka, pa ga na Docker VM-u dodaj korisniku u grupi `docker` – umjesto `OVDJE_ZALIJEPI_REDAK_IZ_ARRHUBA` zalijepi **svoj kopirani redak** (dug je oko 130 znakova i počinje s `command="docker system dial-stdio",restrict ssh-ed25519 AAAAC3Nza…`):
    ```bash
    sudo adduser --disabled-password --gecos "" arrhub && sudo usermod -aG docker arrhub
    sudo install -d -m 700 -o arrhub -g arrhub /home/arrhub/.ssh
-   echo 'command="docker system dial-stdio",restrict ssh-ed25519 AAAA… arrhub' | sudo tee -a /home/arrhub/.ssh/authorized_keys
+   echo 'OVDJE_ZALIJEPI_REDAK_IZ_ARRHUBA' | sudo tee -a /home/arrhub/.ssh/authorized_keys
    sudo chown arrhub:arrhub /home/arrhub/.ssh/authorized_keys && sudo chmod 600 /home/arrhub/.ssh/authorized_keys
    ```
    `command=…` i `restrict` ograničavaju ključ samo na Docker API – njime se ne može otvoriti ljuska ni prosljeđivati portove.

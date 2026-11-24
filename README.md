@@ -177,11 +177,11 @@ Then in ArrHub → **Settings → Docker** enter `http://<docker-vm-ip>:2375` an
 **Or over SSH – no open port.** ArrHub connects with an SSH key and runs only `docker system dial-stdio` on the Docker host (the same thing `DOCKER_HOST=ssh://…` does):
 
 1. In ArrHub → **Settings → Docker** enter `ssh://arrhub@<docker-vm-ip>`, open *SSH* and click **Generate key pair** – ArrHub fills in a new key and shows a ready line for `authorized_keys`.
-2. On the Docker VM, add that line for a user in the `docker` group, e.g.:
+2. Click **Copy** under that line, then on the Docker VM add it for a user in the `docker` group – paste **your copied line** in place of `PASTE_THE_LINE_FROM_ARRHUB_HERE` (it is about 130 characters long and starts with `command="docker system dial-stdio",restrict ssh-ed25519 AAAAC3Nza…`):
    ```bash
    sudo adduser --disabled-password --gecos "" arrhub && sudo usermod -aG docker arrhub
    sudo install -d -m 700 -o arrhub -g arrhub /home/arrhub/.ssh
-   echo 'command="docker system dial-stdio",restrict ssh-ed25519 AAAA… arrhub' | sudo tee -a /home/arrhub/.ssh/authorized_keys
+   echo 'PASTE_THE_LINE_FROM_ARRHUB_HERE' | sudo tee -a /home/arrhub/.ssh/authorized_keys
    sudo chown arrhub:arrhub /home/arrhub/.ssh/authorized_keys && sudo chmod 600 /home/arrhub/.ssh/authorized_keys
    ```
    `command=…` and `restrict` limit the key to the Docker API – it cannot open a shell or forward ports.
