@@ -253,6 +253,49 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dktls{margin:4px 0 12px}.dktls summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8px}
 .dktls textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:11.5px/1.4 var(--mono);resize:vertical}
 .notice.warn{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));color:var(--warn)}
+.dkbar .btn.tool{display:inline-flex;align-items:center;gap:7px;padding:7px 12px}
+.dkbar .btn.tool svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* compose stacks */
+.ovh .sp{flex:1}
+#stDir{font:11.5px var(--mono);opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+.stw{display:grid;grid-template-columns:250px minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.stside{display:flex;flex-direction:column;gap:6px;min-height:0;overflow:auto;padding-right:2px}
+.stside .btn.new{padding:8px 10px;text-align:left;font-weight:600}
+.stitem{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.stitem:hover{border-color:var(--muted)}.stitem.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.stitem b{font-size:13.5px;display:flex;gap:7px;align-items:center}.stitem span{font-size:11.5px;color:var(--muted)}
+.stside h4{margin:10px 2px 2px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stmain{display:flex;flex-direction:column;gap:9px;min-height:0;min-width:0}
+.sttop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sttop input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 10px;font:13px var(--mono);width:190px}
+.sttop .btn{padding:7px 12px}
+.stopts{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.stopts label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.sted{flex:1;min-height:160px;display:flex;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;position:relative}
+.sted .gut{margin:0;padding:10px 8px 10px 10px;text-align:right;color:var(--muted);opacity:.6;font:12.5px/1.5 var(--mono);user-select:none;overflow:hidden;white-space:pre;min-width:38px;border-right:1px solid var(--line)}
+.sted .gut i{font-style:normal;color:var(--err);opacity:1;font-weight:700}
+.sted textarea{flex:1;border:0;outline:0;resize:none;background:transparent;color:var(--text);padding:10px 12px;font:12.5px/1.5 var(--mono);white-space:pre;overflow:auto;tab-size:2}
+.sted .ph{position:absolute;left:62px;top:10px;font:12.5px/1.5 var(--mono);color:var(--muted);pointer-events:none;white-space:pre;opacity:.75}
+.stenv summary{cursor:pointer;color:var(--muted);font-size:12.5px}.stenv textarea{margin-top:6px;width:100%;height:90px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:12px/1.45 var(--mono);resize:vertical}
+.stout{max-height:40%;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px;font-size:12.5px;flex-shrink:0}
+.stout:empty{display:none}
+.stout table{width:100%;border-collapse:collapse}.stout td,.stout th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}.stout th{color:var(--muted);font-weight:500;font-size:11.5px}
+.stout .mono{font-family:var(--mono);font-size:12px}
+.stout pre{margin:8px 0 0;font:11.5px/1.45 var(--mono);white-space:pre-wrap;color:var(--muted)}
+.stout .warn{color:var(--warn)}.stout .err{color:var(--err)}.stout .okc{color:var(--ok)}
+.stout .bar{height:5px;margin:8px 0}
+.act-create{color:var(--ok)}.act-recreate,.act-start{color:var(--accent)}.act-replace,.act-self{color:var(--err)}.act-unchanged{color:var(--muted)}
+.stdanger{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.sthelp{color:var(--muted);font-size:12.5px;line-height:1.5}
+/* images */
+#imModal .ovw{height:auto;max-height:100%}
+.imbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.imlist{flex:0 1 auto;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.imlist table{width:100%;border-collapse:collapse;font-size:13px}
+.imlist th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-weight:500;font-size:11.5px;text-align:left;padding:8px 10px;z-index:1}
+.imlist td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle}
+.imlist td.mono{font:12px var(--mono);color:var(--muted)}.imlist td.r,.imlist th.r{text-align:right;white-space:nowrap}
+.imlist tr.used td{opacity:.72}.imlist .tags{display:flex;flex-wrap:wrap;gap:4px}.imlist .tags{column-gap:8px}.imlist .tags b{font-weight:500;font-family:var(--mono);font-size:12.5px}.imlist .tags b+b::before{content:'·';margin-right:8px;color:var(--muted)}
+@media(max-width:800px){.stw{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.stside{max-height:150px}.sted{min-height:220px}}
 #dkModal{position:fixed;inset:0;z-index:40;background:rgb(0 0 0/.45);display:grid;place-items:center;padding:20px}
 #dkModal.hidden{display:none}
 .dkm{width:min(1100px,100%);height:min(780px,100%);display:flex;flex-direction:column;padding:16px;gap:12px}
@@ -487,6 +530,8 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <button type="button" data-f="updates" data-i18n="dk.f.updates">Updates</button>
         </div>
         <input id="dkSearch" type="search" placeholder="Search containers…" data-i18n-ph="dk.search" autocomplete="off">
+        <button class="btn tool" type="button" id="dkStacks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/><path d="m17 16 3 3-3 3"/></svg><span data-i18n="st.btn">Compose stacks</span></button>
+        <button class="btn tool" type="button" id="dkImages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span data-i18n="im.btn">Images</span></button>
       </div>
       <div class="notice warn hidden" id="dkAuthWarn" data-i18n="dk.authWarn" style="margin-top:12px">ArrHub login is off – anyone on your network can stop or update your containers. Set a username and password in Settings.</div>
     </div>
@@ -683,6 +728,55 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
       <button class="btn" type="button" id="dkmDl" data-i18n="log.download">Download</button>
       <button class="btn" type="button" id="dkmClose" aria-label="Close">✕</button></div>
     <div class="loglist dkm-b" id="dkmBody"></div>
+  </div>
+</div>
+<div id="stModal" class="ovl hidden" role="dialog" aria-modal="true">
+  <div class="ovw glass">
+    <div class="ovh"><b data-i18n="st.title">Compose stacks</b><span class="muted" id="stDir"></span><span class="sp"></span>
+      <button class="btn" type="button" id="stClose" aria-label="Close">✕</button></div>
+    <div class="stw">
+      <div class="stside" id="stSide"></div>
+      <div class="stmain">
+        <div class="sttop">
+          <input type="text" id="stName" placeholder="name" data-i18n-ph="st.name" spellcheck="false" autocomplete="off" maxlength="63">
+          <span class="muted" id="stState"></span><span class="sp"></span>
+          <label class="btn" style="cursor:pointer"><span data-i18n="st.upload">Open file…</span><input type="file" id="stFile" accept=".yml,.yaml,.txt" hidden></label>
+          <button class="btn" type="button" id="stSave" data-i18n="st.save">Save</button>
+          <button class="btn" type="button" id="stCheck" data-i18n="st.check">Check</button>
+          <button class="btn p" type="button" id="stDeploy" data-i18n="st.deploy">Deploy</button>
+        </div>
+        <div class="stopts">
+          <label><input type="checkbox" id="stPull"> <span data-i18n="st.pull">Pull newest images</span></label>
+          <label><input type="checkbox" id="stReplace"> <span data-i18n="st.replace">Replace existing containers with the same name</span></label>
+        </div>
+        <div class="sted"><pre class="gut" id="stGut">1</pre><textarea id="stYml" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea><div class="ph" id="stPh"></div></div>
+        <details class="stenv" id="stEnvBox"><summary data-i18n="st.env">Environment variables (.env) – used for ${VAR} and env_file</summary><textarea id="stEnv" spellcheck="false" placeholder="TZ=Europe/Zagreb&#10;PUID=1000"></textarea></details>
+        <div class="stout" id="stOut"></div>
+        <div class="stdanger hidden" id="stDanger">
+          <button class="btn ok" type="button" data-sop="start" data-i18n="dk.start">Start</button>
+          <button class="btn" type="button" data-sop="restart" data-i18n="dk.restart">Restart</button>
+          <button class="btn" type="button" data-sop="stop" data-i18n="dk.stop">Stop</button>
+          <span class="sp" style="flex:1"></span>
+          <label><input type="checkbox" id="stDownVol"> <span data-i18n="st.downVol">also delete its volumes</span></label>
+          <button class="btn d" type="button" data-sop="down" data-i18n="st.down">Stop &amp; remove containers</button>
+          <button class="btn d" type="button" data-sop="delete" data-i18n="st.delete">Delete stack</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="imModal" class="ovl hidden" role="dialog" aria-modal="true">
+  <div class="ovw glass" style="width:min(1100px,100%)">
+    <div class="ovh"><b data-i18n="im.title">Images</b><span class="muted" id="imSum"></span><span class="sp"></span>
+      <button class="btn" type="button" id="imClose" aria-label="Close">✕</button></div>
+    <div class="imbar">
+      <div class="seg" id="imFilter"><button type="button" data-f="unused" class="on" data-i18n="im.f.unused">Unused</button><button type="button" data-f="all" data-i18n="im.f.all">All</button></div>
+      <span class="sp" style="flex:1"></span>
+      <button class="btn" type="button" id="imRefresh" data-i18n-title="web.reload" title="Reload">↻</button>
+      <button class="btn d" type="button" id="imDelSel" disabled></button>
+      <button class="btn p" type="button" id="imDelAll" disabled></button>
+    </div>
+    <div class="imlist" id="imList"></div>
   </div>
 </div>
 <div id="webModal" class="ovl hidden" role="dialog" aria-modal="true">

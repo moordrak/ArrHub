@@ -55,7 +55,7 @@ jobs:
 
       - name: Syntax check
         run: |
-          node --check server.js
+          node --check server.js && node --check compose.js
           for f in public/*.js; do node --check "$f"; done
           bash -n install.sh && bash -n proxmox/arrhub-lxc.sh
 

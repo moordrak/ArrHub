@@ -35,7 +35,7 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 - **Samopotpisani certifikati** – za servis na `https://` sa samopotpisanim ili lokalno potpisanim certifikatom uključi *Prihvati samopotpisani certifikat* u Postavkama. Provjera se preskače samo za adresu tog servisa; sve ostalo (npr. provjera ažuriranja na GitHubu) i dalje provjerava certifikate
 - **Bez interneta** – Postavke → *Mreža*: ArrHub tada razgovara samo s tvojim servisima – nema provjere verzije ni slika s TMDB-a/TVDB-a; posteri dolaze iz Radarra/Sonarra i Seerrove predmemorije slika (također `ARRHUB_OFFLINE=true`)
 - **Zaglavlje uživo** – svaki tab prikazuje brzinu preuzimanja i slanja, svaku sa svojim grafom zadnjih minuta, i slobodan prostor gdje klijenti za preuzimanje spremaju
-- **Upravljanje Dockerom** – svi kontejneri na Docker hostu sa stanjem, zdravljem, CPU/RAM-om i statusom ažuriranja; pokretanje, zaustavljanje, restart, logovi i ažuriranje jednim klikom s automatskim vraćanjem (vidi [Upravljanje Dockerom](#upravljanje-dockerom))
+- **Upravljanje Dockerom** – svi kontejneri na Docker hostu sa stanjem, zdravljem, CPU/RAM-om i statusom ažuriranja; pokretanje, zaustavljanje, restart, logovi i ažuriranje jednim klikom s automatskim vraćanjem, **compose editor** u koji zalijepiš `docker-compose.yml` i pokreneš ga te čišćenje nekorištenih image-a (vidi [Upravljanje Dockerom](#upravljanje-dockerom))
 - **Stakleni izgled** – izbornik lijevo i zamućena, 70 % prozirna staklena ploča iza pločica kroz koju se vidi dinamička pozadina; na mobitelu se izbornik otvara gumbom ☰
 - **Logovi** – log ArrHuba i logovi Radarra, Sonarra, qBittorrenta, NZBGeta i Seerra u jednom tabu, s filtrom razine, pretragom, automatskim osvježavanjem i preuzimanjem
 - **Vlastiti CA certifikat** – zalijepi certifikat svog izdavatelja (PEM) u Postavke → *SSL / TLS* i ArrHub će njime potpuno provjeravati tvoje `https://` servise, uključujući ime. Također `ARRHUB_CA` (PEM tekst) ili `ARRHUB_CA_FILE` (putanja do .crt/.pem)
@@ -166,6 +166,7 @@ services:
       - ALLOW_STOP=1
       - ALLOW_RESTARTS=1
       - ALLOW_LOGS=1
+      - VOLUMES=1         # compose stackovi s imenovanim volumenima
       - EXEC=1            # samo za terminal – makni ako ga ne želiš
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -202,6 +203,25 @@ SSH ključu Docker hosta vjeruje se kod prvog spajanja i pamti se u `docker_know
 - Redoslijed: oznaka `arrhub.url` / `homepage.href` → https (NPM, postavke servisa) → http → `http://host:port`. Sve adrese su u popisu u prozoru.
 
 Gumb **Terminal** otvara ljusku **unutar** kontejnera (`docker exec`, bash ili sh) – npr. izravno u Radarru, a ne na Docker hostu. Radi preko svih načina spajanja; uz socket proxy dodaj `EXEC=1` (to dopušta root ljusku u bilo kojem kontejneru – izostavi ga ako ne želiš terminal). Iza Nginx Proxy Managera uključi *Websockets Support* za ArrHubov proxy host.
+
+### Compose stackovi
+
+**Compose stackovi** (gumb u Docker tabu) su editor za `docker-compose.yml`: zalijepi datoteku (ili je otvori), daj stacku ime i klikni **Provjeri** – ArrHub prikaže svaki servis s image-om, portovima i mrežom te hoće li biti *stvoren*, *ponovno stvoren* ili ostati *bez promjene*. **Primijeni** zatim stvara mreže, volumene i kontejnere redom po `depends_on` (čeka `service_healthy` gdje je zadano) i pokreće ih. Ponovno primjenjivanje mijenja samo ono što se u datoteci promijenilo; servisi maknuti iz datoteke se uklanjaju.
+
+![Compose stackovi](docs/compose.png)
+
+- ArrHub to radi sam preko Docker API-ja – **na Docker hostu ne treba `docker compose`** i radi preko svih načina spajanja (socket proxy, TLS, SSH). Kontejneri dobiju uobičajene compose oznake, pa su grupirani po stacku u Docker tabu i u Portaineru.
+- **Varijable okruženja** (polje *.env*) popunjavaju `${VAR}`, `${VAR:-zadano}` i `${VAR:?greška}` u datoteci, a njih učitava i `env_file:` – kao Portainerov `stack.env`.
+- **Preuzimanje Portainer stacka:** stackovi pokrenuti negdje drugdje prikazani su pod *Ostali compose projekti*. Klikni ga, zalijepi njegovu datoteku (Portainer: *Stacks → ime → Editor*) i primijeni – kontejneri koji se nisu promijenili rade dalje.
+- Kontejneri istog imena koji ne pripadaju nijednom stacku zamjenjuju se samo ako označiš *Zamijeni postojeće kontejnere*. ArrHub nikad ne zamjenjuje vlastiti kontejner.
+- *Zaustavi i ukloni kontejnere* gasi stack (po želji i s volumenima); datoteka stacka ostaje dok je ne obrišeš. Datoteke se spremaju u `stacks/` pored `config.json`.
+- Podržano: image-i, portovi, volumeni (imenovani, bind s **punom** putanjom, tmpfs), mreže (i vanjske, aliasi, statičke IP adrese), `network_mode` (`service:`, `container:`, `host`), `depends_on` s uvjetima, varijable okruženja, oznake, restart, healthcheck, command/entrypoint, uređaji, `cap_add`, `extra_hosts`, `user`, ograničenja resursa, GPU-i, logging, YAML sidra i `<<` spajanja. Nije podržano: `build:`, `secrets:` / `configs:` i relativne putanje poput `./config` (ArrHub nema mapu na Docker hostu – napiši `/srv/app/config`). Nepodržani ključevi prikazuju se kao upozorenja.
+
+### Nekorišteni image-i
+
+**Image-i** (gumb u Docker tabu) prikazuje sve image-e na Docker hostu s veličinom, starošću i kontejnerima koji ih koriste. Ukloni odabrane ili **sve nekorištene** jednim klikom – image koji koristi bilo koji kontejner (pokrenut ili zaustavljen) nikad se ne može ukloniti.
+
+![Image-i](docs/images.png)
 
 > **Sigurnost:** upravljanje Dockerom znači upravljanje Docker hostom. Uključi prijavu u ArrHub (Postavke → *Prijava*) i učini port 2375 dostupnim samo ArrHubu (npr. pravilom vatrozida na Docker VM-u), nikad s interneta.
 

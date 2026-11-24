@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.title="ArrHub" \
       org.opencontainers.image.version="${VERSION}"
 
 WORKDIR /app
-COPY package.json server.js ./
+COPY package.json server.js compose.js ./
 COPY public ./public
 # ssh client for Docker control over ssh:// (Settings → Docker)
 RUN apk add --no-cache openssh-client && mkdir -p /app/data && chown node:node /app/data

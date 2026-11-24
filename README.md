@@ -35,7 +35,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
 - **Offline mode** – Settings → *Network*: ArrHub then talks only to your services – no update check, no images from TMDB/TVDB; posters come from Radarr/Sonarr and Seerr's image cache (also `ARRHUB_OFFLINE=true`)
 - **Live header** – every tab shows download and upload speed, each with its own graph of the last minutes, and the free space where your download clients save
-- **Docker control** – every container on your Docker host with state, health, CPU/RAM and update status; start, stop, restart, logs and one-click updates with automatic rollback (see [Docker control](#docker-control))
+- **Docker control** – every container on your Docker host with state, health, CPU/RAM and update status; start, stop, restart, logs and one-click updates with automatic rollback, a **compose editor** for pasting a `docker-compose.yml` and starting it, and cleanup of unused images (see [Docker control](#docker-control))
 - **Glass layout** – menu on the left and a frosted, 70 % transparent glass frame behind the cards, so the dynamic background shows through; on phones the menu opens with ☰
 - **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download
 - **Own CA certificate** – paste your certificate authority's certificate (PEM) in Settings → *SSL / TLS* and ArrHub fully verifies your `https://` services against it, including the host name. Also `ARRHUB_CA` (PEM text) or `ARRHUB_CA_FILE` (path to a .crt/.pem)
@@ -166,6 +166,7 @@ services:
       - ALLOW_STOP=1
       - ALLOW_RESTARTS=1
       - ALLOW_LOGS=1
+      - VOLUMES=1         # compose stacks with named volumes
       - EXEC=1            # only for the terminal – remove if you don't want it
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -202,6 +203,25 @@ The Docker host's SSH key is trusted on the first connection and remembered in `
 - Order: `arrhub.url` / `homepage.href` label → https (NPM, service settings) → http → `http://host:port`. All addresses are in the window's list.
 
 The **Terminal** button opens a shell **inside** the container (`docker exec`, bash or sh) – e.g. directly in Radarr, not on the Docker host. It works over every connection type; with the socket proxy add `EXEC=1` (this allows a root shell in any container – leave it out if you don't want the terminal). Behind Nginx Proxy Manager turn on *Websockets Support* for the ArrHub proxy host.
+
+### Compose stacks
+
+**Compose stacks** (button in the Docker tab) is an editor for `docker-compose.yml`: paste a file (or open one), give the stack a name and click **Check** – ArrHub shows every service with its image, ports and network and whether it will be *created*, *recreated* or stay *unchanged*. **Deploy** then creates the networks, volumes and containers in `depends_on` order (waiting for `service_healthy` where asked) and starts them. Deploying again changes only what is different in the file; services removed from the file are removed.
+
+![Compose stacks](docs/compose.png)
+
+- ArrHub does this itself through the Docker API – **no `docker compose` on the Docker host** and it works over every connection type (socket proxy, TLS, SSH). Containers get the usual compose labels, so they are grouped by stack in the Docker tab and in Portainer.
+- **Environment variables** (the *.env* field) fill `${VAR}`, `${VAR:-default}` and `${VAR:?error}` in the file, and are also what `env_file:` loads – just like Portainer's `stack.env`.
+- **Taking over a Portainer stack:** stacks started elsewhere are listed under *Other compose projects*. Click one, paste its file (Portainer: *Stacks → name → Editor*) and deploy – containers that did not change keep running.
+- Containers with the same name that belong to no stack are replaced only when you tick *Replace existing containers*. ArrHub never replaces its own container.
+- *Stop & remove containers* takes a stack down (optionally with its volumes); the stack file is kept until you delete it. Files are stored in `stacks/` next to `config.json`.
+- Supported: images, ports, volumes (named, bind with an **absolute** path, tmpfs), networks (incl. external, aliases, static IPs), `network_mode` (`service:`, `container:`, `host`), `depends_on` with conditions, environment, labels, restart, healthcheck, command/entrypoint, devices, `cap_add`, `extra_hosts`, `user`, resource limits, GPUs, logging, YAML anchors and `<<` merges. Not supported: `build:`, `secrets:` / `configs:` and relative paths like `./config` (ArrHub has no folder on the Docker host – write `/srv/app/config`). Unsupported keys are shown as warnings.
+
+### Unused images
+
+**Images** (button in the Docker tab) lists all images on the Docker host with size, age and the containers that use them. Remove the selected ones or **all unused** with one click – images used by any container (running or stopped) can never be removed.
+
+![Images](docs/images.png)
 
 > **Security:** control over Docker means control over the Docker host. Turn on the ArrHub login (Settings → *Login*), and make port 2375 reachable only from ArrHub (e.g. a firewall rule on the Docker VM), never from the internet.
 

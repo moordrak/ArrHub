@@ -1,6 +1,7 @@
 // ArrHub — UI logic
 'use strict';
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {}, seerrFilter: 'pending', seerrPage: 1, seerrSize: 30 };
 try { const n = Number(localStorage.getItem('arrhub-req-size')); if ([10, 20, 30, 50, 100].includes(n)) state.seerrSize = n; } catch {}
@@ -817,6 +818,257 @@ $('#dkmDl').onclick = () => {
   a.download = `${dkm.c?.name || 'container'}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`; a.click();
 };
 
+// ---- compose stacks ----
+const st = { list: [], cur: null, dirty: false, job: null, open: false };
+const ST_EXAMPLE = `services:
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=\${TZ:-Europe/Zagreb}
+    volumes:
+      - /srv/radarr:/config
+      - /mnt/media:/media
+    ports:
+      - 7878:7878
+    restart: unless-stopped`;
+function stGutter(errLine) {
+  const n = $('#stYml').value.split('\n').length;
+  $('#stGut').innerHTML = Array.from({ length: n }, (_, k) => k + 1 === errLine ? `<i>${k + 1}</i>` : k + 1).join('\n');
+  $('#stGut').scrollTop = $('#stYml').scrollTop;
+  $('#stPh').classList.toggle('hidden', !!$('#stYml').value);
+  $('#stPh').style.left = $('#stGut').offsetWidth + 13 + 'px';
+}
+async function stLoadList() {
+  try { const d = await api('docker/stacks'); st.list = d.stacks; $('#stDir').textContent = d.dir; }
+  catch (e) { st.list = []; $('#stSide').innerHTML = `<div class="error">${esc(e.message)}</div>`; return; }
+  stRenderList();
+}
+function stRenderList() {
+  const item = s => `<button type="button" class="stitem${st.cur === s.name ? ' on' : ''}" data-st="${esc(s.name)}"><b><span class="sdot ${s.total ? (s.running === s.total ? 'running' : s.running ? 'paused' : 'exited') : ''}"></span>${esc(s.name)}</b>
+    <span>${s.total ? t('st.runningN', { n: s.running, total: s.total }) : t('st.notDeployed')}</span></button>`;
+  const mine = st.list.filter(s => s.saved), other = st.list.filter(s => !s.saved);
+  $('#stSide').innerHTML = `<button type="button" class="btn new" id="stNew">＋ ${t('st.new')}</button>${mine.map(item).join('')}`
+    + (other.length ? `<h4 title="${esc(t('st.otherHint'))}">${t('st.other')}</h4>${other.map(item).join('')}` : '');
+}
+function stShowEditor(s) {
+  st.cur = s?.name || null; st.dirty = false;
+  const saved = !!s?.saved;
+  $('#stName').value = s?.name || ''; $('#stName').disabled = saved;
+  $('#stYml').value = s?.yml || ''; $('#stEnv').value = s?.env || '';
+  $('#stEnvBox').open = !!s?.env;
+  $('#stPull').checked = false; $('#stReplace').checked = false;
+  $('#stDanger').classList.toggle('hidden', !s || !(saved || s.total));
+  $('#stDanger [data-sop=delete]').classList.toggle('hidden', !saved);
+  const info = st.list.find(x => x.name === st.cur);
+  $('#stState').textContent = info?.total ? t('st.runningN', { n: info.running, total: info.total }) : '';
+  $('#stOut').innerHTML = s && !saved && s.total ? `<div class="sthelp">${t('st.importHint', { name: esc(s.name) })}</div>` : !s ? `<div class="sthelp">${t('st.help')}</div>` : '';
+  $('#stPh').textContent = ST_EXAMPLE;
+  stGutter(); stRenderList();
+  (saved ? $('#stYml') : $('#stName')).focus();
+}
+async function stSelect(name) {
+  if (st.dirty && !confirm(t('st.discard'))) return;
+  const info = st.list.find(x => x.name === name);
+  if (info?.saved) { try { stShowEditor({ ...info, ...(await api('docker/stacks/' + encodeURIComponent(name))) }); } catch (e) { toast(t('c.error', { msg: e.message })); } }
+  else stShowEditor({ ...info, yml: '', env: '' });
+}
+function stBody(extra = {}) { return { yml: $('#stYml').value, env: $('#stEnv').value, ...extra }; }
+function stName() {
+  const n = $('#stName').value.trim();
+  if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(n)) { toast(t('st.badName')); $('#stName').focus(); return null; }
+  return n;
+}
+function stError(msg) {
+  const m = /line (\d+)/.exec(msg);
+  $('#stOut').innerHTML = `<div class="err">✕ ${esc(msg)}</div>`;
+  stGutter(m ? Number(m[1]) : null);
+  if (m) { const ta = $('#stYml'), lines = ta.value.split('\n'), pos = lines.slice(0, Number(m[1]) - 1).join('\n').length + (m[1] > 1 ? 1 : 0); ta.focus(); ta.setSelectionRange(pos, pos + (lines[m[1] - 1] || '').length); ta.scrollTop = Math.max(0, (Number(m[1]) - 5) * 18.75); stGutter(Number(m[1])); }
+}
+function stPlanHtml(p) {
+  const rows = p.services.map(s => `<tr><td><b>${esc(s.service)}</b><div class="mono muted">${esc(s.container)}</div></td><td class="mono">${esc(s.image)}${s.imageLocal ? '' : ` <span class="tag">${t('st.willPull')}</span>`}</td>
+    <td class="mono">${esc(s.ports.join(', ') || '–')}</td><td class="mono">${esc(s.network.replace(/^container:/, '→ '))}</td><td class="act-${s.action}"><b>${esc(t('st.a.' + s.action))}</b>${s.foreign ? ` <span class="muted">(${esc(s.foreign)})</span>` : ''}</td></tr>`).join('');
+  const extra = [
+    ...p.networks.filter(n => !n.exists).map(n => n.external ? `<div class="err">✕ ${t('st.missingNet', { name: esc(n.name) })}</div>` : `<div class="okc">＋ ${t('st.newNet', { name: esc(n.name) })}</div>`),
+    ...p.volumes.filter(v => !v.exists).map(v => v.external ? `<div class="err">✕ ${t('st.missingVol', { name: esc(v.name) })}</div>` : `<div class="okc">＋ ${t('st.newVol', { name: esc(v.name) })}</div>`),
+    ...p.orphans.map(o => `<div class="err">− ${t('st.orphan', { name: esc(o) })}</div>`),
+    ...p.skipped.map(o => `<div class="muted">${t('st.skipped', { name: esc(o) })}</div>`),
+    ...p.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`),
+  ].join('');
+  return `<table><tr><th>${t('st.c.service')}</th><th>Image</th><th>${t('st.c.ports')}</th><th>${t('st.c.net')}</th><th>${t('st.c.action')}</th></tr>${rows}</table>${extra ? `<div style="margin-top:8px;display:grid;gap:3px">${extra}</div>` : ''}`;
+}
+async function stCheck() {
+  const n = stName(); if (!n) return;
+  $('#stOut').innerHTML = `<div class="muted">${t('c.loading')}</div>`;
+  try { const p = await api(`docker/stacks/${n}/check`, stBody()); stGutter(); $('#stOut').innerHTML = stPlanHtml(p); return p; }
+  catch (e) { stError(e.message); return null; }
+}
+function stJobHtml(j) {
+  const log = j.log?.length ? `<pre>${esc(j.log.join('\n'))}</pre>` : '';
+  if (j.state === 'running') return `<div><b>${esc(t('st.step.' + (j.step || 'queued')))}</b>${j.step === 'pulling' && j.progress != null ? ` ${j.progress}%` : ''}</div><div class="bar"><i style="width:${j.step === 'pulling' ? Math.max(3, j.progress || 0) : { preparing: 4, creating: 60, starting: 75, verifying: 92, stopping: 50, cleanup: 90 }[j.step] || 3}%"></i></div>${log}`;
+  const r = j.result || {};
+  const sum = j.kind === 'down' ? t('st.downDone', { n: (r.removed || []).length })
+    : t('st.deployDone', { c: (r.created || []).length, r: (r.recreated || []).length, u: (r.unchanged || []).length, d: (r.removed || []).length });
+  if (j.state === 'error') return `<div class="err">✕ ${esc(j.error || '')}</div>${j.result ? `<div class="muted" style="margin-top:4px">${esc(sum)}</div>` : ''}${log}`;
+  return `<div class="okc"><b>✓ ${esc(sum)}</b></div>${log}`;
+}
+async function stRunJob(path, body, after) {
+  try {
+    let j = await api(path, body);
+    st.job = j; $('#stOut').innerHTML = stJobHtml(j); stBusy(true);
+    while (j.state === 'running') {
+      await new Promise(r => setTimeout(r, 1000));
+      j = await api('docker/jobs/' + j.id); st.job = j;
+      if (st.open) { const o = $('#stOut'), bottom = o.scrollHeight - o.scrollTop - o.clientHeight < 30; o.innerHTML = stJobHtml(j); if (bottom) o.scrollTop = o.scrollHeight; }
+    }
+    toast(j.state === 'done' ? `${j.name.replace(/^stack:/, '')}: ${t('c.done')}` : `${j.name.replace(/^stack:/, '')}: ${j.error}`);
+    if (after) await after(j);
+  } catch (e) { stError(e.message); }
+  finally { stBusy(false); stLoadList().then(() => { const i = st.list.find(x => x.name === st.cur); $('#stState').textContent = i?.total ? t('st.runningN', { n: i.running, total: i.total }) : ''; }); loadDocker(); }
+}
+function stBusy(b) { ['#stDeploy', '#stCheck', '#stSave'].forEach(s => { $(s).disabled = b; }); $$('#stDanger .btn').forEach(x => { x.disabled = b; }); }
+async function stSave(quiet) {
+  const n = stName(); if (!n) return false;
+  try { await api(`docker/stacks/${n}/save`, stBody()); st.dirty = false; if (!quiet) toast(t('st.saved', { name: n })); const isNew = st.cur !== n || !st.list.find(x => x.name === n)?.saved; st.cur = n; await stLoadList(); if (isNew) { $('#stName').disabled = true; $('#stDanger').classList.remove('hidden'); $('#stDanger [data-sop=delete]').classList.remove('hidden'); } stGutter(); return true; }
+  catch (e) { stError(e.message); return false; }
+}
+async function stDeploy() {
+  const n = stName(); if (!n) return;
+  const p = await stCheck(); if (!p) return;
+  const bad = p.services.filter(s => s.action === 'self');
+  if (bad.length) return toast(t('st.selfErr'));
+  const repl = p.services.filter(s => s.action === 'replace');
+  if (repl.length && !$('#stReplace').checked) { toast(t('st.needReplace')); $('#stReplace').closest('label').animate([{ color: 'var(--err)' }, { color: '' }], { duration: 1600 }); return; }
+  const changes = p.services.filter(s => s.action !== 'unchanged').length + p.orphans.length;
+  if (!confirm(t('st.confirmDeploy', { name: n, n: changes, list: [...p.services.filter(s => s.action !== 'unchanged').map(s => `${s.container} – ${t('st.a.' + s.action)}`), ...p.orphans.map(o => `${o} – ${t('st.a.remove')}`)].join('\n') || t('st.nothing') }))) return;
+  st.dirty = false; st.cur = n; $('#stName').disabled = true;
+  await stRunJob(`docker/stacks/${n}/deploy`, stBody({ pull: $('#stPull').checked, replace: $('#stReplace').checked }));
+  $('#stDanger').classList.remove('hidden'); $('#stDanger [data-sop=delete]').classList.remove('hidden');
+}
+async function stOp(op) {
+  const n = st.cur; if (!n) return;
+  if (op === 'down') {
+    const vol = $('#stDownVol').checked;
+    if (!confirm(t(vol ? 'st.confirmDownVol' : 'st.confirmDown', { name: n }))) return;
+    return stRunJob(`docker/stacks/${n}/down`, { volumes: vol });
+  }
+  if (op === 'delete') {
+    const info = st.list.find(x => x.name === n);
+    if (!confirm(t(info?.total ? 'st.confirmDeleteRunning' : 'st.confirmDelete', { name: n, n: info?.total || 0 }))) return;
+    try { await api(`docker/stacks/${n}/delete`, {}); toast(t('c.deleted')); st.dirty = false; await stLoadList(); stShowEditor(null); } catch (e) { toast(t('c.error', { msg: e.message })); }
+    return;
+  }
+  if (op === 'stop' && !confirm(t('st.confirmStop', { name: n }))) return;
+  stBusy(true);
+  try { await api(`docker/stacks/${n}/${op}`, {}); toast(`${n}: ${t('dk.done.' + op)}`); } catch (e) { toast(t('c.error', { msg: e.message })); }
+  stBusy(false); await stLoadList(); stShowState(); loadDocker();
+}
+function stShowState() { const i = st.list.find(x => x.name === st.cur); $('#stState').textContent = i?.total ? t('st.runningN', { n: i.running, total: i.total }) : ''; }
+async function openStacks() {
+  st.open = true; $('#stModal').classList.remove('hidden');
+  await stLoadList();
+  if (st.cur && st.list.some(x => x.name === st.cur)) { if (!$('#stYml').value) stSelect(st.cur); else stRenderList(); }
+  else if (!st.cur) { const first = st.list.find(x => x.saved); first ? stSelect(first.name) : stShowEditor(null); }
+}
+function closeStacks() { if (st.dirty && !confirm(t('st.discard'))) return; st.open = false; $('#stModal').classList.add('hidden'); }
+$('#dkStacks').onclick = openStacks;
+$('#stClose').onclick = closeStacks;
+$('#stSide').addEventListener('click', e => {
+  if (e.target.closest('#stNew')) { if (st.dirty && !confirm(t('st.discard'))) return; return stShowEditor(null); }
+  const b = e.target.closest('[data-st]'); if (b) stSelect(b.dataset.st);
+});
+$('#stYml').addEventListener('input', () => { st.dirty = true; stGutter(); });
+$('#stEnv').addEventListener('input', () => { st.dirty = true; });
+$('#stYml').addEventListener('scroll', () => { $('#stGut').scrollTop = $('#stYml').scrollTop; });
+$('#stYml').addEventListener('keydown', e => {
+  const ta = e.target;
+  if (e.key === 'Tab' && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value, ls = v.lastIndexOf('\n', a - 1) + 1;
+    if (a === b && !e.shiftKey) { ta.setRangeText('  ', a, b, 'end'); }
+    else {   // indent / outdent the selected lines
+      const le = v.indexOf('\n', b - (b > a && v[b - 1] === '\n' ? 1 : 0)); const end = le < 0 ? v.length : le;
+      const block = v.slice(ls, end).split('\n').map(l => e.shiftKey ? l.replace(/^ {1,2}/, '') : '  ' + l).join('\n');
+      ta.setRangeText(block, ls, end, 'select');
+    }
+    st.dirty = true; stGutter();
+  } else if (e.key === 'Enter') {   // keep the indentation (one step deeper after "key:")
+    const a = ta.selectionStart, v = ta.value, ls = v.lastIndexOf('\n', a - 1) + 1, line = v.slice(ls, a);
+    let indent = /^\s*/.exec(line)[0];
+    if (/:\s*$/.test(line)) indent += '  ';
+    else if (/^\s*- /.test(line) && !/^\s*-\s*$/.test(line) && /:\s*$/.test(line)) indent += '  ';
+    e.preventDefault(); ta.setRangeText('\n' + indent, a, ta.selectionEnd, 'end'); st.dirty = true; stGutter();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); stSave(); }
+});
+$('#stFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('#stYml').value = await f.text(); st.dirty = true; stGutter(); e.target.value = '';
+  if (!$('#stName').value && !$('#stName').disabled) $('#stName').value = f.name.replace(/\.(ya?ml|txt)$/i, '').replace(/^docker-compose$|^compose$/i, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+};
+$('#stSave').onclick = () => stSave();
+$('#stCheck').onclick = stCheck;
+$('#stDeploy').onclick = stDeploy;
+$('#stDanger').addEventListener('click', e => { const b = e.target.closest('[data-sop]'); if (b) stOp(b.dataset.sop); });
+$('#stName').addEventListener('input', e => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''); if (v !== e.target.value) e.target.value = v; });
+
+// ---- images ----
+const im = { list: [], filter: 'unused', sel: new Set() };
+async function imLoad() {
+  $('#imList').innerHTML = `<div class="empty">${t('c.loading')}</div>`;
+  try { const d = await api('docker/images'); im.list = d.images; im.unusedSize = d.unusedSize; im.unusedCount = d.unusedCount; }
+  catch (e) { $('#imList').innerHTML = `<div class="error" style="padding:14px">${esc(e.message)}</div>`; return; }
+  for (const id of [...im.sel]) if (!im.list.some(i => i.id === id && !i.containers.length)) im.sel.delete(id);
+  imRender();
+}
+function imRender() {
+  const rows = im.list.filter(i => im.filter === 'all' || !i.containers.length);
+  $('#imSum').textContent = t('im.sum', { n: im.list.length, u: im.unusedCount, size: size(im.unusedSize) });
+  const selSize = im.list.filter(i => im.sel.has(i.id)).reduce((a, i) => a + i.size, 0);
+  $('#imDelSel').textContent = im.sel.size ? t('im.delSel', { n: im.sel.size, size: size(selSize) }) : t('im.delSel0'); $('#imDelSel').disabled = !im.sel.size;
+  $('#imDelAll').textContent = t('im.delAll', { n: im.unusedCount, size: size(im.unusedSize) }); $('#imDelAll').disabled = !im.unusedCount;
+  if (!rows.length) { $('#imList').innerHTML = `<div class="empty" style="padding:30px">${t(im.filter === 'unused' ? 'im.noneUnused' : 'c.noRecords')}</div>`; return; }
+  const free = rows.filter(i => !i.containers.length);
+  $('#imList').innerHTML = `<table><tr><th style="width:30px"><input type="checkbox" id="imAll" ${free.length && free.every(i => im.sel.has(i.id)) ? 'checked' : ''} ${free.length ? '' : 'disabled'}></th><th>Image</th><th>ID</th><th class="r">${t('im.size')}</th><th class="r">${t('im.created')}</th><th>${t('im.usedBy')}</th></tr>`
+    + rows.map(i => {
+      const tags = i.tags.length ? i.tags : [i.repo ? `${i.repo} <none>` : '<none>'];
+      return `<tr class="${i.containers.length ? 'used' : ''}"><td><input type="checkbox" data-im="${esc(i.id)}" ${im.sel.has(i.id) ? 'checked' : ''} ${i.containers.length ? 'disabled' : ''}></td>
+      <td><div class="tags">${tags.slice(0, 3).map(x => `<b>${esc(x)}</b>`).join('')}${tags.length > 3 ? `<span class="tag" title="${esc(tags.slice(3).join('\n'))}">+${tags.length - 3}</span>` : ''}${i.dangling ? `<span class="tag warn">${t('im.dangling')}</span>` : ''}</div></td>
+      <td class="mono">${esc(i.id.replace(/^sha256:/, '').slice(0, 12))}</td><td class="r">${size(i.size)}</td><td class="r muted">${i.created ? ago(i.created) : ''}</td>
+      <td>${i.containers.length ? `<span class="muted">${esc(i.containers.slice(0, 3).join(', '))}${i.containers.length > 3 ? ` +${i.containers.length - 3}` : ''}</span>` : `<span class="tag ok">${t('im.unused')}</span>`}</td></tr>`;
+    }).join('') + '</table>';
+}
+async function imRemove(all) {
+  const pick = all ? im.list.filter(i => !i.containers.length) : im.list.filter(i => im.sel.has(i.id));
+  if (!pick.length) return;
+  const names = pick.slice(0, 12).map(i => i.tags[0] || i.id.slice(7, 19)).join('\n') + (pick.length > 12 ? `\n… +${pick.length - 12}` : '');
+  if (!confirm(t('im.confirm', { n: pick.length, size: size(pick.reduce((a, i) => a + i.size, 0)), list: names }))) return;
+  $('#imDelSel').disabled = $('#imDelAll').disabled = true;
+  try {
+    const r = await api('docker/images/remove', all ? { all: true } : { ids: pick.map(i => i.id) });
+    im.sel.clear();
+    toast(t('im.removed', { n: r.removed.length, size: size(r.freed) }) + (r.failed.length ? ' · ' + t('im.failed', { n: r.failed.length, msg: r.failed[0].name + ': ' + r.failed[0].error }) : ''));
+  } catch (e) { toast(t('c.error', { msg: e.message })); }
+  imLoad();
+}
+$('#dkImages').onclick = () => { $('#imModal').classList.remove('hidden'); imLoad(); };
+$('#imClose').onclick = () => $('#imModal').classList.add('hidden');
+$('#imRefresh').onclick = imLoad;
+$('#imFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; im.filter = b.dataset.f; [...$('#imFilter').children].forEach(x => x.classList.toggle('on', x === b)); imRender(); };
+$('#imList').addEventListener('change', e => {
+  if (e.target.id === 'imAll') { const free = im.list.filter(i => !i.containers.length); free.forEach(i => e.target.checked ? im.sel.add(i.id) : im.sel.delete(i.id)); return imRender(); }
+  const id = e.target.dataset.im; if (!id) return;
+  e.target.checked ? im.sel.add(id) : im.sel.delete(id); imRender();
+});
+$('#imDelSel').onclick = () => imRemove(false);
+$('#imDelAll').onclick = () => imRemove(true);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#imModal').classList.contains('hidden')) $('#imModal').classList.add('hidden');
+  else if (st.open) closeStacks();
+});
+
 // ---- settings ----
 const setForm = $('#setForm');
 let setLoaded = null;
@@ -995,6 +1247,8 @@ function labelAppearance() {
 function relabel() {
   I18N.apply(); renderLogSources(); renderLogs(); placeTabHead(state.view); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
   if (lastResults.length && state.view === 'add') renderResults();
+  if (st.open) { stRenderList(); stShowState(); if (st.job && st.job.state !== 'running') $('#stOut').innerHTML = stJobHtml(st.job); }
+  if (!$('#imModal').classList.contains('hidden')) imRender();
 }
 function applyUi(ui) {
   if (!ui) return;
