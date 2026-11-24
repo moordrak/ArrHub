@@ -52,6 +52,7 @@ const MSG = {
     dockerNotConfigured: 'Docker is not configured', dockerBadUrl: 'Docker address must start with http://, https://, tcp://, ssh:// or unix:///',
     dockerBadCert: 'The Docker certificate must be PEM text starting with -----BEGIN CERTIFICATE-----', dockerBadKey: 'The Docker client key must be a PEM private key',
     dockerForbidden: 'The Docker socket proxy refused this request – allow CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO and POST',
+    dockerForbiddenVar: 'The Docker socket proxy refused {what} – set {vars} on the socket-proxy container and recreate it',
     dockerNoSocket: 'Docker socket {path} not found', dockerSocketPerm: 'No permission for the Docker socket {path}',
     dockerOk: 'Connected – Docker {version}, {n} containers', dockerSelf: 'This is ArrHub\'s own container – it cannot stop or replace itself',
     dockerPinned: 'The image is pinned to a fixed version (digest) – change it in your compose file', dockerNoImage: 'The image could not be found after pulling',
@@ -84,6 +85,7 @@ const MSG = {
     dockerNotConfigured: 'Docker nije podešen', dockerBadUrl: 'Adresa Dockera mora počinjati s http://, https://, tcp://, ssh:// ili unix:///',
     dockerBadCert: 'Docker certifikat mora biti PEM tekst koji počinje s -----BEGIN CERTIFICATE-----', dockerBadKey: 'Docker klijentski ključ mora biti PEM privatni ključ',
     dockerForbidden: 'Docker socket proxy je odbio zahtjev – dopusti CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO i POST',
+    dockerForbiddenVar: 'Docker socket proxy je odbio {what} – postavi {vars} na socket-proxy kontejneru i ponovno ga pokreni',
     dockerNoSocket: 'Docker socket {path} nije pronađen', dockerSocketPerm: 'Nema dozvole za Docker socket {path}',
     dockerOk: 'Spojeno – Docker {version}, {n} kontejnera', dockerSelf: 'Ovo je ArrHubov vlastiti kontejner – ne može sam sebe zaustaviti ni zamijeniti',
     dockerPinned: 'Image je vezan na fiksnu verziju (digest) – promijeni ga u compose datoteci', dockerNoImage: 'Image nije pronađen nakon preuzimanja',
@@ -1029,6 +1031,14 @@ function sshPublic() {
   });
 }
 const dockerErr = (msg, extra = {}) => Object.assign(new Error(msg), extra);
+// socket proxy (linuxserver / tecnativa) environment variables that allow a request
+function proxyVars(method, p) {
+  const path = p.split('?')[0].replace(/^\/v[\d.]+/, '');
+  const sec = { _ping: 'PING', version: 'VERSION', info: 'INFO', containers: 'CONTAINERS', images: 'IMAGES', distribution: 'DISTRIBUTION', networks: 'NETWORKS' }[path.split('/')[1]] || path.split('/')[1].toUpperCase();
+  const act = /^\/containers\/[^/]+\/(start|stop|restart|pause|unpause)$/.exec(path)?.[1];
+  if (act) return `${sec}=1 + ALLOW_${{ start: 'START', stop: 'STOP', restart: 'RESTARTS', pause: 'PAUSE', unpause: 'UNPAUSE' }[act]}=1`;
+  return method === 'GET' || method === 'HEAD' ? `${sec}=1` : `${sec}=1 + POST=1`;
+}
 function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, target } = {}) {
   target = target || dockerTarget();
   return new Promise((resolve, reject) => {
@@ -1052,10 +1062,11 @@ function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, targ
       res.on('end', () => {
         const buf = Buffer.concat(chunks);
         if (res.statusCode >= 400) {
-          let msg = buf.toString().trim().slice(0, 400);
-          try { msg = JSON.parse(buf).message || msg; } catch {}
-          if (res.statusCode === 403 && !msg.includes(' ')) msg = '';
-          return finish(reject, dockerErr(res.statusCode === 403 ? T('dockerForbidden') + (msg ? ` (${msg})` : '') : msg || `HTTP ${res.statusCode}`, { dockerStatus: res.statusCode }));
+          let msg = buf.toString().trim().slice(0, 400), json = false;
+          try { msg = JSON.parse(buf).message || msg; json = true; } catch {}
+          // a socket proxy answers 403 with an HTML page – say which of its switches is off instead
+          if (res.statusCode === 403 && !json) return finish(reject, dockerErr(T('dockerForbiddenVar', { what: `${method} ${p.split('?')[0]}`, vars: proxyVars(method, p) }), { dockerStatus: 403 }));
+          return finish(reject, dockerErr(msg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || `HTTP ${res.statusCode}`, { dockerStatus: res.statusCode }));
         }
         if (raw) return finish(resolve, buf);
         if (!buf.length) return finish(resolve, null);
