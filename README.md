@@ -9,6 +9,8 @@
 
 ![ArrHub](docs/screenshot.png)
 
+![Docker control](docs/docker.png)
+
 ![Poster wall](docs/theme-posters.png)
 
 ![Service icons on cards](docs/card-icons.png)
@@ -32,6 +34,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
 - **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
 - **Offline mode** – Settings → *Network*: ArrHub then talks only to your services – no update check, no images from TMDB/TVDB; posters come from Radarr/Sonarr and Seerr's image cache (also `ARRHUB_OFFLINE=true`)
+- **Live header** – every tab shows download and upload speed, each with its own graph of the last minutes, and the free space where your download clients save
 - **Docker control** – every container on your Docker host with state, health, CPU/RAM and update status; start, stop, restart, logs and one-click updates with automatic rollback (see [Docker control](#docker-control))
 - **Glass layout** – menu on the left and a frosted, 70 % transparent glass frame behind the cards, so the dynamic background shows through; on phones the menu opens with ☰
 - **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download

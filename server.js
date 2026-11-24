@@ -512,13 +512,25 @@ function makeQb(conf) { return {
     if (!r.ok) throw new Error(`${r.status}: ${text.slice(0, 200)}`);
     try { return JSON.parse(text); } catch { return text; }
   },
+  // free space in the download folder: /sync/maindata, incremental after the first call (rid) so it stays cheap
+  rid: 0, serverState: {},
+  async freeSpace() {
+    try {
+      const d = await this.call(`/sync/maindata?rid=${this.rid}`);
+      if (d.full_update) this.serverState = {};
+      Object.assign(this.serverState, d.server_state || {});
+      this.rid = d.rid || 0;
+    } catch { this.rid = 0; }
+    return this.serverState.free_space_on_disk ?? null;
+  },
   async summary() {
-    const [transfer, torrents, version] = await Promise.all([
+    const [transfer, torrents, version, freeSpace] = await Promise.all([
       this.call('/transfer/info'),
       this.call('/torrents/info?sort=added_on&reverse=true'),
       this.call('/app/version').catch(() => ''),
+      this.freeSpace(),
     ]);
-    return { version, transfer, torrents };
+    return { version, transfer, torrents, freeSpace };
   },
   // qBittorrent 5.x uses stop/start, older versions pause/resume
   async action(action, hashes, deleteFiles) {

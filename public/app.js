@@ -66,12 +66,50 @@ function render() {
   renderCalendar(); renderHistory(); renderRequests();
 }
 
+// ---- tab header: download / upload with their own graph, free space for downloads ----
+const speedHist = { dl: [], ul: [], at: 0 };
+function spark(svg, arr, color) {
+  const W = 120, H = 30, max = Math.max(...arr, 1);
+  const pts = (arr.length > 1 ? arr : [arr[0] || 0, arr[0] || 0]).map((v, i, a) => `${(i / (a.length - 1) * W).toFixed(1)},${(H - 2 - v / max * (H - 5)).toFixed(1)}`).join(' ');
+  svg.innerHTML = `<polygon points="0,${H} ${pts} ${W},${H}" fill="color-mix(in srgb,${color} 22%,transparent)"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+}
+function renderTabHead(dl, ul, haveSpeed) {
+  const now = Date.now();
+  if (haveSpeed && now - speedHist.at > 1500) {           // one point per refresh, last ~60
+    speedHist.dl.push(dl); speedHist.ul.push(ul); speedHist.at = now;
+    if (speedHist.dl.length > 60) { speedHist.dl.shift(); speedHist.ul.shift(); }
+  }
+  $('#thDn').classList.toggle('hidden', !haveSpeed); $('#thUp').classList.toggle('hidden', !haveSpeed);
+  $('#thDnV').textContent = '↓ ' + speed(dl); $('#thUpV').textContent = '↑ ' + speed(ul);
+  spark($('#thDn .spark'), speedHist.dl, 'var(--ok)'); spark($('#thUp .spark'), speedHist.ul, 'var(--sonarr)');
+  // free space where the download clients write; the smaller one runs out first
+  const src = [];
+  const qf = state.data.qbittorrent?.freeSpace;
+  if (state.cfg.qbittorrent && qf != null) src.push({ name: 'qBittorrent', free: qf });
+  const ns = state.data.nzbget?.status;
+  if (state.cfg.nzbget && ns && ns.FreeDiskSpaceMB != null) src.push({ name: 'NZBGet', free: ns.FreeDiskSpaceMB * 1048576, total: ns.TotalDiskSpaceMB ? ns.TotalDiskSpaceMB * 1048576 : null });
+  const box = $('#thFree');
+  box.classList.toggle('hidden', !src.length);
+  if (!src.length) return;
+  const min = src.reduce((a, b) => (b.free < a.free ? b : a));
+  $('#thFreeV').textContent = size(min.free) + (src.length > 1 ? '' : '');
+  box.title = src.map(x => t('th.freeTip', { name: x.name, free: size(x.free) }) + (x.total ? ` / ${size(x.total)}` : '')).join('\n');
+  const bar = $('#thFreeBar');
+  bar.classList.toggle('hidden', !min.total);
+  if (min.total) { const used = 1 - min.free / min.total; bar.style.setProperty('--c', used > .9 ? 'var(--err)' : 'var(--accent)'); bar.firstElementChild.style.width = used * 100 + '%'; }
+  box.classList.toggle('low', min.total ? min.free / min.total < .1 : min.free < 20 * 1073741824);
+}
+function placeTabHead(v) {
+  const sec = $('#v-' + v), h = $('#tabhead');
+  if (sec && h.parentElement !== sec) sec.prepend(h);
+  $('#thTitle').textContent = document.querySelector(`#nav [data-v="${v}"] span`)?.textContent || '';
+}
 function renderSpeeds() {
   const q = state.data.qbittorrent?.transfer, n = state.data.nzbget?.status;
   let dl = 0, ul = 0;
   if (q) { dl += q.dl_info_speed; ul += q.up_info_speed; }
   if (n) dl += n.DownloadRate;
-  $('#speeds').innerHTML = `<span>↓ <b>${speed(dl)}</b></span><span>↑ <b>${speed(ul)}</b></span>`;
+  renderTabHead(dl, ul, !!(q || n));
   Appearance.Bg.setActivity(dl);
 }
 
@@ -471,6 +509,7 @@ function show(v) {
   state.view = v;
   document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'v-' + v));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  placeTabHead(v);
   if (v === 'add') loadOptions();
   if (v === 'logs') { renderLogSources(); loadLogs(); }
   if (v === 'history') loadAllHistory();
@@ -600,8 +639,8 @@ function dkRow(c) {
       ${c.health ? `<span class="tag ${c.health === 'healthy' ? 'ok' : c.health === 'unhealthy' ? 'err' : 'warn'}">${esc(t('dk.h.' + c.health))}</span>` : ''}${c.self ? `<span class="tag">ArrHub</span>` : ''}</div>
       <div class="img" title="${esc(c.image)}">${esc(c.image)}</div></div>
     <div><div class="st">${esc(dkUptime(c))}</div><div class="m" style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">${dkUpdBadge(c)}${c.ports.slice(0, 3).map(p => `<span class="tag mono">${esc(p)}</span>`).join('')}${/^container:/.test(c.networkMode) ? `<span class="tag" title="${esc(c.networkMode)}">${t('dk.sharedNet')}</span>` : ''}</div></div>
-    <div class="meter"><span>CPU ${cpu}</span><div class="bar"><i style="width:${Math.min(100, st?.cpu || 0)}%"></i></div></div>
-    <div class="meter"><span>RAM ${mem}</span><div class="bar"><i style="width:${memPct}%"></i></div></div>
+    <div class="meter"><span><b>CPU</b>${cpu}</span><div class="bar"><i style="width:${Math.min(100, st?.cpu || 0)}%"></i></div>
+      <span style="margin-top:4px"><b>RAM</b>${mem}</span><div class="bar"><i style="width:${memPct}%"></i></div></div>
     <div class="acts">${acts}</div>
     ${dkJob(c)}
   </div>`;
@@ -864,7 +903,7 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); renderLogSources(); renderLogs(); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
+  I18N.apply(); renderLogSources(); renderLogs(); placeTabHead(state.view); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
   if (lastResults.length && state.view === 'add') renderResults();
 }
 function applyUi(ui) {

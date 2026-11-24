@@ -47,8 +47,21 @@ nav button[data-v=settings]{margin-top:auto}
 nav button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 7%,transparent)}
 nav button.on{color:var(--text);background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
 nav button.on .ni{opacity:1;color:var(--accent-text,var(--accent))}
-.speeds{display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:12.5px;color:var(--muted);padding:12px 14px 2px;margin-top:10px;border-top:1px solid var(--glass-line)}
-.speeds b{color:var(--text);font-weight:600}
+.tabhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-4px 0 18px;padding:12px 16px;border-radius:14px;
+  background:color-mix(in srgb,var(--panel) 55%,transparent);border:1px solid var(--glass-line)}
+.tabhead h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.tabhead .sp{flex:1}
+.th-m{display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:12px;background:color-mix(in srgb,var(--panel2) 70%,transparent);border:1px solid var(--line)}
+.th-m .col{display:flex;flex-direction:column;gap:3px;min-width:0}
+.th-m .v{font:700 15px/1.1 var(--mono);white-space:nowrap}
+.th-m .l{font-size:10.5px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.th-m .spark{width:120px;height:30px;display:block;flex:none}
+.th-m .di{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;color:var(--muted);flex:none}
+.th-m .bar{height:4px;width:150px}
+.th-m.dn .v{color:var(--ok)}.th-m.up .v{color:var(--sonarr)}
+.th-m.low .v{color:var(--err)}
+@media(max-width:700px){.tabhead{padding:10px}.tabhead h1{width:100%}.th-m .spark{width:80px}}
+
 main{padding:16px 16px 16px 0}
 /* every tab sits on one frame: 30 % opaque, so the dynamic background stays visible around the cards */
 main>section{background:var(--glass-hi),var(--glass);-webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);border:1px solid var(--glass-line);border-radius:20px;padding:20px;box-shadow:var(--glass-shadow);min-height:calc(100vh - 32px)}
@@ -203,15 +216,16 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dkchip b{font-family:var(--mono);font-size:13px}
 .dkgrp{margin-top:16px}
 .dkgrp>h3{margin:0 0 8px 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
-.dkrow{display:grid;grid-template-columns:minmax(210px,1.4fr) minmax(170px,1fr) 150px 150px auto;gap:14px;align-items:center;padding:12px 16px;margin-bottom:8px}
+.dkrow{display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(150px,1fr) 170px auto;gap:14px;align-items:center;padding:12px 16px;margin-bottom:8px}
 .dkrow>div{min-width:0}
 .dkrow .nm{display:flex;align-items:center;gap:10px;min-width:0}
 .dkrow .nm b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dkrow .img{font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dkrow .st{font-size:12.5px;color:var(--muted)}
-.dkrow .meter{font:12px var(--mono);color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.dkrow .meter{font:12px var(--mono);color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.dkrow .meter span{display:flex;justify-content:space-between;gap:8px}.dkrow .meter b{font-weight:600;color:var(--muted)}
 .dkrow .meter .bar{height:4px}
-.dkrow .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.dkrow .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
 .dkrow .acts .btn{padding:6px 10px;font-size:12.5px}
 .dkrow .acts .btn.upd{border-color:color-mix(in srgb,var(--accent) 60%,var(--line));color:var(--accent-text,var(--accent))}
 .dkrow .job{grid-column:1/-1;font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -231,7 +245,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dkm-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.dkm-h b{font-size:15px}
 .dkm-b{flex:1;max-height:none;min-height:0}
 .logrow.lv-stderr .lm{color:color-mix(in srgb,var(--err) 80%,var(--text))}
-@media(max-width:1100px){.dkrow{grid-template-columns:1fr 1fr}.dkrow .acts{grid-column:1/-1;justify-content:flex-start}}
+@media(max-width:1100px){.dkrow{grid-template-columns:1fr 1fr}.dkrow .acts{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}}
 @media(max-width:560px){.dkrow{grid-template-columns:1fr}}
 .pager{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px}
 .pager .sp{flex:1}
@@ -322,10 +336,19 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     <button data-v="logs"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span data-i18n="nav.logs">Logs</span></button>
     <button data-v="settings"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span data-i18n="nav.settings">Settings</span></button>
   </nav>
-  <div class="speeds" id="speeds"></div>
 </aside>
 
 <main>
+  <!-- tab header: moved into the visible tab by show() -->
+  <div id="tabhead" class="tabhead">
+    <h1 id="thTitle"></h1><span class="sp"></span>
+    <div class="th-m dn" id="thDn"><svg class="spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="col"><span class="l" data-i18n="th.download">Download</span><span class="v" id="thDnV">–</span></div></div>
+    <div class="th-m up" id="thUp"><svg class="spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="col"><span class="l" data-i18n="th.upload">Upload</span><span class="v" id="thUpV">–</span></div></div>
+    <div class="th-m hidden" id="thFree"><svg class="di" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 13h18"/><circle cx="17" cy="16" r=".9" fill="currentColor"/></svg>
+      <div class="col"><span class="l" data-i18n="th.free">Free for downloads</span><span class="v" id="thFreeV">–</span><div class="bar hidden" id="thFreeBar"><i></i></div></div></div>
+  </div>
   <!-- OVERVIEW -->
   <section id="v-overview">
     <div class="notice hidden" id="setupNotice"><span data-i18n="ov.noServices">No services are configured yet.</span><span class="sp"></span><button class="btn p" onclick="show('settings')" data-i18n="ov.openSettings">Open settings</button></div>
