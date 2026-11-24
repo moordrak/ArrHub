@@ -9,7 +9,8 @@ LABEL org.opencontainers.image.title="ArrHub" \
 WORKDIR /app
 COPY package.json server.js ./
 COPY public ./public
-RUN mkdir -p /app/data && chown node:node /app/data
+# ssh client for Docker control over ssh:// (Settings → Docker)
+RUN apk add --no-cache openssh-client && mkdir -p /app/data && chown node:node /app/data
 
 ENV NODE_ENV=production \
     PORT=8686 \

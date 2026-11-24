@@ -39,7 +39,7 @@ ask() {
 msg "Installing packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates tar >/dev/null
+apt-get install -y -qq curl ca-certificates tar openssh-client >/dev/null
 
 node_major() { command -v node >/dev/null && node -p 'process.versions.node.split(".")[0]' || echo 0; }
 if (( $(node_major) < 18 )); then

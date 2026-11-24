@@ -49,14 +49,19 @@ const MSG = {
     netCertExpired: 'The TLS certificate has expired', netCertName: 'The TLS certificate does not match the address – the URL must use a name or IP listed in the certificate', fetchFailed: 'Connection failed',
     e401: 'Invalid API key or username/password (401)', e403: 'Access denied – check the API key (403)', e404: 'Not found (404) – check the URL and URL Base',
     noIcon: 'No icon found on the service', loginRequired: 'Login required', notFound: 'Not found', notConfigured: '{svc} is not configured', forbidden: 'Forbidden', badRequest: 'Bad request', offlineBlocked: 'Offline mode – ArrHub does not connect to {host}', offlineNoRemote: 'offline mode – no image from the internet',
-    dockerNotConfigured: 'Docker is not configured', dockerBadUrl: 'Docker address must start with http://, https://, tcp:// or unix:///',
+    dockerNotConfigured: 'Docker is not configured', dockerBadUrl: 'Docker address must start with http://, https://, tcp://, ssh:// or unix:///',
     dockerBadCert: 'The Docker certificate must be PEM text starting with -----BEGIN CERTIFICATE-----', dockerBadKey: 'The Docker client key must be a PEM private key',
     dockerForbidden: 'The Docker socket proxy refused this request – allow CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO and POST',
     dockerNoSocket: 'Docker socket {path} not found', dockerSocketPerm: 'No permission for the Docker socket {path}',
     dockerOk: 'Connected – Docker {version}, {n} containers', dockerSelf: 'This is ArrHub\'s own container – it cannot stop or replace itself',
     dockerPinned: 'The image is pinned to a fixed version (digest) – change it in your compose file', dockerNoImage: 'The image could not be found after pulling',
     dockerAutoRemove: 'The container was started with --rm and would disappear when stopped – recreate it with docker compose',
-    dockerCrashed: 'The new container stopped or kept restarting right after starting (exit code {code})', dockerUnhealthy: 'The new container reports itself as unhealthy',
+    dockerCrashed: 'The new container stopped or kept restarting right after starting (exit code {code})',
+    sshMissing: 'The ssh client is not installed (install the openssh-client package)', sshAuth: 'SSH login refused – add ArrHub\'s public key to ~/.ssh/authorized_keys of that user on the Docker host',
+    sshHostKey: 'The Docker host\'s SSH key has changed – if that is expected, delete its line from {file}', sshNoDocker: 'Docker is not installed for that user on the Docker host (docker: command not found)',
+    sshDockerGroup: 'That SSH user may not use Docker – add it to the docker group on the Docker host (sudo usermod -aG docker <user>)',
+    sshBadKey: 'The SSH key is not a valid private key (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'The SSH key is protected with a passphrase – use a key without one',
+    sshClosed: 'The SSH connection was closed by the Docker host', dockerUnhealthy: 'The new container reports itself as unhealthy',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -76,14 +81,19 @@ const MSG = {
     netCertExpired: 'TLS certifikat je istekao', netCertName: 'TLS certifikat ne odgovara adresi – URL mora koristiti ime ili IP naveden u certifikatu', fetchFailed: 'Povezivanje nije uspjelo',
     e401: 'Neispravan API ključ ili korisničko ime/lozinka (401)', e403: 'Pristup odbijen – provjeri API ključ (403)', e404: 'Nije pronađeno (404) – provjeri URL i URL Base',
     noIcon: 'Servis nema dostupnu ikonu', loginRequired: 'Potrebna prijava', notFound: 'Nije pronađeno', notConfigured: '{svc} nije konfiguriran', forbidden: 'Zabranjeno', badRequest: 'Neispravan zahtjev', offlineBlocked: 'Način bez interneta – ArrHub se ne spaja na {host}', offlineNoRemote: 'način bez interneta – nema slike s interneta',
-    dockerNotConfigured: 'Docker nije podešen', dockerBadUrl: 'Adresa Dockera mora počinjati s http://, https://, tcp:// ili unix:///',
+    dockerNotConfigured: 'Docker nije podešen', dockerBadUrl: 'Adresa Dockera mora počinjati s http://, https://, tcp://, ssh:// ili unix:///',
     dockerBadCert: 'Docker certifikat mora biti PEM tekst koji počinje s -----BEGIN CERTIFICATE-----', dockerBadKey: 'Docker klijentski ključ mora biti PEM privatni ključ',
     dockerForbidden: 'Docker socket proxy je odbio zahtjev – dopusti CONTAINERS, IMAGES, NETWORKS, DISTRIBUTION, INFO i POST',
     dockerNoSocket: 'Docker socket {path} nije pronađen', dockerSocketPerm: 'Nema dozvole za Docker socket {path}',
     dockerOk: 'Spojeno – Docker {version}, {n} kontejnera', dockerSelf: 'Ovo je ArrHubov vlastiti kontejner – ne može sam sebe zaustaviti ni zamijeniti',
     dockerPinned: 'Image je vezan na fiksnu verziju (digest) – promijeni ga u compose datoteci', dockerNoImage: 'Image nije pronađen nakon preuzimanja',
     dockerAutoRemove: 'Kontejner je pokrenut s --rm i nestao bi kad se zaustavi – ponovno ga stvori s docker compose',
-    dockerCrashed: 'Novi kontejner se zaustavio ili se stalno ponovno pokreće odmah nakon pokretanja (izlazni kod {code})', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)',
+    dockerCrashed: 'Novi kontejner se zaustavio ili se stalno ponovno pokreće odmah nakon pokretanja (izlazni kod {code})',
+    sshMissing: 'SSH klijent nije instaliran (instaliraj paket openssh-client)', sshAuth: 'SSH prijava odbijena – dodaj ArrHubov javni ključ u ~/.ssh/authorized_keys tog korisnika na Docker hostu',
+    sshHostKey: 'SSH ključ Docker hosta se promijenio – ako je to očekivano, obriši njegov redak iz {file}', sshNoDocker: 'Docker nije instaliran za tog korisnika na Docker hostu (docker: command not found)',
+    sshDockerGroup: 'Taj SSH korisnik ne smije koristiti Docker – dodaj ga u grupu docker na Docker hostu (sudo usermod -aG docker <korisnik>)',
+    sshBadKey: 'SSH ključ nije ispravan privatni ključ (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'SSH ključ je zaštićen lozinkom – koristi ključ bez nje',
+    sshClosed: 'Docker host je zatvorio SSH vezu', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -127,6 +137,8 @@ const FIELDS = [
   // Docker Engine API on the Docker host: http://host:2375 (socket proxy), https://host:2376 (TLS) or unix:///var/run/docker.sock
   ['docker', 'url', 'ARRHUB_DOCKER_URL'], ['docker', 'ca', 'ARRHUB_DOCKER_CA'], ['docker', 'cert', 'ARRHUB_DOCKER_CERT'],
   ['docker', 'key', 'ARRHUB_DOCKER_KEY', true], ['docker', 'cleanup', 'ARRHUB_DOCKER_CLEANUP'], ['docker', 'link', 'ARRHUB_DOCKER_LINK'],
+  // ssh://user@host – private key for it (OpenSSH format, no passphrase)
+  ['docker', 'sshKey', 'ARRHUB_DOCKER_SSH_KEY', true],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -171,6 +183,7 @@ function loadConfig() {
   if (process.env.ARRHUB_DOCKER_CERT_PATH) for (const [f, file] of [['ca', 'ca.pem'], ['cert', 'cert.pem'], ['key', 'key.pem']]) {
     if (!c.docker[f]) try { c.docker[f] = fs.readFileSync(path.join(process.env.ARRHUB_DOCKER_CERT_PATH, file), 'utf8'); } catch {}
   }
+  if (!c.docker.sshKey && process.env.ARRHUB_DOCKER_SSH_KEY_FILE) { try { c.docker.sshKey = fs.readFileSync(process.env.ARRHUB_DOCKER_SSH_KEY_FILE, 'utf8'); } catch (e) { console.error('ARRHUB_DOCKER_SSH_KEY_FILE:', e.message); } }
   if (c.docker.url) c.docker.url = String(c.docker.url).trim().replace(/\/+$/, '');
   c.docker.cleanup = c.docker.cleanup === undefined || c.docker.cleanup === '' ? true : toBool(c.docker.cleanup);
   if (!c.tls.ca && process.env.ARRHUB_CA_FILE) { try { c.tls.ca = fs.readFileSync(process.env.ARRHUB_CA_FILE, 'utf8'); } catch (e) { console.error('ARRHUB_CA_FILE:', e.message); } }
@@ -231,13 +244,17 @@ function validate(c) {
   if (c.net && c.net.offline !== undefined) c.net.offline = toBool(c.net.offline);
   if (c.docker?.url) {
     const u = String(c.docker.url).trim();
-    if (!/^(unix:\/\/\/|\/|tcp:\/\/|https?:\/\/)/i.test(u)) throw new Error(T('dockerBadUrl'));
-    if (/^(tcp|https?):/i.test(u)) { try { new URL(u.replace(/^tcp:/i, 'http:')); } catch { throw new Error(T('dockerBadUrl')); } }
+    if (!/^(unix:\/\/\/|\/|tcp:\/\/|https?:\/\/|ssh:\/\/)/i.test(u)) throw new Error(T('dockerBadUrl'));
+    if (/^(tcp|https?|ssh):/i.test(u)) { try { const x = new URL(u.replace(/^tcp:/i, 'http:')); if (!x.hostname) throw 0; } catch { throw new Error(T('dockerBadUrl')); } }
   }
   if (c.docker?.cert && !/-----BEGIN CERTIFICATE-----/.test(c.docker.cert)) throw new Error(T('dockerBadCert'));
   if (c.docker?.key && c.docker.key !== MASK && !/PRIVATE KEY-----/.test(c.docker.key)) throw new Error(T('dockerBadKey'));
   if (c.docker?.ca && !/-----BEGIN CERTIFICATE-----/.test(c.docker.ca)) throw new Error(T('dockerBadCert'));
   if (c.docker && c.docker.cleanup !== undefined) c.docker.cleanup = toBool(c.docker.cleanup);
+  if (c.docker?.sshKey && c.docker.sshKey !== MASK) {
+    if (!/PRIVATE KEY-----/.test(c.docker.sshKey)) throw new Error(T('sshBadKey'));
+    if (/ENCRYPTED/.test(c.docker.sshKey)) throw new Error(T('sshPassphrase'));
+  }
   if (c.tls?.ca) c.tls.ca = parseCa(c.tls.ca).pem.join('\n') + '\n';   // throws on junk or a private key
   for (const k of SERVICES) {
     const l = c[k]?.link;
@@ -913,12 +930,103 @@ function dockerTarget(d = cfg.docker || {}) {
   const raw = String(d.url || '').trim();
   if (!raw) return null;
   if (/^unix:\/\//i.test(raw) || raw.startsWith('/')) return { socketPath: raw.replace(/^unix:\/\//i, '') };
+  if (/^ssh:\/\//i.test(raw)) {
+    const u = new URL(raw);
+    return { ssh: { user: decodeURIComponent(u.username || ''), host: u.hostname.replace(/^\[|\]$/g, ''), port: u.port || '', key: d.sshKey && d.sshKey !== MASK ? d.sshKey : '' } };
+  }
   const url = new URL(raw.replace(/^tcp:\/\//i, d.cert ? 'https://' : 'http://'));
   const tls = url.protocol === 'https:' ? {
     ...(d.ca ? { ca: [...tls_.rootCertificates, ...(parseCa(d.ca).pem)] } : caState?.pem?.length ? { ca: [...tls_.rootCertificates, ...caState.pem] } : {}),
     ...(d.cert ? { cert: d.cert } : {}), ...(d.key && d.key !== MASK ? { key: d.key } : {}),
   } : null;
   return { url, tls };
+}
+
+// ---- Docker over SSH: like `DOCKER_HOST=ssh://…` – ssh runs `docker system dial-stdio` on the Docker host and the
+// Docker API goes through that connection. Uses the system ssh client (openssh-client); one shared connection
+// (ControlMaster) keeps it fast.
+const { spawn, execFile } = require('child_process');
+const { Duplex } = require('stream');
+const sshDir = (() => {
+  const d = path.join(os_.tmpdir(), `arrhub-ssh-${typeof process.getuid === 'function' ? process.getuid() : 'u'}`);
+  try { fs.mkdirSync(d, { recursive: true, mode: 0o700 }); fs.chmodSync(d, 0o700); } catch {}
+  return d;
+})();
+// host keys are remembered next to config.json (first connection is trusted, a changed key is refused)
+const knownHosts = (() => {
+  const f = path.join(path.dirname(CONFIG_FILE), 'docker_known_hosts');
+  try { fs.accessSync(path.dirname(f), fs.constants.W_OK); return f; } catch { return path.join(sshDir, 'known_hosts'); }
+})();
+const keyHash = k => crypto_.createHash('sha256').update(k || '').digest('hex').slice(0, 10);
+function sshKeyFile(key) {
+  if (!key) return null;
+  const f = path.join(sshDir, `key-${keyHash(key)}`);
+  if (!fs.existsSync(f)) fs.writeFileSync(f, key.replace(/\r\n/g, '\n').trim() + '\n', { mode: 0o600 });
+  return f;
+}
+function sshArgs(t, { shared = true } = {}) {
+  const a = ['-F', '/dev/null', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=30', '-o', 'LogLevel=ERROR',
+    '-o', 'StrictHostKeyChecking=accept-new', '-o', `UserKnownHostsFile=${knownHosts}`];
+  const kf = sshKeyFile(t.key);
+  if (kf) a.push('-i', kf, '-o', 'IdentitiesOnly=yes');
+  if (shared) a.push('-o', 'ControlMaster=auto', '-o', `ControlPath=${sshDir}/cm-${keyHash(t.key)}-%C`, '-o', 'ControlPersist=300');
+  else a.push('-o', 'ControlMaster=no', '-o', 'ControlPath=none');
+  if (t.port) a.push('-p', String(t.port));
+  a.push(t.user ? `${t.user}@${t.host}` : t.host, '--', 'docker', 'system', 'dial-stdio');
+  return a;
+}
+function sshStream(t) {
+  const child = spawn('ssh', sshArgs(t, { shared: !t.test }), { stdio: ['pipe', 'pipe', 'pipe'] });
+  let err = '';
+  child.stderr.on('data', b => { err = (err + b).slice(-4000); });
+  const d = Duplex.from({ readable: child.stdout, writable: child.stdin });
+  d.sshErr = () => err;
+  child.on('error', e => { d.spawnErr = e; d.destroy(e); });
+  child.on('exit', () => setTimeout(() => d.destroy(), 50));
+  d.on('close', () => { try { child.kill(); } catch {} });
+  for (const m of ['setTimeout', 'setNoDelay', 'setKeepAlive', 'ref', 'unref']) if (typeof d[m] !== 'function') d[m] = () => d;
+  return d;
+}
+function sshMessage(stderr, e) {
+  const s = String(stderr || '').trim();
+  if (e?.code === 'ENOENT' && /spawn/.test(e.syscall || e.message || '')) return T('sshMissing');
+  if (/Permission denied \(/i.test(s)) return T('sshAuth');
+  if (/REMOTE HOST IDENTIFICATION HAS CHANGED|Host key verification failed/i.test(s)) return T('sshHostKey', { file: knownHosts });
+  if (/Could not resolve hostname/i.test(s)) return T('netNotFound');
+  if (/Connection refused/i.test(s)) return T('netRefused');
+  if (/timed out/i.test(s)) return T('netTimeout');
+  if (/No route to host/i.test(s)) return T('netHost');
+  if (/docker.*(command )?not found/i.test(s)) return T('sshNoDocker');
+  if (/permission denied.*docker daemon socket|docker\.sock.*permission denied/i.test(s)) return T('sshDockerGroup');
+  if (/load key|invalid format|error in libcrypto|passphrase/i.test(s)) return T('sshBadKey');
+  return s.split('\n').filter(Boolean).pop() || (e?.message === 'socket hang up' ? T('sshClosed') : e?.message) || T('sshClosed');
+}
+// new key pair for ArrHub (Settings → Docker → Generate)
+function sshKeygen() {
+  return new Promise((resolve, reject) => {
+    const f = path.join(sshDir, `gen-${crypto_.randomBytes(4).toString('hex')}`);
+    execFile('ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 'arrhub', '-f', f], err => {
+      if (err) return reject(new Error(err.code === 'ENOENT' ? T('sshMissing') : err.message));
+      try {
+        const priv = fs.readFileSync(f, 'utf8'), pub = fs.readFileSync(f + '.pub', 'utf8').trim();
+        resolve({ privateKey: priv, publicKey: pub, authorizedKeys: authLine(pub) });
+      } catch (e) { reject(e); }
+      finally { fs.rm(f, () => {}); fs.rm(f + '.pub', () => {}); }
+    });
+  });
+}
+const authLine = pub => `command="docker system dial-stdio",restrict ${pub}`;
+// the public half of the saved key, for the authorized_keys line shown in Settings
+function sshPublic() {
+  return new Promise(resolve => {
+    const key = cfg.docker?.sshKey;
+    if (!key) return resolve({ publicKey: null });
+    let f; try { f = sshKeyFile(key); } catch { return resolve({ publicKey: null }); }
+    execFile('ssh-keygen', ['-y', '-f', f], (err, out) => {
+      const pub = !err && String(out).trim();
+      resolve(pub ? { publicKey: pub, authorizedKeys: authLine(pub) } : { publicKey: null });
+    });
+  });
 }
 const dockerErr = (msg, extra = {}) => Object.assign(new Error(msg), extra);
 function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, target } = {}) {
@@ -929,7 +1037,9 @@ function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, targ
     const mod = isTls ? https_ : http_;
     const base = target.url ? target.url.pathname.replace(/\/+$/, '') : '';
     const o = { method, path: base + p, headers: { Host: target.url ? target.url.host : 'docker', Accept: 'application/json' } };
-    if (target.socketPath) o.socketPath = target.socketPath;
+    let sock = null;
+    if (target.ssh) { o.createConnection = () => (sock = sshStream(target.ssh)); o.headers.Connection = 'close'; }   // no agent: one ssh stream per request
+    else if (target.socketPath) o.socketPath = target.socketPath;
     else { o.hostname = target.url.hostname; o.port = target.url.port || (isTls ? 443 : 80); }
     if (isTls) Object.assign(o, target.tls);
     let payload;
@@ -951,10 +1061,11 @@ function dockerApi(method, p, { body, timeout = 20000, raw = false, onData, targ
         if (!buf.length) return finish(resolve, null);
         try { finish(resolve, JSON.parse(buf)); } catch { finish(resolve, buf.toString()); }
       });
-      res.on('error', e => finish(reject, Object.assign(new TypeError('fetch failed'), { cause: e })));
+      res.on('error', e => finish(reject, target.ssh ? dockerErr(sshMessage(sock?.sshErr(), e)) : Object.assign(new TypeError('fetch failed'), { cause: e })));
     });
-    const tm = setTimeout(() => { r.destroy(); finish(reject, Object.assign(new TypeError('fetch failed'), { cause: { code: 'ETIMEDOUT' } })); }, timeout);
+    const tm = setTimeout(() => { const se = sock?.sshErr(); r.destroy(); finish(reject, se ? dockerErr(sshMessage(se)) : Object.assign(new TypeError('fetch failed'), { cause: { code: 'ETIMEDOUT' } })); }, timeout);
     r.on('error', e => {
+      if (target.ssh) return setTimeout(() => finish(reject, dockerErr(sshMessage(sock?.sshErr(), sock?.spawnErr || e))), 80);   // let ssh finish writing its error
       if (target.socketPath && e.code === 'ENOENT') return finish(reject, dockerErr(T('dockerNoSocket', { path: target.socketPath })));
       if (target.socketPath && e.code === 'EACCES') return finish(reject, dockerErr(T('dockerSocketPerm', { path: target.socketPath })));
       finish(reject, Object.assign(new TypeError('fetch failed'), { cause: e }));
@@ -1100,6 +1211,7 @@ async function dockerTest(values) {
   const c = mergeInput(values || {});
   const target = dockerTarget(c.docker || {});
   if (!target) throw new Error(T('dockerNotConfigured'));
+  if (target.ssh) target.ssh.test = true;
   await dockerApi('GET', '/_ping', { target });
   const v = await dockerApi('GET', '/version', { target });
   const n = await dockerApi('GET', '/containers/json?all=1', { target });
@@ -1339,6 +1451,8 @@ const routes = {
   'POST /api/settings': (q, b) => saveSettings(b.values),
   'POST /api/settings/test': (q, b) => b.service === 'docker' ? dockerTest(b.values) : testService(b.service, b.values),
   'GET /api/docker': () => dockerSummary(),
+  'POST /api/settings/docker-sshkey': () => sshKeygen(),
+  'GET /api/settings/docker-sshpub': () => sshPublic(),
   'GET /api/docker/containers': async q => ({ containers: await dockerContainers(q.get('stats') === '1'), info: await dockerInfo().catch(() => null), checkedAt: dk.checkedAt || null, checking: dk.checking }),
   'POST /api/docker/check': async () => { checkUpdates(true).catch(() => {}); return { checking: true }; },
   'POST /api/docker/containers/:id/update': (q, b, p) => startUpdate(p.id),

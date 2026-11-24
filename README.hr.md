@@ -70,7 +70,7 @@ za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEER
 za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 vlastiti CA `ARRHUB_CA` (PEM) ili `ARRHUB_CA_FILE` (putanja),
 način bez interneta `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, a za izgled
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, a za izgled
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30). One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
@@ -173,6 +173,21 @@ services:
 ```
 
 Zatim u ArrHubu → **Postavke → Docker** upiši `http://<ip-docker-vm-a>:2375` i klikni *Testiraj vezu*. Alternative: `https://<host>:2376` s TLS klijentskim certifikatima (zalijepi `ca.pem`, `cert.pem` i `key.pem` ili postavi `ARRHUB_DOCKER_CERT_PATH`) ili `unix:///var/run/docker.sock` ako ArrHub radi na samom Docker hostu.
+
+**Ili preko SSH-a – bez otvorenog porta.** ArrHub se spaja SSH ključem i na Docker hostu pokreće samo `docker system dial-stdio` (isto što radi `DOCKER_HOST=ssh://…`):
+
+1. U ArrHubu → **Postavke → Docker** upiši `ssh://arrhub@<ip-docker-vm-a>`, otvori *SSH* i klikni **Stvori par ključeva** – ArrHub upiše novi ključ i prikaže gotov redak za `authorized_keys`.
+2. Na Docker VM-u dodaj taj redak korisniku u grupi `docker`, npr.:
+   ```bash
+   sudo adduser --disabled-password --gecos "" arrhub && sudo usermod -aG docker arrhub
+   sudo install -d -m 700 -o arrhub -g arrhub /home/arrhub/.ssh
+   echo 'command="docker system dial-stdio",restrict ssh-ed25519 AAAA… arrhub' | sudo tee -a /home/arrhub/.ssh/authorized_keys
+   sudo chown arrhub:arrhub /home/arrhub/.ssh/authorized_keys && sudo chmod 600 /home/arrhub/.ssh/authorized_keys
+   ```
+   `command=…` i `restrict` ograničavaju ključ samo na Docker API – njime se ne može otvoriti ljuska ni prosljeđivati portove.
+3. Spremi postavke i klikni *Testiraj vezu*.
+
+SSH ključu Docker hosta vjeruje se kod prvog spajanja i pamti se u `docker_known_hosts` pored `config.json`; promijenjeni ključ se odbija. Ključevi s lozinkom nisu podržani. Varijable okoline: `ARRHUB_DOCKER_URL=ssh://…`, `ARRHUB_DOCKER_SSH_KEY` ili `ARRHUB_DOCKER_SSH_KEY_FILE`. Napomena: korisnik u grupi `docker` može sve što može Docker – socket proxy je ograničenija opcija.
 
 > **Sigurnost:** upravljanje Dockerom znači upravljanje Docker hostom. Uključi prijavu u ArrHub (Postavke → *Prijava*) i učini port 2375 dostupnim samo ArrHubu (npr. pravilom vatrozida na Docker VM-u), nikad s interneta.
 

@@ -716,6 +716,7 @@ async function loadSettings() {
       el.disabled = locked; el.dataset.locked = locked ? '1' : ''; el.title = '';
     }
     setForm.querySelectorAll('.test .r').forEach(r => { r.textContent = ''; r.className = 'r'; });
+    showAuthLine(''); loadSshPub();
     settingsTexts();
     syncAppearanceControls(); previewAppearance();
   } catch (e) { toast(t('c.error', { msg: e.message })); }
@@ -738,6 +739,26 @@ setForm.addEventListener('click', async e => {
   finally { b.disabled = false; }
 });
 $('#setReset').onclick = loadSettings;
+// Docker over SSH: generate a key pair and show the authorized_keys line for the Docker host
+function showAuthLine(line) { $('#dkPubBox').classList.toggle('hidden', !line); $('#dkPub').value = line || ''; }
+async function loadSshPub() {
+  const url = setForm.querySelector('[name="docker.url"]')?.value || '';
+  if (!/^ssh:\/\//i.test(url)) return;
+  $('#dkSsh').open = true;
+  try { const r = await api('settings/docker-sshpub'); showAuthLine(r.authorizedKeys); } catch {}
+}
+$('#dkGenKey').onclick = async () => {
+  const r = $('#dkGenR'); r.className = 'r'; r.textContent = t('set.checking');
+  try {
+    const k = await api('settings/docker-sshkey', {});
+    setForm.querySelector('[name="docker.sshKey"]').value = k.privateKey;
+    showAuthLine(k.authorizedKeys); r.className = 'r ok'; r.textContent = '✓ ' + t('set.dockerGenDone');
+  } catch (e) { r.className = 'r err'; r.textContent = '✕ ' + e.message; }
+};
+$('#dkCopyPub').onclick = async () => {
+  try { await navigator.clipboard.writeText($('#dkPub').value); } catch { $('#dkPub').select(); document.execCommand('copy'); }
+  toast(t('set.copied'));
+};
 setForm.onsubmit = async e => {
   e.preventDefault();
   const v = formValues();

@@ -564,9 +564,18 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         </div>
         <div class="card" style="border-top:3px solid var(--docker)">
           <h2><span class="dot" style="background:var(--docker)"></span>Docker</h2>
-          <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
+          <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375 · ssh://arrhub@192.168.1.20"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
           <div class="ctl" style="margin:2px 0 10px"><label><input type="checkbox" name="docker.cleanup" checked> <span data-i18n="set.dockerCleanup">Remove the old image after an update</span></label></div>
+          <details class="dktls" id="dkSsh"><summary data-i18n="set.dockerSsh">SSH (only for ssh://)</summary>
+            <div class="field"><label data-i18n="set.dockerSshKey">Private SSH key</label><textarea name="docker.sshKey" rows="3" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+              <span class="hint" data-i18n="set.dockerSshKeyHint">Without a passphrase. Stored like a password. Empty = the ssh keys of the user ArrHub runs as.</span></div>
+            <div class="test" style="margin-bottom:8px"><button type="button" class="btn" id="dkGenKey" data-i18n="set.dockerGenKey">Generate key pair</button><span class="r" id="dkGenR"></span></div>
+            <div class="field hidden" id="dkPubBox"><label data-i18n="set.dockerAuthLine">Line for ~/.ssh/authorized_keys on the Docker host</label>
+              <textarea id="dkPub" rows="3" readonly spellcheck="false"></textarea>
+              <span class="hint" data-i18n-html="set.dockerAuthHint">Add it for a user in the <code>docker</code> group. <code>command=…</code> and <code>restrict</code> limit the key to Docker only – no shell, no forwarding.</span>
+              <div><button type="button" class="btn" id="dkCopyPub" data-i18n="set.copy">Copy</button></div></div>
+          </details>
           <details class="dktls"><summary data-i18n="set.dockerTls">TLS client certificates (only for https://)</summary>
             <div class="field"><label data-i18n="set.dockerCa">CA certificate (ca.pem)</label><textarea name="docker.ca" rows="3" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
             <div class="field"><label data-i18n="set.dockerCert">Client certificate (cert.pem)</label><textarea name="docker.cert" rows="3" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>

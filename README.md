@@ -70,7 +70,7 @@ the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
 self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 own CA `ARRHUB_CA` (PEM) or `ARRHUB_CA_FILE` (path),
 offline mode `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, and for the look
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, and for the look
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
@@ -173,6 +173,21 @@ services:
 ```
 
 Then in ArrHub → **Settings → Docker** enter `http://<docker-vm-ip>:2375` and click *Test connection*. Alternatives: `https://<host>:2376` with TLS client certificates (paste `ca.pem`, `cert.pem` and `key.pem`, or set `ARRHUB_DOCKER_CERT_PATH`), or `unix:///var/run/docker.sock` when ArrHub runs on the Docker host itself.
+
+**Or over SSH – no open port.** ArrHub connects with an SSH key and runs only `docker system dial-stdio` on the Docker host (the same thing `DOCKER_HOST=ssh://…` does):
+
+1. In ArrHub → **Settings → Docker** enter `ssh://arrhub@<docker-vm-ip>`, open *SSH* and click **Generate key pair** – ArrHub fills in a new key and shows a ready line for `authorized_keys`.
+2. On the Docker VM, add that line for a user in the `docker` group, e.g.:
+   ```bash
+   sudo adduser --disabled-password --gecos "" arrhub && sudo usermod -aG docker arrhub
+   sudo install -d -m 700 -o arrhub -g arrhub /home/arrhub/.ssh
+   echo 'command="docker system dial-stdio",restrict ssh-ed25519 AAAA… arrhub' | sudo tee -a /home/arrhub/.ssh/authorized_keys
+   sudo chown arrhub:arrhub /home/arrhub/.ssh/authorized_keys && sudo chmod 600 /home/arrhub/.ssh/authorized_keys
+   ```
+   `command=…` and `restrict` limit the key to the Docker API – it cannot open a shell or forward ports.
+3. Save the settings and click *Test connection*.
+
+The Docker host's SSH key is trusted on the first connection and remembered in `docker_known_hosts` next to `config.json`; a changed key is refused. Keys with a passphrase are not supported. Environment variables: `ARRHUB_DOCKER_URL=ssh://…`, `ARRHUB_DOCKER_SSH_KEY` or `ARRHUB_DOCKER_SSH_KEY_FILE`. Note: a user in the `docker` group can do everything Docker can – the socket proxy is the more limited option.
 
 > **Security:** control over Docker means control over the Docker host. Turn on the ArrHub login (Settings → *Login*), and make port 2375 reachable only from ArrHub (e.g. a firewall rule on the Docker VM), never from the internet.
 
