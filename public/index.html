@@ -216,7 +216,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dkchip b{font-family:var(--mono);font-size:13px}
 .dkgrp{margin-top:16px}
 .dkgrp>h3{margin:0 0 8px 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
-.dkrow{display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(150px,1fr) 170px auto;gap:14px;align-items:center;padding:12px 16px;margin-bottom:8px}
+.dkrow{display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(150px,1fr) 170px 300px;gap:14px;align-items:center;padding:12px 16px;margin-bottom:8px}
 .dkrow>div{min-width:0}
 .dkrow .nm{display:flex;align-items:center;gap:10px;min-width:0}
 .dkrow .nm b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -227,6 +227,20 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dkrow .meter .bar{height:4px}
 .dkrow .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
 .dkrow .acts .btn{padding:6px 10px;font-size:12.5px}
+.dkrow .acts .ib{width:34px;height:32px;padding:0;display:inline-grid;place-items:center}
+.dkrow .acts .ib svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dkrow .acts .ib.upd{width:auto;padding:0 10px;display:inline-flex;gap:6px;align-items:center}
+.ovl{position:fixed;inset:0;z-index:40;background:rgb(0 0 0/.5);display:flex;align-items:center;justify-content:center;padding:18px}
+.ovl.hidden{display:none}
+.ovw{width:min(1500px,100%);height:min(980px,100%);min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:12px;gap:10px}
+.ovh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ovh b{font-size:15px}.ovh .mono{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.ovh a.btn{text-decoration:none}
+.ovb{flex:1;min-height:0;min-width:0;position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--panel)}
+.ovb iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+.ovb .ovmsg{height:100%;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.ovb .ovmsg div{max-width:560px;display:flex;flex-direction:column;gap:14px;align-items:center}
+.ovb.term{background:#0b0d10;padding:8px 6px 6px 10px}
+.ovb.term>.xterm{position:absolute;inset:8px 6px 6px 10px}
 .dkrow .acts .btn.upd{border-color:color-mix(in srgb,var(--accent) 60%,var(--line));color:var(--accent-text,var(--accent))}
 .dkrow .job{grid-column:1/-1;font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .dkrow .job .bar{flex:1;min-width:120px;height:5px}
@@ -245,6 +259,7 @@ body.has-bg .card,body.has-bg .res,body.has-bg .notice{background:color-mix(in s
 .dkm-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.dkm-h b{font-size:15px}
 .dkm-b{flex:1;max-height:none;min-height:0}
 .logrow.lv-stderr .lm{color:color-mix(in srgb,var(--err) 80%,var(--text))}
+@media(max-width:700px){.ovl{padding:6px}.ovw{padding:8px}}
 @media(max-width:1100px){.dkrow{grid-template-columns:1fr 1fr}.dkrow .acts{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}}
 @media(max-width:560px){.dkrow{grid-template-columns:1fr}}
 .pager{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px}
@@ -589,6 +604,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <h2><span class="dot" style="background:var(--docker)"></span>Docker</h2>
           <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375 · ssh://arrhub@192.168.1.20"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
+          <div class="field"><label data-i18n="set.dockerWebHost">Address for opening containers (optional)</label><input name="docker.webHost" placeholder="192.168.1.20" data-i18n-ph="set.dockerWebHostPh"><span class="hint" data-i18n="set.dockerWebHostHint">Host name or IP of the Docker host used for the container web pages. Empty = the host from the Docker address.</span></div>
           <div class="ctl" style="margin:2px 0 10px"><label><input type="checkbox" name="docker.cleanup" checked> <span data-i18n="set.dockerCleanup">Remove the old image after an update</span></label></div>
           <details class="dktls" id="dkSsh"><summary data-i18n="set.dockerSsh">SSH (only for ssh://)</summary>
             <div class="field"><label data-i18n="set.dockerSshKey">Private SSH key</label><textarea name="docker.sshKey" rows="3" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
@@ -660,6 +676,23 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
       <button class="btn" type="button" id="dkmDl" data-i18n="log.download">Download</button>
       <button class="btn" type="button" id="dkmClose" aria-label="Close">✕</button></div>
     <div class="loglist dkm-b" id="dkmBody"></div>
+  </div>
+</div>
+<div id="webModal" class="ovl hidden" role="dialog" aria-modal="true">
+  <div class="ovw glass">
+    <div class="ovh"><b id="webTitle"></b><select id="webSel" class="hidden"></select><span class="muted mono" id="webUrl"></span><span class="sp"></span>
+      <button class="btn" type="button" id="webReload" data-i18n-title="web.reload" title="Reload">↻</button>
+      <a class="btn" id="webNew" target="_blank" rel="noopener noreferrer" data-i18n="web.newTab">Open in new tab</a>
+      <button class="btn" type="button" id="webClose" aria-label="Close">✕</button></div>
+    <div class="ovb" id="webBody"></div>
+  </div>
+</div>
+<div id="termModal" class="ovl hidden" role="dialog" aria-modal="true">
+  <div class="ovw glass">
+    <div class="ovh"><b id="termTitle"></b><span class="muted" id="termState"></span><span class="sp"></span>
+      <button class="btn" type="button" id="termReconnect" data-i18n="term.reconnect">Reconnect</button>
+      <button class="btn" type="button" id="termClose" aria-label="Close">✕</button></div>
+    <div class="ovb term" id="termBody"></div>
   </div>
 </div>
 <div id="toast"></div>

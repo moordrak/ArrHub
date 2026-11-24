@@ -586,6 +586,16 @@ $('#logDownload').onclick = () => {
 setInterval(() => { if (state.view === 'logs' && $('#logAuto').checked && !document.hidden) loadLogs(); }, 10000);
 
 // ---- Docker ----
+const svgI = d => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const DK_ICONS = {
+  web: svgI('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
+  term: svgI('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M12 15h5"/>'),
+  logs: svgI('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'),
+  restart: svgI('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'),
+  stop: svgI('<rect x="6" y="6" width="12" height="12" rx="2"/>'),
+  start: svgI('<path d="M7 5v14l12-7z"/>'),
+  update: svgI('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>'),
+};
 const dk = { list: [], info: null, filter: 'all', q: '', checkedAt: null, checking: false, err: null, busy: false, jobs: {}, queue: [] };
 async function loadDocker() {
   if (dk.busy) return;
@@ -628,11 +638,16 @@ function dkRow(c) {
   const mem = st && st.mem != null ? size(st.mem) : '–';
   const memPct = st?.mem && st?.memLimit ? Math.min(100, st.mem / st.memLimit * 100) : 0;
   const dis = busy ? ' disabled' : '';
+  const ib = (a, icon, label, extra = '') => `<button class="btn ib" data-dk="${a}" title="${esc(label)}" aria-label="${esc(label)}"${extra}>${DK_ICONS[icon]}</button>`;
   const acts = [
-    run ? `<button class="btn" data-dk="stop"${dis || (c.self ? ' disabled' : '')}>${t('dk.stop')}</button>` : `<button class="btn" data-dk="start"${dis}>${t('dk.start')}</button>`,
-    `<button class="btn" data-dk="restart"${dis}>${t('dk.restart')}</button>`,
-    `<button class="btn" data-dk="logs">${t('dk.logs')}</button>`,
-    c.update.state !== 'pinned' && !c.self ? `<button class="btn${c.update.state === 'available' ? ' upd' : ''}" data-dk="update"${dis}>${t('dk.update')}</button>` : '',
+    c.web?.length ? ib('web', 'web', t('dk.open.web') + ' – ' + c.web.map(w => w.label).join(', ')) : '',
+    run ? ib('term', 'term', t('dk.terminal')) : '',
+    ib('logs', 'logs', t('dk.logs')),
+    run ? ib('restart', 'restart', t('dk.restart'), dis) : '',
+    run ? ib('stop', 'stop', t('dk.stop'), dis || (c.self ? ' disabled' : '')) : ib('start', 'start', t('dk.start'), dis),
+    c.update.state !== 'pinned' && !c.self ? (c.update.state === 'available'
+      ? `<button class="btn ib upd" data-dk="update" title="${esc(t('dk.update'))}"${dis}>${DK_ICONS.update}${t('dk.update')}</button>`
+      : ib('update', 'update', t('dk.update'), dis)) : '',
   ].join('');
   return `<div class="card dkrow" data-id="${esc(c.id)}" data-name="${esc(c.name)}">
     <div><div class="nm"><span class="sdot ${esc(c.state)}" title="${esc(c.state)}"></span><b title="${esc(c.name)}">${esc(c.name)}</b>
@@ -684,6 +699,8 @@ $('#dkList').addEventListener('click', async e => {
   const row = b.closest('.dkrow'), c = dk.list.find(x => x.id === row.dataset.id); if (!c) return;
   const a = b.dataset.dk;
   if (a === 'logs') return dkOpenLogs(c);
+  if (a === 'web') return openWeb(c);
+  if (a === 'term') return openTerm(c);
   if (a === 'update') { if (confirm(t('dk.confirmUpdate', { name: c.name }))) dkUpdate(c); return; }
   if ((a === 'stop' || a === 'restart') && !confirm(t('dk.confirm.' + a, { name: c.name }))) return;
   b.disabled = true;
@@ -701,6 +718,78 @@ $('#dkUpdAll').onclick = async () => {
   for (const c of list) { await dkUpdate(c); dk.queue.shift(); }
   dk.queue = []; renderDocker();
 };
+// ---- container web page in a window over the app ----
+const web = { c: null, links: [] };
+const fillHost = u => u.replace('{host}', location.hostname);
+function webShow(i) {
+  const l = web.links[i]; if (!l) return;
+  const url = fillHost(l.url);
+  $('#webUrl').textContent = url; $('#webNew').href = url;
+  const mixed = location.protocol === 'https:' && url.startsWith('http:');
+  const why = mixed ? t('web.mixed') : l.frameable === false ? t('web.noFrame', { reason: l.reason || '' }) : '';
+  $('#webBody').innerHTML = why
+    ? `<div class="ovmsg"><div><span>${esc(why)}</span><a class="btn p" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${t('web.newTab')}</a></div></div>`
+    : `<iframe src="${esc(url)}" referrerpolicy="no-referrer" allow="clipboard-read; clipboard-write; fullscreen"></iframe>`;
+}
+async function openWeb(c) {
+  web.c = c; web.links = c.web.map(w => ({ ...w }));
+  $('#webTitle').textContent = c.name; $('#webModal').classList.remove('hidden');
+  $('#webBody').innerHTML = `<div class="ovmsg"><div>${t('c.loading')}</div></div>`;
+  try { web.links = (await api(`docker/containers/${encodeURIComponent(c.id)}/web`)).links; } catch {}
+  const sel = $('#webSel');
+  sel.classList.toggle('hidden', web.links.length < 2);
+  sel.innerHTML = web.links.map((l, i) => `<option value="${i}">${esc(l.label)}</option>`).join('');
+  webShow(0);
+}
+function closeWeb() { $('#webModal').classList.add('hidden'); $('#webBody').innerHTML = ''; web.c = null; }
+$('#webSel').onchange = e => webShow(Number(e.target.value));
+$('#webReload').onclick = () => { const f = $('#webBody iframe'); if (f) f.src = f.src; };
+$('#webClose').onclick = closeWeb;
+$('#webModal').onclick = e => { if (e.target.id === 'webModal') closeWeb(); };
+
+// ---- terminal into a container (docker exec) ----
+const term = { c: null, t: null, fit: null, ws: null, lib: null, ro: null };
+async function xtermLib() {
+  if (term.lib) return term.lib;
+  if (!document.querySelector('link[data-xterm]')) document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="vendor/xterm.css" data-xterm>');
+  return (term.lib = (await import('./vendor/xterm.mjs')).default);
+}
+function termConnect() {
+  const c = term.c; if (!c || !term.t) return;
+  try { term.ws?.close(); } catch {}
+  term.fit.fit();
+  const q = `cols=${term.t.cols}&rows=${term.t.rows}`;
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${location.pathname.replace(/[^/]*$/, '')}api/docker/containers/${encodeURIComponent(c.id)}/terminal?${q}`);
+  ws.binaryType = 'arraybuffer'; term.ws = ws;
+  $('#termState').textContent = t('term.connecting');
+  ws.onopen = () => { $('#termState').textContent = ''; term.t.focus(); };
+  ws.onmessage = e => term.t.write(typeof e.data === 'string' ? e.data : new Uint8Array(e.data));
+  ws.onclose = () => { if (term.ws === ws) $('#termState').textContent = t('term.closed'); };
+  ws.onerror = () => { if (term.ws === ws) $('#termState').textContent = t('term.failed'); };
+}
+async function openTerm(c) {
+  term.c = c; $('#termTitle').textContent = `${c.name} – ${t('dk.terminal')}`; $('#termState').textContent = '';
+  $('#termModal').classList.remove('hidden');
+  let lib; try { lib = await xtermLib(); } catch (e) { $('#termBody').textContent = e.message; return; }
+  term.t?.dispose(); $('#termBody').innerHTML = '';
+  const cs = getComputedStyle(document.documentElement);
+  term.t = new lib.Terminal({ cursorBlink: true, fontSize: 13.5, scrollback: 5000, allowProposedApi: false,
+    fontFamily: cs.getPropertyValue('--mono').trim() || 'ui-monospace, monospace',
+    theme: { background: '#0b0d10', foreground: '#e6e6e6', cursor: cs.getPropertyValue('--accent').trim() || '#e8a33d', selectionBackground: '#3a4250' } });
+  term.fit = new lib.FitAddon(); term.t.loadAddon(term.fit);
+  term.t.open($('#termBody'));
+  term.t.onData(d => { if (term.ws?.readyState === 1) term.ws.send(new TextEncoder().encode(d)); });
+  term.t.onResize(({ cols, rows }) => { if (term.ws?.readyState === 1) term.ws.send(JSON.stringify({ t: 'resize', cols, rows })); });
+  term.ro?.disconnect(); term.ro = new ResizeObserver(() => { try { term.fit.fit(); } catch {} }); term.ro.observe($('#termBody'));
+  termConnect();
+}
+function closeTerm() {
+  $('#termModal').classList.add('hidden'); term.ro?.disconnect();
+  try { term.ws?.close(); } catch {} term.ws = null; term.t?.dispose(); term.t = null; term.c = null;
+}
+$('#termClose').onclick = closeTerm;
+$('#termReconnect').onclick = () => { term.t?.reset(); termConnect(); };
+
 // container logs in a dialog
 const dkm = { c: null, lines: [], timer: null };
 async function dkLoadLogs() {
@@ -720,7 +809,7 @@ function dkOpenLogs(c) {
 function dkCloseLogs() { $('#dkModal').classList.add('hidden'); clearInterval(dkm.timer); dkm.c = null; }
 $('#dkmClose').onclick = dkCloseLogs;
 $('#dkModal').onclick = e => { if (e.target.id === 'dkModal') dkCloseLogs(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && dkm.c) dkCloseLogs(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && dkm.c) dkCloseLogs(); else if (e.key === 'Escape' && web.c) closeWeb(); });
 $('#dkmTail').onchange = dkLoadLogs;
 $('#dkmDl').onclick = () => {
   const a = document.createElement('a');

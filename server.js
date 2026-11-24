@@ -62,7 +62,7 @@ const MSG = {
     sshHostKey: 'The Docker host\'s SSH key has changed – if that is expected, delete its line from {file}', sshNoDocker: 'Docker is not installed for that user on the Docker host (docker: command not found)',
     sshDockerGroup: 'That SSH user may not use Docker – add it to the docker group on the Docker host (sudo usermod -aG docker <user>)',
     sshBadKey: 'The SSH key is not a valid private key (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'The SSH key is protected with a passphrase – use a key without one',
-    sshClosed: 'The SSH connection was closed by the Docker host', dockerUnhealthy: 'The new container reports itself as unhealthy',
+    sshClosed: 'The SSH connection was closed by the Docker host', dockerUnhealthy: 'The new container reports itself as unhealthy', termNotRunning: 'The container is not running', termEnded: '[session ended]', termNoShell: 'This container has no shell (/bin/sh), so a terminal is not possible – this is normal for minimal (distroless) images.',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -95,7 +95,7 @@ const MSG = {
     sshHostKey: 'SSH ključ Docker hosta se promijenio – ako je to očekivano, obriši njegov redak iz {file}', sshNoDocker: 'Docker nije instaliran za tog korisnika na Docker hostu (docker: command not found)',
     sshDockerGroup: 'Taj SSH korisnik ne smije koristiti Docker – dodaj ga u grupu docker na Docker hostu (sudo usermod -aG docker <korisnik>)',
     sshBadKey: 'SSH ključ nije ispravan privatni ključ (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'SSH ključ je zaštićen lozinkom – koristi ključ bez nje',
-    sshClosed: 'Docker host je zatvorio SSH vezu', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)',
+    sshClosed: 'Docker host je zatvorio SSH vezu', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)', termNotRunning: 'Kontejner ne radi', termEnded: '[sesija završena]', termNoShell: 'Ovaj kontejner nema ljusku (/bin/sh), pa terminal nije moguć – to je normalno za minimalne (distroless) image-e.',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -141,6 +141,8 @@ const FIELDS = [
   ['docker', 'key', 'ARRHUB_DOCKER_KEY', true], ['docker', 'cleanup', 'ARRHUB_DOCKER_CLEANUP'], ['docker', 'link', 'ARRHUB_DOCKER_LINK'],
   // ssh://user@host – private key for it (OpenSSH format, no passphrase)
   ['docker', 'sshKey', 'ARRHUB_DOCKER_SSH_KEY', true],
+  // address of the Docker host for opening containers' web pages (default: host of the Docker address)
+  ['docker', 'webHost', 'ARRHUB_DOCKER_WEB_HOST'],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -1060,6 +1062,7 @@ function proxyVars(method, p) {
   const path = p.split('?')[0].replace(/^\/v[\d.]+/, '');
   const sec = { _ping: 'PING', version: 'VERSION', info: 'INFO', containers: 'CONTAINERS', images: 'IMAGES', distribution: 'DISTRIBUTION', networks: 'NETWORKS' }[path.split('/')[1]] || path.split('/')[1].toUpperCase();
   if (/^\/containers\/[^/]+\/logs$/.test(path)) return 'ALLOW_LOGS=1';   // linuxserver socket-proxy: logs have their own switch
+  if (/^\/containers\/[^/]+\/exec$/.test(path) || /^\/exec\//.test(path)) return 'EXEC=1 + POST=1';   // terminal
   const act = /^\/containers\/[^/]+\/(start|stop|restart|pause|unpause)$/.exec(path)?.[1];
   if (act) return `${sec}=1 + ALLOW_${{ start: 'START', stop: 'STOP', restart: 'RESTARTS', pause: 'PAUSE', unpause: 'UNPAUSE' }[act]}=1`;
   return method === 'GET' || method === 'HEAD' ? `${sec}=1` : `${sec}=1 + POST=1`;
@@ -1214,6 +1217,7 @@ async function dockerContainers(withStats) {
       project: c.Labels?.['com.docker.compose.project'] || '', service: c.Labels?.['com.docker.compose.service'] || '',
       health: (/\((healthy|unhealthy|health: starting)\)/.exec(c.Status || '') || [])[1]?.replace('health: ', '') || '',
       ports, networkMode: c.HostConfig?.NetworkMode || '', self: isSelf(c.Id), update: await updateStateFor(image, c.ImageID),
+      web: webLinks(c),
     };
   }));
   if (withStats) {
@@ -1449,6 +1453,169 @@ function startUpdate(id) {
   return job;
 }
 
+
+// ---- web pages of containers: published TCP ports on the Docker host, or a label ----
+function dockerWebHost() {
+  if (cfg.docker?.webHost) return String(cfg.docker.webHost).trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const t = (() => { try { return dockerTarget(); } catch { return null; } })();
+  if (t?.ssh) return t.ssh.host;
+  if (t?.url) return t.url.hostname;
+  // unix socket: the Docker host is this machine – its first LAN address
+  for (const list of Object.values(os_.networkInterfaces())) for (const a of list || []) if (a.family === 'IPv4' && !a.internal) return a.address;
+  return null;                                   // browser falls back to the address ArrHub was opened with
+}
+function webLinks(c) {
+  const out = [], seen = new Set();
+  const add = (url, label) => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, label }); } };
+  const L = c.Labels || {};
+  for (const k of ['arrhub.url', 'homepage.href']) if (/^https?:\/\//i.test(L[k] || '')) add(L[k].trim(), L[k].trim().replace(/^https?:\/\//i, ''));
+  const host = dockerWebHost(), h = host && host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+  for (const p of c.Ports || []) {
+    if (!p.PublicPort || p.Type !== 'tcp' || /^127\.|^::1$/.test(p.IP || '')) continue;
+    const https = [443, 8443, 9443].includes(p.PrivatePort) || [443, 8443, 9443].includes(p.PublicPort);
+    add(`${https ? 'https' : 'http'}://${h || '{host}'}:${p.PublicPort}/`, `:${p.PublicPort}`);
+  }
+  return out;
+}
+// may the page be shown inside ArrHub? (X-Frame-Options / CSP frame-ancestors) – asked from the server, on the LAN
+function frameCheck(url) {
+  return new Promise(resolve => {
+    let u; try { u = new URL(url); } catch { return resolve({ frameable: true }); }
+    const mod = u.protocol === 'https:' ? https_ : http_;
+    const r = mod.request(u, { method: 'GET', rejectUnauthorized: false, timeout: 5000, headers: { Accept: 'text/html' } }, res => {
+      const xfo = String(res.headers['x-frame-options'] || '').toLowerCase();
+      const fa = /frame-ancestors([^;]*)/i.exec(String(res.headers['content-security-policy'] || ''))?.[1]?.trim() || '';
+      res.resume();
+      if (xfo === 'deny' || xfo === 'sameorigin') return resolve({ frameable: false, reason: `X-Frame-Options: ${xfo.toUpperCase()}` });
+      if (fa && !/(^|\s)\*(\s|$)/.test(fa)) return resolve({ frameable: false, reason: `Content-Security-Policy: frame-ancestors ${fa}` });
+      resolve({ frameable: true, status: res.statusCode });
+    });
+    r.on('timeout', () => { r.destroy(); resolve({ frameable: true, unreachable: true }); });
+    r.on('error', () => resolve({ frameable: true, unreachable: true }));
+    r.end();
+  });
+}
+async function containerWeb(id) {
+  const list = await dockerApi('GET', '/containers/json?all=1');
+  const c = list.find(x => x.Id === id || x.Id.startsWith(id) || (x.Names || []).includes('/' + id));
+  if (!c) throw dockerErr(T('notFound'), { status: 404 });
+  const links = webLinks(c);
+  return { name: (c.Names?.[0] || '').replace(/^\//, ''), links: await Promise.all(links.map(async l => ({ ...l, ...(l.url.includes('{host}') ? { frameable: true } : await frameCheck(l.url)) }))) };
+}
+
+// ---- terminal: docker exec with a TTY, attached over a WebSocket ----
+// raw stream to the daemon (HTTP upgrade / hijack) over the same transport as every other call
+function dockerHijack(p, body) {
+  const target = dockerTarget();
+  return new Promise((resolve, reject) => {
+    if (!target) return reject(dockerErr(T('dockerNotConfigured')));
+    const isTls = !!target.url && target.url.protocol === 'https:';
+    const base = target.url ? target.url.pathname.replace(/\/+$/, '') : '';
+    const payload = Buffer.from(JSON.stringify(body));
+    const o = { method: 'POST', path: base + p, headers: { Host: target.url ? target.url.host : 'docker', 'Content-Type': 'application/json', 'Content-Length': payload.length, Connection: 'Upgrade', Upgrade: 'tcp' } };
+    let sock = null;
+    if (target.ssh) o.createConnection = () => (sock = sshStream(target.ssh));
+    else if (target.socketPath) o.socketPath = target.socketPath;
+    else { o.hostname = target.url.hostname; o.port = target.url.port || (isTls ? 443 : 80); if (isTls) Object.assign(o, target.tls); }
+    const r = (isTls ? https_ : http_).request(o);
+    const tm = setTimeout(() => { r.destroy(); reject(dockerErr(T('netTimeout'))); }, 20000);
+    r.on('upgrade', (res, socket, head) => { clearTimeout(tm); if (head?.length) socket.unshift(head); resolve(socket); });
+    r.on('response', res => {
+      clearTimeout(tm);
+      let b = ''; res.on('data', d => { b += d; }); res.on('end', () => {
+        if (res.statusCode === 403 && !/^\s*\{/.test(b)) return reject(dockerErr(T('dockerForbiddenVar', { what: 'POST ' + p, vars: 'EXEC=1 + POST=1' })));
+        let m = b; try { m = JSON.parse(b).message || b; } catch {}
+        reject(dockerErr(String(m).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || `HTTP ${res.statusCode}`));
+      });
+    });
+    r.on('error', e => { clearTimeout(tm); reject(target.ssh ? dockerErr(sshMessage(sock?.sshErr(), sock?.spawnErr || e)) : Object.assign(new TypeError('fetch failed'), { cause: e })); });
+    r.end(payload);
+  });
+}
+// minimal WebSocket (RFC 6455) – server side only, no extensions
+const EventEmitter_ = require('events');
+function wsAccept(req, socket, head) {
+  const key = req.headers['sec-websocket-key'];
+  if (!key || String(req.headers.upgrade || '').toLowerCase() !== 'websocket') { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); return null; }
+  const accept = crypto_.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+  socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+  socket.setNoDelay?.(true);
+  const ws = new EventEmitter_();
+  let buf = Buffer.alloc(0), frag = null, fragBin = false, closed = false;
+  const frame = (op, p) => {
+    const n = p.length;
+    const h = n < 126 ? Buffer.from([0x80 | op, n]) : n < 65536 ? Buffer.from([0x80 | op, 126, n >> 8, n & 255]) : (() => { const x = Buffer.alloc(10); x[0] = 0x80 | op; x[1] = 127; x.writeBigUInt64BE(BigInt(n), 2); return x; })();
+    return Buffer.concat([h, p]);
+  };
+  ws.send = (data, binary) => { if (!closed && socket.writable) socket.write(frame(binary ? 2 : 1, Buffer.isBuffer(data) ? data : Buffer.from(String(data)))); };
+  ws.close = (code = 1000) => { if (closed) return; closed = true; try { socket.end(frame(8, Buffer.from([code >> 8, code & 255]))); } catch {} ws.emit('close'); };
+  const feed = chunk => {
+    buf = Buffer.concat([buf, chunk]);
+    while (buf.length >= 2) {
+      const fin = buf[0] & 0x80, op = buf[0] & 0x0f, masked = buf[1] & 0x80;
+      let len = buf[1] & 0x7f, off = 2;
+      if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; }
+      else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); off = 10; }
+      if (len > 4 * 1024 * 1024) return ws.close(1009);
+      const mOff = off; if (masked) off += 4;
+      if (buf.length < off + len) return;
+      let pl = Buffer.from(buf.subarray(off, off + len));
+      if (masked) for (let i = 0; i < pl.length; i++) pl[i] ^= buf[mOff + (i & 3)];
+      buf = buf.subarray(off + len);
+      if (op === 8) return ws.close();
+      if (op === 9) { socket.write(frame(10, pl)); continue; }
+      if (op === 10) continue;
+      if (op === 0) { frag = Buffer.concat([frag || Buffer.alloc(0), pl]); if (fin) { ws.emit('message', frag, fragBin); frag = null; } continue; }
+      if (!fin) { frag = pl; fragBin = op === 2; continue; }
+      ws.emit('message', pl, op === 2);
+    }
+  };
+  socket.on('data', feed);
+  socket.on('close', () => { if (!closed) { closed = true; ws.emit('close'); } });
+  socket.on('error', () => {});
+  if (head?.length) feed(head);
+  return ws;
+}
+async function dockerTerminal(ws, id, cols, rows) {
+  let sock = null, execId = null, name = id;
+  const say = (msg, color = 31) => ws.send(`\r\n\x1b[${color}m${msg}\x1b[0m\r\n`, true);
+  const resize = (c, r) => {
+    c = Math.max(10, Math.min(500, Number(c) || 80)); r = Math.max(4, Math.min(200, Number(r) || 24));
+    if (execId) dockerApi('POST', `/exec/${execId}/resize?h=${r}&w=${c}`).catch(() => {});
+  };
+  ws.on('close', () => { try { sock?.destroy(); } catch {} if (execId) console.log(`docker: terminal closed – ${name}`); });
+  try {
+    const ins = await dockerApi('GET', `/containers/${enc(id)}/json`);
+    name = ins.Name.replace(/^\//, '');
+    if (!ins.State.Running) { say(T('termNotRunning')); return ws.close(); }
+    const ex = await dockerApi('POST', `/containers/${ins.Id}/exec`, { body: {
+      AttachStdin: true, AttachStdout: true, AttachStderr: true, Tty: true,
+      Env: ['TERM=xterm-256color', `COLUMNS=${cols}`, `LINES=${rows}`],
+      // bash when the image has it, otherwise sh
+      Cmd: ['/bin/sh', '-c', 'if command -v bash >/dev/null 2>&1; then exec bash; else exec sh; fi'],
+    } });
+    execId = ex.Id;
+    sock = await dockerHijack(`/exec/${execId}/start`, { Detach: false, Tty: true });
+    console.log(`docker: terminal opened – ${name}`);
+    let first = true;
+    sock.on('data', d => {
+      ws.send(d, true);
+      if (first) { first = false; if (/exec: "\/bin\/sh": stat \/bin\/sh: no such file|executable file not found/.test(d.toString())) say(T('termNoShell'), 33); }
+    });
+    sock.on('end', () => { say(T('termEnded'), 90); ws.close(); });
+    sock.on('error', () => ws.close());
+    ws.on('message', (data, bin) => {
+      if (bin) return sock.writable && sock.write(data);
+      let m; try { m = JSON.parse(data.toString()); } catch { return; }
+      if (m.t === 'resize') resize(m.cols, m.rows);
+      else if (m.t === 'in' && typeof m.d === 'string' && sock.writable) sock.write(m.d);
+    });
+    resize(cols, rows);
+  } catch (e) {
+    say(friendlyError(e)); ws.close();
+  }
+}
+
 // ---------- HTTP server ----------
 function send(res, code, data, type = 'application/json') {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
@@ -1469,7 +1636,7 @@ function checkAuth(r) {
   return u === cfg.auth.user && p === cfg.auth.pass;
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.txt': 'text/plain; charset=utf-8', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
@@ -1494,6 +1661,7 @@ const routes = {
   'POST /api/docker/containers/:id/update': (q, b, p) => startUpdate(p.id),
   'POST /api/docker/containers/:id/:action': (q, b, p) => dockerAction(p.id, p.action),
   'GET /api/docker/containers/:id/logs': (q, b, p) => dockerLogs(p.id, q.get('tail')),
+  'GET /api/docker/containers/:id/web': (q, b, p) => containerWeb(p.id),
   'GET /api/docker/jobs/:id': (q, b, p) => { const j = jobs.get(p.id); if (!j) throw dockerErr(T('notFound'), { status: 404 }); return j; },
   'GET /api/radarr': () => arr('radarr').summary(),
   'GET /api/sonarr': () => arr('sonarr').summary(),
@@ -1543,6 +1711,19 @@ const server = http.createServer((r, res) => langStore.run(requestLang(r), () =>
   try { if (!res.headersSent) send(res, 400, { error: T('badRequest') }); else res.end(); } catch {}
 })));
 server.on('clientError', (err, socket) => { try { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch {} });
+// WebSocket: /api/docker/containers/<id>/terminal?cols=&rows=
+server.on('upgrade', (r, socket, head) => {
+  socket.on('error', () => {});
+  const u = new URL(r.url, 'http://x');
+  const m = /^\/api\/docker\/containers\/([^/]+)\/terminal$/.exec(u.pathname);
+  if (!m) return socket.end('HTTP/1.1 404 Not Found\r\n\r\n');
+  if (!checkAuth(r)) return socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
+  if (!dockerOn()) return socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  const ws = wsAccept(r, socket, head);
+  if (!ws) return;
+  langStore.run(requestLang(r), () => dockerTerminal(ws, decodeURIComponent(m[1]), Number(u.searchParams.get('cols')) || 80, Number(u.searchParams.get('rows')) || 24)
+    .catch(e => console.warn('docker: terminal – ' + e.message)));
+});
 // last line of defence: log and keep running instead of exiting
 process.on('uncaughtException', e => console.error(new Date().toISOString(), 'uncaught error (ArrHub keeps running):', e?.stack || e));
 process.on('unhandledRejection', e => console.error(new Date().toISOString(), 'unhandled rejection (ArrHub keeps running):', e?.stack || e));
