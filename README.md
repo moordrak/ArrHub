@@ -32,6 +32,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
 - **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
 - **Offline mode** – Settings → *Network*: ArrHub then talks only to your services – no update check, no images from TMDB/TVDB; posters come from Radarr/Sonarr and Seerr's image cache (also `ARRHUB_OFFLINE=true`)
+- **Glass layout** – menu on the left and a frosted, 70 % transparent glass frame behind the cards, so the dynamic background shows through; on phones the menu opens with ☰
 - **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download
 - **Own CA certificate** – paste your certificate authority's certificate (PEM) in Settings → *SSL / TLS* and ArrHub fully verifies your `https://` services against it, including the host name. Also `ARRHUB_CA` (PEM text) or `ARRHUB_CA_FILE` (path to a .crt/.pem)
 - **Calendar** – movies and episodes for the next 2 weeks

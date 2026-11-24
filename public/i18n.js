@@ -6,7 +6,7 @@
     en: {
       // navigation
       'nav.overview': 'Overview', 'nav.downloads': 'Downloads', 'nav.calendar': 'Calendar', 'nav.history': 'History',
-      'nav.requests': 'Requests', 'nav.add': 'Add', 'nav.logs': 'Logs', 'nav.settings': '⚙ Settings',
+      'nav.requests': 'Requests', 'nav.add': 'Add', 'nav.logs': 'Logs', 'nav.settings': 'Settings',
       // common
       'c.loading': 'Loading…', 'c.error': 'Error: {msg}', 'c.done': 'Done', 'c.deleted': 'Deleted', 'c.removed': 'Removed',
       'hist.qbSub': 'completed torrents', 'hist.qbNote': 'qBittorrent keeps no history – torrents removed from it are not shown.', 'c.empty': 'Empty', 'c.noRecords': 'No records', 'c.free': '{size} free', 'c.ratio': 'ratio {r}', 'c.notConfigured': '{svc} is not configured',
@@ -91,7 +91,7 @@
     },
     hr: {
       'nav.overview': 'Pregled', 'nav.downloads': 'Preuzimanja', 'nav.calendar': 'Kalendar', 'nav.history': 'Povijest',
-      'nav.requests': 'Zahtjevi', 'nav.add': 'Dodaj', 'nav.logs': 'Logovi', 'nav.settings': '⚙ Postavke',
+      'nav.requests': 'Zahtjevi', 'nav.add': 'Dodaj', 'nav.logs': 'Logovi', 'nav.settings': 'Postavke',
       'c.loading': 'Učitavanje…', 'c.error': 'Greška: {msg}', 'c.done': 'Gotovo', 'c.deleted': 'Obrisano', 'c.removed': 'Uklonjeno',
       'hist.qbSub': 'završeni torrenti', 'hist.qbNote': 'qBittorrent ne vodi povijest – torrenti koje ukloniš ovdje se ne prikazuju.', 'c.empty': 'Prazno', 'c.noRecords': 'Nema zapisa', 'c.free': '{size} slobodno', 'c.ratio': 'omjer {r}', 'c.notConfigured': '{svc} nije konfiguriran',
       'c.movie': 'Film', 'c.series': 'Serija', 'c.refresh': 'Osvježi', 'c.delete': 'Obriši', 'c.remove': 'Ukloni',

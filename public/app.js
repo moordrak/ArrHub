@@ -472,7 +472,11 @@ function show(v) {
   else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);
 }
-$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) { show(b.dataset.v); document.body.classList.remove('menu-open'); } };
+// narrow screens: ☰ opens the menu, tapping outside or Esc closes it
+$('#menuBtn').onclick = () => document.body.classList.toggle('menu-open');
+$('#scrim').onclick = () => document.body.classList.remove('menu-open');
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.body.classList.remove('menu-open'); });
 $('#qbFilter').onchange = e => { qbFilter = e.target.value; renderQb(); };
 
 // ---- logs ----
