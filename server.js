@@ -62,7 +62,7 @@ const MSG = {
     sshHostKey: 'The Docker host\'s SSH key has changed – if that is expected, delete its line from {file}', sshNoDocker: 'Docker is not installed for that user on the Docker host (docker: command not found)',
     sshDockerGroup: 'That SSH user may not use Docker – add it to the docker group on the Docker host (sudo usermod -aG docker <user>)',
     sshBadKey: 'The SSH key is not a valid private key (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'The SSH key is protected with a passphrase – use a key without one',
-    sshClosed: 'The SSH connection was closed by the Docker host', dockerUnhealthy: 'The new container reports itself as unhealthy', termNotRunning: 'The container is not running', termEnded: '[session ended]', termNoShell: 'This container has no shell (/bin/sh), so a terminal is not possible – this is normal for minimal (distroless) images.',
+    sshClosed: 'The SSH connection was closed by the Docker host', dockerUnhealthy: 'The new container reports itself as unhealthy', termNotRunning: 'The container is not running', npmBadUrl: 'Nginx Proxy Manager address must start with http:// or https:// (e.g. http://192.168.1.10:81)', npmAuth: 'Nginx Proxy Manager refused the login – check the e-mail and password', npmNotNpm: 'That address does not answer like Nginx Proxy Manager (use its admin address, usually port 81)', npmOk: 'Connected – {n} proxy hosts, {https} with SSL', termEnded: '[session ended]', termNoShell: 'This container has no shell (/bin/sh), so a terminal is not possible – this is normal for minimal (distroless) images.',
   },
   hr: {
     urlInvalid: '{svc}: neispravan URL', linkInvalid: '{svc}: poveznica mora biti puna http:// ili https:// adresa', urlScheme: '{svc}: URL mora počinjati s http:// ili https://',
@@ -95,7 +95,7 @@ const MSG = {
     sshHostKey: 'SSH ključ Docker hosta se promijenio – ako je to očekivano, obriši njegov redak iz {file}', sshNoDocker: 'Docker nije instaliran za tog korisnika na Docker hostu (docker: command not found)',
     sshDockerGroup: 'Taj SSH korisnik ne smije koristiti Docker – dodaj ga u grupu docker na Docker hostu (sudo usermod -aG docker <korisnik>)',
     sshBadKey: 'SSH ključ nije ispravan privatni ključ (OpenSSH format, -----BEGIN OPENSSH PRIVATE KEY-----)', sshPassphrase: 'SSH ključ je zaštićen lozinkom – koristi ključ bez nje',
-    sshClosed: 'Docker host je zatvorio SSH vezu', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)', termNotRunning: 'Kontejner ne radi', termEnded: '[sesija završena]', termNoShell: 'Ovaj kontejner nema ljusku (/bin/sh), pa terminal nije moguć – to je normalno za minimalne (distroless) image-e.',
+    sshClosed: 'Docker host je zatvorio SSH vezu', dockerUnhealthy: 'Novi kontejner javlja da nije zdrav (unhealthy)', termNotRunning: 'Kontejner ne radi', npmBadUrl: 'Adresa Nginx Proxy Managera mora počinjati s http:// ili https:// (npr. http://192.168.1.10:81)', npmAuth: 'Nginx Proxy Manager je odbio prijavu – provjeri e-mail i lozinku', npmNotNpm: 'Ta adresa ne odgovara kao Nginx Proxy Manager (koristi njegovu admin adresu, obično port 81)', npmOk: 'Spojeno – {n} proxy hostova, {https} sa SSL-om', termEnded: '[sesija završena]', termNoShell: 'Ovaj kontejner nema ljusku (/bin/sh), pa terminal nije moguć – to je normalno za minimalne (distroless) image-e.',
   },
 };
 const LANGS = ['auto', 'en', 'hr'];
@@ -143,6 +143,8 @@ const FIELDS = [
   ['docker', 'sshKey', 'ARRHUB_DOCKER_SSH_KEY', true],
   // address of the Docker host for opening containers' web pages (default: host of the Docker address)
   ['docker', 'webHost', 'ARRHUB_DOCKER_WEB_HOST'],
+  // Nginx Proxy Manager (optional): its proxy hosts give containers their https addresses
+  ['npm', 'url', 'ARRHUB_NPM_URL'], ['npm', 'user', 'ARRHUB_NPM_USER'], ['npm', 'pass', 'ARRHUB_NPM_PASS', true],
   ['ui', 'theme', 'ARRHUB_THEME'], ['ui', 'accent', 'ARRHUB_ACCENT'], ['ui', 'background', 'ARRHUB_BACKGROUND'],
   ['ui', 'bgIntensity', 'ARRHUB_BG_INTENSITY'], ['ui', 'bgReactive', 'ARRHUB_BG_REACTIVE'], ['ui', 'lang', 'ARRHUB_LANG'],
   ['ui', 'cardIcons', 'ARRHUB_CARD_ICONS'], ['ui', 'cardIconStrength', 'ARRHUB_CARD_ICON_STRENGTH'],
@@ -172,7 +174,7 @@ function readFileConfig() {
 // File + environment variables (environment wins)
 function loadConfig() {
   const file = readFileConfig();
-  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {}, npm: {} };
   for (const k of SERVICES) c[k] = {};
   for (const [sec, f, env] of FIELDS) {
     const v = envSet(env) ? process.env[env] : getF(file, sec, f);
@@ -226,7 +228,7 @@ function settingsView() {
 }
 // Merges UI input with current values (mask = keep the existing secret)
 function mergeInput(values, base = cfg) {
-  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {} };
+  const c = { auth: {}, ui: {}, tls: {}, net: {}, docker: {}, npm: {} };
   for (const [sec, f, , secret] of FIELDS) {
     const key = sec ? `${sec}.${f}` : f;
     let v = values?.[key];
@@ -252,6 +254,7 @@ function validate(c) {
     if (/^(tcp|https?|ssh):/i.test(u)) { try { const x = new URL(u.replace(/^tcp:/i, 'http:')); if (!x.hostname) throw 0; } catch { throw new Error(T('dockerBadUrl')); } }
   }
   if (c.docker?.cert && !/-----BEGIN CERTIFICATE-----/.test(c.docker.cert)) throw new Error(T('dockerBadCert'));
+  if (c.npm?.url) { try { const x = new URL(c.npm.url); if (!/^https?:$/.test(x.protocol)) throw 0; } catch { throw new Error(T('npmBadUrl')); } c.npm.url = c.npm.url.trim().replace(/\/+$/, ''); }
   if (c.docker?.key && c.docker.key !== MASK && !/PRIVATE KEY-----/.test(c.docker.key)) throw new Error(T('dockerBadKey'));
   if (c.docker?.ca && !/-----BEGIN CERTIFICATE-----/.test(c.docker.ca)) throw new Error(T('dockerBadCert'));
   if (c.docker && c.docker.cleanup !== undefined) c.docker.cleanup = toBool(c.docker.cleanup);
@@ -297,7 +300,7 @@ function saveSettings(values) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
   cfg = loadConfig();
   qb.sid = null;
-  mediaCache.at = 0; aboutCache.at = 0;   // offline mode / service URLs may have changed
+  mediaCache.at = 0; aboutCache.at = 0; npmState.at = 0;   // offline mode / service URLs / NPM may have changed
   console.log('Settings saved' + (cfg.net?.offline ? ' (offline mode)' : ''));
   return { ok: true, restartRequired: cfg.port !== oldPort };
 }
@@ -1209,6 +1212,8 @@ async function dockerContainers(withStats) {
   const list = await dockerApi('GET', '/containers/json?all=1');
   const chk = checkUpdates().catch(() => {});           // refresh update info in the background (every 6 h)
   if (!dk.checkedAt) await Promise.race([chk, new Promise(r => setTimeout(r, 4000))]);   // first time: wait a moment for it
+  const np = npmRefresh();
+  if (!npmState.at && cfg.npm?.url) await Promise.race([np, new Promise(r => setTimeout(r, 4000))]);
   const out = await Promise.all(list.map(async c => {
     const image = await containerRef(c);
     const ports = [...new Set((c.Ports || []).filter(x => x.PublicPort).map(x => `${x.PublicPort}:${x.PrivatePort}/${x.Type}`))];
@@ -1217,7 +1222,7 @@ async function dockerContainers(withStats) {
       project: c.Labels?.['com.docker.compose.project'] || '', service: c.Labels?.['com.docker.compose.service'] || '',
       health: (/\((healthy|unhealthy|health: starting)\)/.exec(c.Status || '') || [])[1]?.replace('health: ', '') || '',
       ports, networkMode: c.HostConfig?.NetworkMode || '', self: isSelf(c.Id), update: await updateStateFor(image, c.ImageID),
-      web: webLinks(c),
+      web: webLinks(c, image),
     };
   }));
   if (withStats) {
@@ -1464,19 +1469,102 @@ function dockerWebHost() {
   for (const list of Object.values(os_.networkInterfaces())) for (const a of list || []) if (a.family === 'IPv4' && !a.internal) return a.address;
   return null;                                   // browser falls back to the address ArrHub was opened with
 }
-function webLinks(c) {
-  const out = [], seen = new Set();
-  const add = (url, label) => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, label }); } };
+// which of ArrHub's services is this container? (name, compose service or image)
+const SVC_MATCH = { radarr: /radarr/, sonarr: /sonarr/, nzbget: /nzbget/, qbittorrent: /qbittorrent/, seerr: /(^|[\s\/_.-])(seerr|overseerr|jellyseerr)([\s:\/_.-]|$)/ };
+function serviceOf(c, image) {
+  const hay = `${(c.Names?.[0] || '').replace(/^\//, '')} ${c.Labels?.['com.docker.compose.service'] || ''} ${image || c.Image || ''}`.toLowerCase();
+  return SERVICES.find(k => enabled(k) && SVC_MATCH[k]?.test(hay)) || null;
+}
+const cleanUrl = u => { try { const x = new URL(u); x.username = ''; x.password = ''; return x.toString().replace(/\/+$/, '') + '/'; } catch { return null; } };
+// addresses to open a container at, best first: label → https (NPM, ArrHub's service settings) → http → published ports
+function webLinks(c, image) {
+  const cand = [];
+  const add = (url, label, rank) => { if (url) cand.push({ url, label, rank }); };
   const L = c.Labels || {};
-  for (const k of ['arrhub.url', 'homepage.href']) if (/^https?:\/\//i.test(L[k] || '')) add(L[k].trim(), L[k].trim().replace(/^https?:\/\//i, ''));
-  const host = dockerWebHost(), h = host && host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+  for (const k of ['arrhub.url', 'homepage.href']) if (/^https?:\/\//i.test(L[k] || '')) add(L[k].trim(), L[k].trim().replace(/^https?:\/\//i, '').replace(/\/$/, ''), 0);
+  // Nginx Proxy Manager proxy hosts that forward to this container
+  const name = (c.Names?.[0] || '').replace(/^\//, '').toLowerCase();
+  const names = new Set([name, String(L['com.docker.compose.service'] || '').toLowerCase()].filter(Boolean));
+  const cIps = Object.values(c.NetworkSettings?.Networks || {}).map(n => n.IPAddress).filter(Boolean);
+  const pub = new Set((c.Ports || []).filter(p => p.PublicPort && p.Type === 'tcp').map(p => p.PublicPort));
+  const priv = new Set((c.Ports || []).filter(p => p.Type === 'tcp').map(p => p.PrivatePort));
+  const dHost = String(dockerWebHost() || '').toLowerCase();
+  for (const h of npmState.hosts) {
+    // forwarded to the container itself (by name or IP – then any port, it may not be published) or to a port on the Docker host
+    const toContainer = names.has(h.host) || cIps.includes(h.host) || h.ips.some(ip => cIps.includes(ip));
+    const toDockerHost = h.host === dHost || h.ips.some(ip => npmState.dockerIps.includes(ip));
+    if (toContainer || (toDockerHost && pub.has(h.port)))
+      add(`${h.https ? 'https' : 'http'}://${h.domain}/`, h.domain, h.https ? 1 : 3);
+  }
+  // the address of the matching service in ArrHub's settings (its link first, then its URL)
+  const svc = serviceOf(c, image);
+  if (svc) for (const u of [cfg[svc].link, cfg[svc].url]) { const x = u && cleanUrl(u); if (x) add(x, x.replace(/^https?:\/\//, '').replace(/\/$/, ''), x.startsWith('https:') ? 2 : 4); }
+  const host = dockerWebHost(), hh = host && host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
   for (const p of c.Ports || []) {
     if (!p.PublicPort || p.Type !== 'tcp' || /^127\.|^::1$/.test(p.IP || '')) continue;
     const https = [443, 8443, 9443].includes(p.PrivatePort) || [443, 8443, 9443].includes(p.PublicPort);
-    add(`${https ? 'https' : 'http'}://${h || '{host}'}:${p.PublicPort}/`, `:${p.PublicPort}`);
+    add(`${https ? 'https' : 'http'}://${hh || '{host}'}:${p.PublicPort}/`, `:${p.PublicPort}`, https ? 2 : 5);
   }
-  return out;
+  const seen = new Set();
+  return cand.sort((a, b) => a.rank - b.rank).filter(x => !seen.has(x.url) && seen.add(x.url)).map(({ url, label }) => ({ url, label }));
 }
+
+// ---- Nginx Proxy Manager: read its proxy hosts (every 5 min) ----
+const dns_ = require('dns');
+const npmState = { hosts: [], dockerIps: [], at: 0, err: null, run: null };
+function npmReq(method, url, body, token) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url), isTls = u.protocol === 'https:';
+    const payload = body ? Buffer.from(JSON.stringify(body)) : null;
+    const o = { method, headers: { Accept: 'application/json', ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': payload.length } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, timeout: 10000 };
+    if (isTls && caState?.pem?.length) o.ca = [...tls_.rootCertificates, ...caState.pem];
+    const r = (isTls ? https_ : http_).request(u, o, res => {
+      let b = ''; res.on('data', d => { b += d; }); res.on('end', () => {
+        if (res.statusCode === 401 || res.statusCode === 403) return reject(new Error(T('npmAuth')));
+        if (res.statusCode === 404) return reject(new Error(T('npmNotNpm')));
+        if (res.statusCode >= 400) return reject(new Error(`HTTP ${res.statusCode}`));
+        try { resolve(JSON.parse(b)); } catch { reject(new Error(T('npmNotNpm'))); }
+      });
+    });
+    r.on('timeout', () => r.destroy(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })));
+    r.on('error', e => reject(Object.assign(new TypeError('fetch failed'), { cause: e })));
+    if (payload) r.write(payload);
+    r.end();
+  });
+}
+const lookupAll = async h => { if (!h) return []; if (/^[\d.]+$|:/.test(h)) return [h]; try { return (await dns_.promises.lookup(h, { all: true })).map(a => a.address); } catch { return []; } };
+async function npmLoad(c = cfg.npm || {}) {
+  if (!c.url) return { hosts: [] };
+  const tok = await npmReq('POST', `${c.url}/api/tokens`, { identity: c.user || '', secret: c.pass || '' });
+  if (!tok?.token) throw new Error(T('npmAuth'));
+  const list = await npmReq('GET', `${c.url}/api/nginx/proxy-hosts`, null, tok.token);
+  if (!Array.isArray(list)) throw new Error(T('npmNotNpm'));
+  const hosts = await Promise.all(list.filter(h => h.enabled !== false && h.enabled !== 0 && h.domain_names?.length).map(async h => ({
+    domain: String(h.domain_names[0]).toLowerCase(), https: Number(h.certificate_id) > 0 || h.certificate_id === 'new',
+    host: String(h.forward_host || '').toLowerCase(), port: Number(h.forward_port), ips: await lookupAll(String(h.forward_host || '').toLowerCase()),
+  })));
+  return { hosts };
+}
+function npmRefresh(force) {
+  if (!cfg.npm?.url) { npmState.hosts = []; return Promise.resolve(); }
+  if (npmState.run) return npmState.run;
+  if (!force && Date.now() - npmState.at < 5 * 60e3) return Promise.resolve();
+  npmState.run = (async () => {
+    try {
+      const [{ hosts }, ips] = await Promise.all([npmLoad(), lookupAll(String(dockerWebHost() || '').toLowerCase())]);
+      npmState.hosts = hosts; npmState.dockerIps = ips; npmState.err = null;
+    } catch (e) { npmState.err = langStore.run('en', () => friendlyError(e)); console.warn('npm: could not read proxy hosts – ' + npmState.err); }
+    finally { npmState.at = Date.now(); npmState.run = null; }
+  })();
+  return npmState.run;
+}
+async function npmTest(values) {
+  const c = mergeInput(values || {});
+  if (!/^https?:\/\/[^/]/i.test(c.npm?.url || '')) throw new Error(T('npmBadUrl'));
+  const { hosts } = await npmLoad(c.npm);
+  return { ok: true, message: T('npmOk', { n: hosts.length, https: hosts.filter(h => h.https).length }) };
+}
+
 // may the page be shown inside ArrHub? (X-Frame-Options / CSP frame-ancestors) – asked from the server, on the LAN
 function frameCheck(url) {
   return new Promise(resolve => {
@@ -1499,7 +1587,8 @@ async function containerWeb(id) {
   const list = await dockerApi('GET', '/containers/json?all=1');
   const c = list.find(x => x.Id === id || x.Id.startsWith(id) || (x.Names || []).includes('/' + id));
   if (!c) throw dockerErr(T('notFound'), { status: 404 });
-  const links = webLinks(c);
+  await npmRefresh();
+  const links = webLinks(c, c.Image);
   return { name: (c.Names?.[0] || '').replace(/^\//, ''), links: await Promise.all(links.map(async l => ({ ...l, ...(l.url.includes('{host}') ? { frameable: true } : await frameCheck(l.url)) }))) };
 }
 
@@ -1652,7 +1741,7 @@ const routes = {
   'GET /api/settings': async () => settingsView(),
   'GET /api/logs/:src': (q, b, p) => serviceLogs(p.src),
   'POST /api/settings': (q, b) => saveSettings(b.values),
-  'POST /api/settings/test': (q, b) => b.service === 'docker' ? dockerTest(b.values) : testService(b.service, b.values),
+  'POST /api/settings/test': (q, b) => b.service === 'docker' ? dockerTest(b.values) : b.service === 'npm' ? npmTest(b.values) : testService(b.service, b.values),
   'GET /api/docker': () => dockerSummary(),
   'POST /api/settings/docker-sshkey': () => sshKeygen(),
   'GET /api/settings/docker-sshpub': () => sshPublic(),

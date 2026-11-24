@@ -73,7 +73,7 @@ the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
 self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 own CA `ARRHUB_CA` (PEM) or `ARRHUB_CA_FILE` (path),
 offline mode `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, and for the look
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, and for the look
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
@@ -195,6 +195,11 @@ Then in ArrHub → **Settings → Docker** enter `http://<docker-vm-ip>:2375` an
 The Docker host's SSH key is trusted on the first connection and remembered in `docker_known_hosts` next to `config.json`; a changed key is refused. Keys with a passphrase are not supported. Environment variables: `ARRHUB_DOCKER_URL=ssh://…`, `ARRHUB_DOCKER_SSH_KEY` or `ARRHUB_DOCKER_SSH_KEY_FILE`. Note: a user in the `docker` group can do everything Docker can – the socket proxy is the more limited option.
 
 **Web pages and terminal.** Containers with a published TCP port (or a `arrhub.url` / `homepage.href` label) get a 🌐 button that opens the app in a window over ArrHub. Apps that forbid being shown inside another page (e.g. qBittorrent with its clickjacking protection on) and plain `http://` pages while ArrHub itself runs on `https://` are offered in a new tab instead. If the links use the wrong address, set *Address for opening containers* in Settings → Docker.
+
+**https addresses are found automatically**, so the browser never has to show an `http://` page inside the `https://` ArrHub:
+- **Arr services** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr) are recognised by container name, compose service or image and opened at the address from their card in Settings – e.g. `https://radarr.int`. This also works for qBittorrent behind a VPN container.
+- **Nginx Proxy Manager** (optional, Settings → Docker → *Nginx Proxy Manager*): ArrHub reads your proxy hosts and opens every container at its domain – proxy hosts that forward to the container by name, or to its published port on the Docker host. Hosts with an SSL certificate come first.
+- Order: `arrhub.url` / `homepage.href` label → https (NPM, service settings) → http → `http://host:port`. All addresses are in the window's list.
 
 The **Terminal** button opens a shell **inside** the container (`docker exec`, bash or sh) – e.g. directly in Radarr, not on the Docker host. It works over every connection type; with the socket proxy add `EXEC=1` (this allows a root shell in any container – leave it out if you don't want the terminal). Behind Nginx Proxy Manager turn on *Websockets Support* for the ArrHub proxy host.
 

@@ -845,6 +845,7 @@ async function loadSettings() {
     }
     setForm.querySelectorAll('.test .r').forEach(r => { r.textContent = ''; r.className = 'r'; });
     showAuthLine(''); loadSshPub();
+    if (setForm.querySelector('[name="npm.url"]')?.value) $('#dkNpm').open = true;
     settingsTexts();
     syncAppearanceControls(); previewAppearance();
   } catch (e) { toast(t('c.error', { msg: e.message })); }

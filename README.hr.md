@@ -73,7 +73,7 @@ za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEER
 za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
 vlastiti CA `ARRHUB_CA` (PEM) ili `ARRHUB_CA_FILE` (putanja),
 način bez interneta `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, a za izgled
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, a za izgled
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30). One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
@@ -195,6 +195,11 @@ Zatim u ArrHubu → **Postavke → Docker** upiši `http://<ip-docker-vm-a>:2375
 SSH ključu Docker hosta vjeruje se kod prvog spajanja i pamti se u `docker_known_hosts` pored `config.json`; promijenjeni ključ se odbija. Ključevi s lozinkom nisu podržani. Varijable okoline: `ARRHUB_DOCKER_URL=ssh://…`, `ARRHUB_DOCKER_SSH_KEY` ili `ARRHUB_DOCKER_SSH_KEY_FILE`. Napomena: korisnik u grupi `docker` može sve što može Docker – socket proxy je ograničenija opcija.
 
 **Web stranice i terminal.** Kontejneri s objavljenim TCP portom (ili oznakom `arrhub.url` / `homepage.href`) dobivaju gumb 🌐 koji aplikaciju otvara u prozoru iznad ArrHuba. Aplikacije koje ne dopuštaju prikaz unutar druge stranice (npr. qBittorrent s uključenom zaštitom od clickjackinga) i obične `http://` stranice dok ArrHub radi na `https://` nude se u novoj kartici. Ako poveznice koriste krivu adresu, postavi *Adresa za otvaranje kontejnera* u Postavke → Docker.
+
+**https adrese pronalaze se automatski**, pa preglednik nikad ne mora prikazati `http://` stranicu unutar `https://` ArrHuba:
+- **Arr servisi** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr) prepoznaju se po imenu kontejnera, compose servisu ili image-u i otvaraju se na adresi iz svoje kartice u Postavkama – npr. `https://radarr.int`. Radi i za qBittorrent iza VPN kontejnera.
+- **Nginx Proxy Manager** (neobavezno, Postavke → Docker → *Nginx Proxy Manager*): ArrHub čita tvoje proxy hostove i svaki kontejner otvara na njegovoj domeni – proxy hostovi koji prosljeđuju na kontejner po imenu ili na njegov objavljeni port na Docker hostu. Hostovi sa SSL certifikatom idu prvi.
+- Redoslijed: oznaka `arrhub.url` / `homepage.href` → https (NPM, postavke servisa) → http → `http://host:port`. Sve adrese su u popisu u prozoru.
 
 Gumb **Terminal** otvara ljusku **unutar** kontejnera (`docker exec`, bash ili sh) – npr. izravno u Radarru, a ne na Docker hostu. Radi preko svih načina spajanja; uz socket proxy dodaj `EXEC=1` (to dopušta root ljusku u bilo kojem kontejneru – izostavi ga ako ne želiš terminal). Iza Nginx Proxy Managera uključi *Websockets Support* za ArrHubov proxy host.
 

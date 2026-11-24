@@ -606,6 +606,13 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
           <div class="field"><label data-i18n="set.dockerWebHost">Address for opening containers (optional)</label><input name="docker.webHost" placeholder="192.168.1.20" data-i18n-ph="set.dockerWebHostPh"><span class="hint" data-i18n="set.dockerWebHostHint">Host name or IP of the Docker host used for the container web pages. Empty = the host from the Docker address.</span></div>
           <div class="ctl" style="margin:2px 0 10px"><label><input type="checkbox" name="docker.cleanup" checked> <span data-i18n="set.dockerCleanup">Remove the old image after an update</span></label></div>
+          <details class="dktls" id="dkNpm"><summary data-i18n="set.npm">Nginx Proxy Manager – https addresses (optional)</summary>
+            <span class="hint" style="display:block;margin-bottom:10px" data-i18n="set.npmHint">ArrHub reads your proxy hosts and opens each container at its https domain instead of http://IP:port – no browser warning about http inside https. Arr services also use the addresses from their cards above.</span>
+            <div class="field"><label data-i18n="set.npmUrl">Admin address</label><input name="npm.url" placeholder="http://192.168.1.10:81"></div>
+            <div class="field"><label data-i18n="set.npmUser">E-mail</label><input name="npm.user" autocomplete="off" placeholder="admin@example.com"></div>
+            <div class="field"><label data-i18n="set.npmPass">Password</label><input name="npm.pass" type="password" autocomplete="new-password"></div>
+            <div class="test" style="margin-bottom:8px"><button type="button" class="btn" data-test="npm" data-i18n="set.test">Test connection</button><span class="r"></span></div>
+          </details>
           <details class="dktls" id="dkSsh"><summary data-i18n="set.dockerSsh">SSH (only for ssh://)</summary>
             <div class="field"><label data-i18n="set.dockerSshKey">Private SSH key</label><textarea name="docker.sshKey" rows="3" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
               <span class="hint" data-i18n="set.dockerSshKeyHint">Without a passphrase. Stored like a password. Empty = the ssh keys of the user ArrHub runs as.</span></div>
