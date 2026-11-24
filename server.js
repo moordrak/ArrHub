@@ -977,17 +977,29 @@ function sshArgs(t, { shared = true } = {}) {
   a.push(t.user ? `${t.user}@${t.host}` : t.host, '--', 'docker', 'system', 'dial-stdio');
   return a;
 }
+// the socket for one Docker API request over ssh. The ssh process may exit before the last bytes of its output
+// have been read (Node then destroys its stdin at once), so the stream ends only when stdout has ended – never
+// because the process exited – and writes after that are dropped instead of failing the request.
+class SshSocket extends Duplex {
+  constructor(child) {
+    super({ allowHalfOpen: true });
+    this.child = child; this.err = '';
+    child.stdout.on('data', b => { if (!this.push(b)) child.stdout.pause(); });
+    child.stdout.on('end', () => this.push(null));
+    child.stdout.on('error', () => this.push(null));
+    child.stdin.on('error', () => {});                      // EPIPE once the remote side is gone
+    child.stderr.on('data', b => { this.err = (this.err + b).slice(-4000); });
+    child.on('error', e => { this.spawnErr = e; this.destroy(e); });   // e.g. no ssh client installed
+  }
+  sshErr() { return this.err; }
+  _read() { this.child.stdout.resume(); }
+  _write(chunk, enc, cb) { const i = this.child.stdin; if (i.destroyed || !i.writable) return cb(); i.write(chunk, () => cb()); }
+  _final(cb) { try { this.child.stdin.end(); } catch {} cb(); }
+  _destroy(err, cb) { try { this.child.kill(); } catch {} cb(err); }
+  setTimeout() { return this; } setNoDelay() { return this; } setKeepAlive() { return this; } ref() { return this; } unref() { return this; }
+}
 function sshStream(t) {
-  const child = spawn('ssh', sshArgs(t, { shared: !t.test }), { stdio: ['pipe', 'pipe', 'pipe'] });
-  let err = '';
-  child.stderr.on('data', b => { err = (err + b).slice(-4000); });
-  const d = Duplex.from({ readable: child.stdout, writable: child.stdin });
-  d.sshErr = () => err;
-  child.on('error', e => { d.spawnErr = e; d.destroy(e); });
-  child.on('exit', () => setTimeout(() => d.destroy(), 50));
-  d.on('close', () => { try { child.kill(); } catch {} });
-  for (const m of ['setTimeout', 'setNoDelay', 'setKeepAlive', 'ref', 'unref']) if (typeof d[m] !== 'function') d[m] = () => d;
-  return d;
+  return new SshSocket(spawn('ssh', sshArgs(t, { shared: !t.test }), { stdio: ['pipe', 'pipe', 'pipe'] }));
 }
 function sshMessage(stderr, e) {
   const s = String(stderr || '').trim();
