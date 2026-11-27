@@ -115,7 +115,7 @@ msg "Downloading ArrHub"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")/.." 2>/dev/null && pwd || echo /nonexistent)"
 if [[ -f "$SCRIPT_DIR/server.js" && -f "$SCRIPT_DIR/install.sh" ]]; then
-  cp -r "$SCRIPT_DIR/server.js" "$SCRIPT_DIR/compose.js" "$SCRIPT_DIR/package.json" "$SCRIPT_DIR/public" "$SCRIPT_DIR/install.sh" "$SCRIPT_DIR/config.example.json" "$SCRIPT_DIR/README.md" "$TMP/"
+  cp -r "$SCRIPT_DIR/server.js" "$SCRIPT_DIR/compose.js" "$SCRIPT_DIR/package.json" "$SCRIPT_DIR/lib" "$SCRIPT_DIR/public" "$SCRIPT_DIR/install.sh" "$SCRIPT_DIR/config.example.json" "$SCRIPT_DIR/README.md" "$TMP/"
 else
   auth=(); [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
   curl -fsSL "${auth[@]}" "https://api.github.com/repos/$REPO/tarball/$BRANCH" | tar xz -C "$TMP" --strip-components=1 \

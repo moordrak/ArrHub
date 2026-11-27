@@ -71,8 +71,8 @@ fi
 # ---------- user and files ----------
 id "$APP_USER" &>/dev/null || useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 mkdir -p "$APP_DIR"
-rm -rf "$APP_DIR/public"
-cp -r "$SRC/server.js" "$SRC/compose.js" "$SRC/package.json" "$SRC/public" "$SRC/config.example.json" "$APP_DIR/"
+rm -rf "$APP_DIR/public" "$APP_DIR/lib"
+cp -r "$SRC/server.js" "$SRC/compose.js" "$SRC/package.json" "$SRC/lib" "$SRC/public" "$SRC/config.example.json" "$APP_DIR/"
 cp "$SRC"/README*.md "$APP_DIR/" 2>/dev/null || true
 
 # ---------- configuration ----------

@@ -56,6 +56,8 @@ jobs:
       - name: Syntax check
         run: |
           node --check server.js && node --check compose.js
+          for f in lib/*.js lib/docker/*.js; do node --check "$f"; done
+          node -e "for (const f of ['settings', 'logs', 'docker/stacks', 'docker/terminal']) require('./lib/' + f)"   # loads every module
           for f in public/*.js; do node --check "$f"; done
           bash -n install.sh && bash -n proxmox/arrhub-lxc.sh
 
