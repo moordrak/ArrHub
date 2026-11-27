@@ -21,6 +21,7 @@ const { dockerTest, dockerSummary, dockerContainers, dockerInfo, dk, checkUpdate
 const { stackList, stackRead, stackOp, dockerImages, removeImages } = require('./lib/docker/stacks');
 const { npmTest, containerWeb } = require('./lib/docker/web');
 const { wsAccept, dockerTerminal } = require('./lib/docker/terminal');
+const { checkAuth, sameOrigin, jsonBody, dockerLocked } = require('./lib/guard');
 
 function requestLang(r) {
   const h = String(r.headers['x-lang'] || '').toLowerCase();
@@ -44,18 +45,11 @@ function readBody(r) {
     r.on('error', fail);
   });
 }
-function checkAuth(r) {
-  if (!config.cfg.auth.user) return true;
-  const h = r.headers.authorization || '';
-  const [u, p] = Buffer.from(h.replace(/^Basic /, ''), 'base64').toString().split(/:(.*)/s);
-  return u === config.cfg.auth.user && p === config.cfg.auth.pass;
-}
-
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.txt': 'text/plain; charset=utf-8', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 const PUBLIC = path.join(__dirname, 'public');
 
 const routes = {
-  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), docker: dockerOn(), refresh: config.cfg.refresh, auth: !!config.cfg.auth.user, ui: config.cfg.ui, version: VERSION, links: serviceLinks() }),
+  'GET /api/config': async () => ({ ...Object.fromEntries(SERVICES.map(k => [k, enabled(k)])), docker: dockerOn(), dockerLocked: dockerLocked(), refresh: config.cfg.refresh, auth: !!config.cfg.auth.user, ui: config.cfg.ui, version: VERSION, links: serviceLinks() }),
   'GET /api/media': q => libraryMedia(q.get('refresh') === '1'),
   'GET /api/about': q => about(q.get('refresh') === '1'),
   'GET /api/icon/:svc': async (q, b, p) => {
@@ -144,7 +138,9 @@ server.on('upgrade', (r, socket, head) => {
   const m = /^\/api\/docker\/containers\/([^/]+)\/terminal$/.exec(u.pathname);
   if (!m) return socket.end('HTTP/1.1 404 Not Found\r\n\r\n');
   if (!checkAuth(r)) return socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
-  if (!dockerOn()) return socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  // WebSockets have no CORS: without this any website could open a shell in a container
+  if (!sameOrigin(r)) { console.warn('docker: terminal – refused a connection from another website (' + String(r.headers.origin).slice(0, 100) + ')'); return socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); }
+  if (!dockerOn() || dockerLocked()) return socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   const ws = wsAccept(r, socket, head);
   if (!ws) return;
   langStore.run(requestLang(r), () => dockerTerminal(ws, decodeURIComponent(m[1]), Number(u.searchParams.get('cols')) || 80, Number(u.searchParams.get('rows')) || 24)
@@ -162,8 +158,16 @@ async function handle(r, res) {
   if (u.pathname.startsWith('/api/')) {
     const m = match(r.method, u.pathname);
     if (!m) return send(res, 404, { error: T('notFound') });
+    if (r.method !== 'GET' && r.method !== 'HEAD') {
+      const browser = r.headers.origin !== undefined || r.headers['sec-fetch-site'] !== undefined;
+      if (!sameOrigin(r) || (browser && !jsonBody(r))) {
+        console.warn(`${u.pathname}: refused a request from another website (${String(r.headers.origin || r.headers['sec-fetch-site']).slice(0, 100)})`);
+        return send(res, 403, { error: T('crossSite') });
+      }
+    }
     const svc = u.pathname.split('/')[2];
     if (svc === 'docker' && !dockerOn()) return send(res, 400, { error: T('dockerNotConfigured') });
+    if (svc === 'docker' && dockerLocked()) return send(res, 403, { error: T('dockerNeedsLogin') });
     if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs', 'docker'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
