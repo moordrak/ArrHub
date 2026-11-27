@@ -75,7 +75,7 @@ za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEER
 za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE, PROWLARR_INSECURE, BAZARR_INSECURE` (`true`/`false`),
 vlastiti CA `ARRHUB_CA` (PEM) ili `ARRHUB_CA_FILE` (putanja),
 način bez interneta `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, a za izgled
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, `ARRHUB_DOCKER_NOAUTH`, dodatni dopušteni originsi `ARRHUB_ORIGINS`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, a za izgled
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30). One imaju prednost pred
 datotekom, pa su takva polja u Postavkama zaključana. Putanju datoteke mijenja `ARRHUB_CONFIG`.
@@ -143,6 +143,15 @@ Za vlastitu izgradnju: `docker build -t arrhub .`
 ### Nginx Proxy Manager
 Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavezno uključi
 `auth` u config.json ili Access List u NPM-u – ploča može brisati i dodavati sadržaj.
+
+### Sigurnost
+- **Docker kontrola traži prijavu.** Ako je postavljena adresa Dockera, a ArrHub nema prijavu, Docker funkcije su zaključane.
+  Ako NPM Access List (ili drugi reverse proxy) već traži lozinku ispred ArrHuba, označi
+  *Prijavu radi moj reverse proxy* u Postavke → Docker (ili `ARRHUB_DOCKER_NOAUTH=true`).
+- **Druge stranice ne mogu upravljati ArrHubom.** Svaki POST i terminal kontejnera (WebSocket) moraju doći sa
+  stranice samog ArrHuba: `Origin` preglednika mora odgovarati adresi na kojoj je ArrHub otvoren (`Host` ili
+  `X-Forwarded-Host`), a POST iz preglednika mora biti JSON. Skripte bez `Origin` zaglavlja (curl) i dalje rade.
+  Ako ArrHubov API zoveš s neke svoje druge stranice, dodaj je u `ARRHUB_ORIGINS` (odvojeno zarezom).
 
 ## Upravljanje Dockerom
 

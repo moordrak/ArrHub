@@ -75,7 +75,7 @@ the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK, PR
 self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE, PROWLARR_INSECURE, BAZARR_INSECURE` (`true`/`false`),
 own CA `ARRHUB_CA` (PEM) or `ARRHUB_CA_FILE` (path),
 offline mode `ARRHUB_OFFLINE` (`true`/`false`),
-Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, and for the look
+Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, `ARRHUB_DOCKER_NOAUTH`, extra allowed origins `ARRHUB_ORIGINS`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, and for the look
 `ARRHUB_THEME, ARRHUB_ACCENT, ARRHUB_BACKGROUND, ARRHUB_BG_INTENSITY, ARRHUB_BG_REACTIVE, ARRHUB_LANG` (`en`, `hr`, `auto`),
 `ARRHUB_CARD_ICONS` (`true`/`false`), `ARRHUB_CARD_ICON_STRENGTH` (3–30).
 They take precedence over the file, so those fields are locked in Settings. `ARRHUB_CONFIG` changes the file path.
@@ -143,6 +143,15 @@ To build it yourself: `docker build -t arrhub .`
 ### Nginx Proxy Manager
 Add a Proxy Host → `http://<lxc-ip>:8686`. If it is reachable outside your LAN, make sure to enable the
 `auth` login in config.json or an Access List in NPM – the dashboard can delete and add content.
+
+### Security
+- **Docker control needs a login.** With a Docker address set and no ArrHub login, the Docker features are locked.
+  If an NPM Access List (or another reverse proxy) already asks for a password in front of ArrHub, tick
+  *Login is handled by my reverse proxy* under Settings → Docker (or `ARRHUB_DOCKER_NOAUTH=true`).
+- **Other websites can't drive ArrHub.** Every POST and the container terminal (WebSocket) must come from
+  ArrHub's own page: the browser's `Origin` has to match the address ArrHub is opened on (`Host` or
+  `X-Forwarded-Host`), and browser POSTs must be JSON. Scripts without an `Origin` header (curl) still work.
+  If you call ArrHub's API from another page of your own, list it in `ARRHUB_ORIGINS` (comma separated).
 
 ## Docker control
 
