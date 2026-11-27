@@ -116,7 +116,7 @@ pct exec <CTID> -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/moord
 ### Manual (systemd)
 ```bash
 useradd -r -s /usr/sbin/nologin arrhub
-mkdir -p /opt/arrhub && cp -r server.js public config.json /opt/arrhub/
+mkdir -p /opt/arrhub && cp -r server.js compose.js package.json lib public config.json /opt/arrhub/
 chown -R arrhub: /opt/arrhub && chmod 600 /opt/arrhub/config.json
 cp arrhub.service /etc/systemd/system/ && systemctl enable --now arrhub
 ```

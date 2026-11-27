@@ -2,12 +2,13 @@ FROM node:22-alpine
 
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="ArrHub" \
-      org.opencontainers.image.description="One dashboard for Radarr, Sonarr, NZBGet, qBittorrent and Seerr" \
+      org.opencontainers.image.description="One dashboard for Radarr, Sonarr, Prowlarr, Bazarr, NZBGet, qBittorrent, Seerr and Docker" \
       org.opencontainers.image.source="https://github.com/moordrak/arrhub" \
       org.opencontainers.image.version="${VERSION}"
 
 WORKDIR /app
 COPY package.json server.js compose.js ./
+COPY lib ./lib
 COPY public ./public
 # ssh client for Docker control over ssh:// (Settings → Docker)
 RUN apk add --no-cache openssh-client && mkdir -p /app/data && chown node:node /app/data
