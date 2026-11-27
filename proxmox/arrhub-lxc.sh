@@ -66,6 +66,10 @@ ask QBIT_URL "qBittorrent URL (e.g. http://192.168.1.10:8080)"
 [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent username" admin; ask QBIT_PASS "qBittorrent password" "" secret; }
 ask SEERR_URL "Seerr URL (e.g. http://192.168.1.10:5055)"
 [[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API key"
+ask PROWLARR_URL "Prowlarr URL (e.g. http://192.168.1.10:9696)"
+[[ -n "${PROWLARR_URL:-}" ]] && ask PROWLARR_KEY "Prowlarr API key"
+ask BAZARR_URL "Bazarr URL (e.g. http://192.168.1.10:6767)"
+[[ -n "${BAZARR_URL:-}" ]] && ask BAZARR_KEY "Bazarr API key"
 echo
 
 # ---------- template ----------
@@ -130,6 +134,7 @@ pct exec "$CTID" -- env NONINTERACTIVE=1 \
   NZBGET_URL="${NZBGET_URL:-}" NZBGET_USER="${NZBGET_USER:-}" NZBGET_PASS="${NZBGET_PASS:-}" \
   QBIT_URL="${QBIT_URL:-}" QBIT_USER="${QBIT_USER:-}" QBIT_PASS="${QBIT_PASS:-}" \
   SEERR_URL="${SEERR_URL:-}" SEERR_KEY="${SEERR_KEY:-}" \
+  PROWLARR_URL="${PROWLARR_URL:-}" PROWLARR_KEY="${PROWLARR_KEY:-}" BAZARR_URL="${BAZARR_URL:-}" BAZARR_KEY="${BAZARR_KEY:-}" \
   bash /root/arrhub-src/install.sh
 pct exec "$CTID" -- rm -rf /root/arrhub-src
 

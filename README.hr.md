@@ -21,7 +21,7 @@
 
 ![Tema Pastel breskva](docs/theme-pastel-peach.png)
 
-Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet, qBittorrent i Seerr**.
+Jedinstvena web nadzorna ploča za **Radarr, Sonarr, NZBGet, qBittorrent, Seerr, Prowlarr i Bazarr**.
 Mali Node.js poslužitelj (bez ovisnosti, Node 18+) drži API ključeve i lozinke na strani poslužitelja
 i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
 
@@ -33,14 +33,16 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
   odobravanje, odbijanje i brisanje. Broj zahtjeva na čekanju vidi se i u Pregledu. Radi i s Overseerrom i Jellyseerrom.
 - **Poveznice na svaki servis** – svaka kartica ima gumb ↗ koji otvara web sučelje servisa u novoj kartici. Zadano vodi na URL servisa, a u Postavkama se za svaki servis može upisati zasebna javna poveznica (npr. adresa preko reverse proxyja)
 - **Samopotpisani certifikati** – za servis na `https://` sa samopotpisanim ili lokalno potpisanim certifikatom uključi *Prihvati samopotpisani certifikat* u Postavkama. Provjera se preskače samo za adresu tog servisa; sve ostalo (npr. provjera ažuriranja na GitHubu) i dalje provjerava certifikate
+- **Prowlarr** – uključeni indekseri i oni s greškom, pretrage i preuzimanja u zadnja 24 h, spojene aplikacije i upozorenja; gumbi *Testiraj indeksere* i *Sinkroniziraj aplikacije*; povijest pretraga i preuzimanja
+- **Bazarr** – nedostajući titlovi za epizode i filmove, pružatelji koje je Bazarr pauzirao (npr. nakon previše zahtjeva) i upozorenja; *Traži nedostajuće* pokreće Bazarrovu pretragu; povijest preuzetih, poboljšanih i sinkroniziranih titlova
 - **Bez interneta** – Postavke → *Mreža*: ArrHub tada razgovara samo s tvojim servisima – nema provjere verzije ni slika s TMDB-a/TVDB-a; posteri dolaze iz Radarra/Sonarra i Seerrove predmemorije slika (također `ARRHUB_OFFLINE=true`)
 - **Zaglavlje uživo** – svaki tab prikazuje brzinu preuzimanja i slanja, svaku sa svojim grafom zadnjih minuta, i slobodan prostor gdje klijenti za preuzimanje spremaju
 - **Upravljanje Dockerom** – svi kontejneri na Docker hostu sa stanjem, zdravljem, CPU/RAM-om i statusom ažuriranja; pokretanje, zaustavljanje, restart, logovi i ažuriranje jednim klikom s automatskim vraćanjem, **compose editor** u koji zalijepiš `docker-compose.yml` i pokreneš ga te čišćenje nekorištenih image-a (vidi [Upravljanje Dockerom](#upravljanje-dockerom))
 - **Stakleni izgled** – izbornik lijevo i zamućena, 70 % prozirna staklena ploča iza pločica kroz koju se vidi dinamička pozadina; na mobitelu se izbornik otvara gumbom ☰
-- **Logovi** – log ArrHuba i logovi Radarra, Sonarra, qBittorrenta, NZBGeta i Seerra u jednom tabu, s filtrom razine, pretragom, automatskim osvježavanjem i preuzimanjem
+- **Logovi** – log ArrHuba i logovi Radarra, Sonarra, qBittorrenta, NZBGeta, Seerra, Prowlarra i Bazarra u jednom tabu, s filtrom razine, pretragom, automatskim osvježavanjem i preuzimanjem
 - **Vlastiti CA certifikat** – zalijepi certifikat svog izdavatelja (PEM) u Postavke → *SSL / TLS* i ArrHub će njime potpuno provjeravati tvoje `https://` servise, uključujući ime. Također `ARRHUB_CA` (PEM tekst) ili `ARRHUB_CA_FILE` (putanja do .crt/.pem)
 - **Kalendar** – filmovi i epizode za sljedeća 2 tjedna
-- **Povijest** – zadnji događaji iz Radarra, Sonarra i NZBGeta
+- **Povijest** – zadnji događaji iz Radarra, Sonarra, NZBGeta, qBittorrenta, Prowlarra (pretrage, preuzimanja) i Bazarra (titlovi)
 - **Dodaj** – pretraga i dodavanje filmova/serija (odabir profila kvalitete i mape, opcionalno odmah traži)
 - **Postavke** – adrese, API ključevi i lozinke usluga, prijava u ArrHub, interval osvježavanja i port, sve kroz sučelje.
   Gumb *Testiraj vezu* provjerava svaku uslugu prije spremanja, a promjene vrijede odmah, bez ponovnog pokretanja.
@@ -49,7 +51,7 @@ i prosljeđuje pozive, pa preglednik nikad ne vidi tajne i nema CORS problema.
   Zadnje dvije koriste postere i pozadinske slike iz Radarra/Sonarra (dohvaća ih ArrHub, nije potreban internet).
   Animacija se po želji ubrzava s brzinom preuzimanja, a poštuje i postavku sustava „smanji pokrete”.
 - **Ikone servisa na karticama**: velika, prigušena ikona servisa iza svake kartice. ArrHub preuzima službenu ikonu s tvoje
-  instance Radarra/Sonarra/qBittorrenta/NZBGeta/Seerra (zamjena je generička ikona), uz prekidač i klizač jačine u Postavke → Izgled
+  instance Radarra/Sonarra/qBittorrenta/NZBGeta/Seerra/Prowlarra/Bazarra (zamjena je generička ikona), uz prekidač i klizač jačine u Postavke → Izgled
 - **Jezik**: engleski ili hrvatski (ili automatski prema pregledniku), bira se u Postavkama → Izgled
 - Automatsko osvježavanje (zadano 5 s), opcionalna Basic Auth prijava
 - Podržava qBittorrent 4.x i 5.x (stop/start i pause/resume)
@@ -68,9 +70,9 @@ sučelju nikad ne prikazuju: polje s `********` znači da se postojeća vrijedno
 
 Umjesto sučelja možeš i ručno urediti `config.json` (predložak je `config.example.json`) i ponovno pokrenuti servis.
 Sve se može zadati i varijablama okruženja: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`,
-za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
-za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY, PROWLARR_URL, PROWLARR_KEY, BAZARR_URL, BAZARR_KEY`,
+za poveznice u karticama `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK, PROWLARR_LINK, BAZARR_LINK`,
+za samopotpisane certifikate `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE, PROWLARR_INSECURE, BAZARR_INSECURE` (`true`/`false`),
 vlastiti CA `ARRHUB_CA` (PEM) ili `ARRHUB_CA_FILE` (putanja),
 način bez interneta `ARRHUB_OFFLINE` (`true`/`false`),
 Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (ili `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, a za izgled
@@ -198,7 +200,7 @@ SSH ključu Docker hosta vjeruje se kod prvog spajanja i pamti se u `docker_know
 **Web stranice i terminal.** Kontejneri s objavljenim TCP portom (ili oznakom `arrhub.url` / `homepage.href`) dobivaju gumb 🌐 koji aplikaciju otvara u prozoru iznad ArrHuba. Aplikacije koje ne dopuštaju prikaz unutar druge stranice (npr. qBittorrent s uključenom zaštitom od clickjackinga) i obične `http://` stranice dok ArrHub radi na `https://` nude se u novoj kartici. Ako poveznice koriste krivu adresu, postavi *Adresa za otvaranje kontejnera* u Postavke → Docker.
 
 **https adrese pronalaze se automatski**, pa preglednik nikad ne mora prikazati `http://` stranicu unutar `https://` ArrHuba:
-- **Arr servisi** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr) prepoznaju se po imenu kontejnera, compose servisu ili image-u i otvaraju se na adresi iz svoje kartice u Postavkama – npr. `https://radarr.int`. Radi i za qBittorrent iza VPN kontejnera.
+- **Arr servisi** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr, Prowlarr, Bazarr) prepoznaju se po imenu kontejnera, compose servisu ili image-u i otvaraju se na adresi iz svoje kartice u Postavkama – npr. `https://radarr.int`. Radi i za qBittorrent iza VPN kontejnera.
 - **Nginx Proxy Manager** (neobavezno, Postavke → Docker → *Nginx Proxy Manager*): ArrHub čita tvoje proxy hostove i svaki kontejner otvara na njegovoj domeni – proxy hostovi koji prosljeđuju na kontejner po imenu ili na njegov objavljeni port na Docker hostu. Hostovi sa SSL certifikatom idu prvi.
 - Redoslijed: oznaka `arrhub.url` / `homepage.href` → https (NPM, postavke servisa) → http → `http://host:port`. Sve adrese su u popisu u prozoru.
 

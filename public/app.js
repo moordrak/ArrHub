@@ -6,9 +6,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const state = { cfg: {}, data: {}, err: {}, view: 'overview', addType: 'radarr', opts: {}, seerrFilter: 'pending', seerrPage: 1, seerrSize: 30 };
 try { const n = Number(localStorage.getItem('arrhub-req-size')); if ([10, 20, 30, 50, 100].includes(n)) state.seerrSize = n; } catch {}
 const seerrPath = () => `seerr?filter=${state.seerrFilter}&page=${state.seerrPage}&size=${state.seerrSize}`;
-const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)', docker: 'var(--docker)' };
-const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr', docker: 'Docker' };
-const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
+const COLORS = { radarr: 'var(--radarr)', sonarr: 'var(--sonarr)', nzbget: 'var(--nzb)', qbittorrent: 'var(--qb)', seerr: 'var(--seerr)', prowlarr: 'var(--prowlarr)', bazarr: 'var(--bazarr)', docker: 'var(--docker)' };
+const NAMES = { radarr: 'Radarr', sonarr: 'Sonarr', nzbget: 'NZBGet', qbittorrent: 'qBittorrent', seerr: 'Seerr', prowlarr: 'Prowlarr', bazarr: 'Bazarr', docker: 'Docker' };
+const SVCS = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr', 'prowlarr', 'bazarr'];
 
 // ---- formatting ----
 function size(b) { if (!b && b !== 0) return '–'; const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return b.toFixed(i > 1 ? 1 : 0) + ' ' + u[i]; }
@@ -171,6 +171,17 @@ function renderCards() {
     ${row(t('card.approved'), c.approved ?? 0)}${row(t('card.processing'), c.processing ?? 0)}${row(t('card.available'), c.available ?? 0)}
     <div class="link"><button class="btn" onclick="show('requests')">${t('card.openRequests')}</button></div>`;
   }));
+  if (state.cfg.prowlarr) out.push(svcCard('prowlarr', d => `<div class="big">${d.enabled}<span class="muted" style="font-size:.55em"> / ${d.total}</span></div><div class="sub">${t('pr.indexersOn')}</div>
+    ${row(t('pr.queries24'), d.queries)}${row(t('pr.grabs24'), d.grabs)}
+    ${row(t('pr.failing'), d.failing.length ? `<span class="tag err" title="${esc(d.failing.map(f => f.name).join(', '))}">${d.failing.length}</span>` : 0)}
+    ${row(t('pr.apps'), d.apps.length ? `<span title="${esc(d.apps.map(a => `${a.name} (${a.sync})`).join('\n'))}">${esc(d.apps.map(a => a.name).join(', '))}</span>` : `<span class="tag warn">${t('pr.noApps')}</span>`)}
+    ${health(d.health)}
+    <div class="link"><button class="btn" onclick="prTest(this)">${t('pr.test')}</button><button class="btn" onclick="run('prowlarr/sync', {}, t('pr.synced'))">${t('pr.sync')}</button></div>`));
+  if (state.cfg.bazarr) out.push(svcCard('bazarr', d => `<div class="big">${d.episodes + d.movies}</div><div class="sub">${t('bz.missing')}</div>
+    ${row(t('bz.episodes'), d.episodes)}${row(t('bz.movies'), d.movies)}
+    ${row(t('bz.throttled'), d.throttled.length ? `<span class="tag warn" title="${esc(d.throttled.map(p => `${p.name}: ${p.status}${p.retry ? ' → ' + p.retry : ''}`).join('\n'))}">${d.throttled.length}</span>` : 0)}
+    ${health(d.health)}
+    <div class="link"><button class="btn" onclick="bzSearch(this)">${t('bz.search')}</button></div>`));
   if (state.cfg.docker) out.push(svcCard('docker', d => `<div class="big">${d.running}<span class="muted" style="font-size:.55em"> / ${d.total}</span></div><div class="sub">${t('dk.runningOf')}</div>
     ${row(t('dk.stoppedN'), d.stopped ? `<span class="tag err">${d.stopped}</span>` : 0)}${row(t('dk.unhealthyN'), d.unhealthy ? `<span class="tag err">${d.unhealthy}</span>` : 0)}
     ${row(t('dk.updatesN'), d.updates ? `<span class="tag warn">${d.updates}</span>` : 0)}
@@ -288,7 +299,7 @@ const EVT = {
   movieFileRenamed: ['ev.renamed', ''], episodeFileRenamed: ['ev.renamed', ''], downloadIgnored: ['ev.ignored', 'warn'],
 };
 // History: every card is paged on its own (default 10 per page, size remembered per service)
-const HIST_EL = { radarr: 'radarrHist', sonarr: 'sonarrHist', nzbget: 'nzbHist', qbittorrent: 'qbitHist' };
+const HIST_EL = { radarr: 'radarrHist', sonarr: 'sonarrHist', nzbget: 'nzbHist', qbittorrent: 'qbitHist', prowlarr: 'prowlarrHist', bazarr: 'bazarrHist' };
 const PAGE_SIZES = [10, 20, 30, 50, 100];
 const hist = {};
 function histState(k) {
@@ -322,7 +333,21 @@ function pagerHtml(d, size) {
       <button class="btn" type="button" data-pg="last" title="${esc(t('req.last'))}"${d.page >= d.pages ? ' disabled' : ''}>»</button>
     </div>`;
 }
+const PR_EVT = { indexerQuery: ['pr.e.query', ''], indexerRss: ['pr.e.rss', ''], releaseGrabbed: ['pr.e.grab', 'ok'], indexerAuth: ['pr.e.auth', ''], indexerInfo: ['pr.e.info', ''] };
+const BZ_ACT = { 0: ['bz.a.deleted', 'warn'], 1: ['bz.a.downloaded', 'ok'], 2: ['bz.a.manual', 'ok'], 3: ['bz.a.upgraded', 'ok'], 4: ['bz.a.uploaded', 'ok'], 5: ['bz.a.synced', ''], 6: ['bz.a.translated', ''] };
 function histRow(k, r) {
+  if (k === 'prowlarr') {
+    const [key, c] = PR_EVT[r.eventType] || [null, ''];
+    const title = r.eventType === 'releaseGrabbed' ? r.title : r.query ? `“${r.query}”` : r.eventType === 'indexerRss' ? 'RSS' : (r.title || r.indexer);
+    return `<div class="item"><div class="t" title="${esc(title)}">${esc(title || '–')}</div><div class="muted">${ago(r.date)}</div>
+      <div class="m"><span class="tag ${r.successful ? c : 'err'}">${esc(key ? t(key) : r.eventType)}${r.successful ? '' : ' ✕'}</span>${r.indexer ? `<span>${esc(r.indexer)}</span>` : ''}${r.results != null && r.eventType !== 'releaseGrabbed' ? `<span>${esc(t('pr.results', { n: r.results }))}</span>` : ''}${r.source ? `<span class="tag">${esc(r.source)}</span>` : ''}${r.elapsed != null ? `<span class="muted">${r.elapsed} ms</span>` : ''}</div></div>`;
+  }
+  if (k === 'bazarr') {
+    const [key, c] = BZ_ACT[r.action] || [null, ''];
+    const lang = r.language ? r.language + (r.forced ? ' (forced)' : r.hi ? ' (HI)' : '') : '';
+    return `<div class="item"><div class="t" title="${esc(r.description || r.title)}">${esc(r.title || '–')}${r.episode ? ` <span class="muted">${esc(r.episode)}</span>` : ''}</div><div class="muted">${r.time ? ago(r.time) : esc(r.when)}</div>
+      <div class="m"><span class="tag ${c}">${esc(key ? t(key) : String(r.action))}</span>${lang ? `<span>${esc(lang)}</span>` : ''}${r.provider ? `<span>${esc(r.provider)}</span>` : ''}${r.score ? `<span class="muted">${esc(String(r.score))}</span>` : ''}<span class="tag">${t(r.kind === 'movie' ? 'bz.movie' : 'bz.episode')}</span></div></div>`;
+  }
   if (k === 'qbittorrent') {
     const [st, c] = qbState(r.state);
     return `<div class="item"><div class="t" title="${esc(r.name)}">${esc(r.name)}</div><div class="muted">${ago(r.completion_on * 1000)}</div>
@@ -462,6 +487,16 @@ const nzbAct = (a, id) => run('nzbget/action', { action: a, ids: id ? [id] : [] 
 function nzbDel(id) { if (confirm(t('confirm.delNzb'))) run('nzbget/action', { action: 'delete', ids: [id] }, t('c.deleted')); }
 function arrRemove(k, id) { if (!confirm(t('confirm.arrRemove'))) return; const bl = confirm(t('confirm.blocklist')); run(k + '/queue/remove', { id, blocklist: bl }, t('c.removed')); }
 const arrCmd = (k, name) => run(k + '/command', { name }, t('act.cmdSent'));
+async function prTest(btn) {
+  btn.disabled = true; const old = btn.textContent; btn.textContent = t('pr.testing');
+  try {
+    const r = await api('prowlarr/test', {});
+    toast(r.bad.length ? t('pr.testBad', { ok: r.ok, n: r.tested, list: r.bad.map(b => b.name).join(', ') }) : t('pr.testOk', { n: r.tested }));
+    setTimeout(refresh, 600);
+  } catch (e) { toast(t('c.error', { msg: e.message })); }
+  btn.disabled = false; btn.textContent = old;
+}
+function bzSearch(btn) { if (!confirm(t('bz.searchConfirm'))) return; btn.disabled = true; run('bazarr/search', {}, t('bz.searchStarted')); }
 
 // ---- add ----
 let lastResults = [];
@@ -1161,9 +1196,11 @@ const GENERIC_ICONS = {
   qbittorrent: '<path d="M10 6v16a14 14 0 0 0 28 0V6"/><path d="M10 6h8v16a6 6 0 0 0 12 0V6h8"/><path d="M10 14h8M30 14h8"/>',
   nzbget: '<path d="M14 36h-2a9 9 0 0 1-1-17.9A12 12 0 0 1 34 16a8 8 0 0 1 2 15.8"/><path d="M24 22v20M17 35l7 7 7-7"/>',
   seerr: '<path d="M6 26l6-18h24l6 18v14H6z"/><path d="M6 26h11l2 5h10l2-5h11"/><path d="M24 10v10M19 15l5 5 5-5"/>',
+  prowlarr: '<circle cx="21" cy="21" r="14"/><path d="M31 31l12 12"/><path d="M21 13v16M13 21h16" opacity=".6"/><circle cx="21" cy="21" r="5" fill="C"/>',
+  bazarr: '<rect x="4" y="8" width="40" height="28" rx="4"/><path d="M14 36l-4 8 10-8"/><path d="M11 22h10M25 22h12M11 29h18M33 29h4"/>',
   docker: '<path d="M24 4 42 14v20L24 44 6 34V14z"/><path d="M6 14l18 10 18-10M24 24v20"/><path d="M15 9l18 10"/>',
 };
-const ICON_VARS = { radarr: '--radarr', sonarr: '--sonarr', qbittorrent: '--qb', nzbget: '--nzb', seerr: '--seerr', docker: '--docker' };
+const ICON_VARS = { radarr: '--radarr', sonarr: '--sonarr', qbittorrent: '--qb', nzbget: '--nzb', seerr: '--seerr', prowlarr: '--prowlarr', bazarr: '--bazarr', docker: '--docker' };
 const iconState = {}; // svc -> 'official' | 'generic'
 let iconStamp = Date.now();
 function genericIcon(k) {

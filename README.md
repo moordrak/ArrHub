@@ -21,7 +21,7 @@
 
 ![Pastel Peach theme](docs/theme-pastel-peach.png)
 
-One web dashboard for **Radarr, Sonarr, NZBGet, qBittorrent and Seerr**.
+One web dashboard for **Radarr, Sonarr, NZBGet, qBittorrent, Seerr, Prowlarr and Bazarr**.
 A small Node.js server (no dependencies, Node 18+) keeps API keys and passwords on the server side
 and proxies the calls, so the browser never sees secrets and there are no CORS problems.
 
@@ -33,14 +33,16 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
   approve, decline and delete. The pending count is also shown on the Overview. Works with Overseerr and Jellyseerr too.
 - **Links to every service** – each card has a ↗ button that opens the service's own web UI in a new tab. By default it uses the service URL; in Settings you can set a separate public link per service (e.g. your reverse-proxy address)
 - **Self-signed certificates** – for a service on `https://` with a self-signed or locally signed certificate, tick *Accept self-signed certificate* in Settings. Verification is skipped only for that service's address; everything else (e.g. the GitHub update check) still verifies certificates
+- **Prowlarr** – indexers enabled and failing, searches and grabs in the last 24 h, connected apps and health warnings; *Test indexers* and *Sync apps* buttons; search and grab history
+- **Bazarr** – missing subtitles for episodes and movies, providers paused by Bazarr (e.g. after too many requests) and health warnings; *Search missing* starts Bazarr's search; history of downloaded, upgraded and synced subtitles
 - **Offline mode** – Settings → *Network*: ArrHub then talks only to your services – no update check, no images from TMDB/TVDB; posters come from Radarr/Sonarr and Seerr's image cache (also `ARRHUB_OFFLINE=true`)
 - **Live header** – every tab shows download and upload speed, each with its own graph of the last minutes, and the free space where your download clients save
 - **Docker control** – every container on your Docker host with state, health, CPU/RAM and update status; start, stop, restart, logs and one-click updates with automatic rollback, a **compose editor** for pasting a `docker-compose.yml` and starting it, and cleanup of unused images (see [Docker control](#docker-control))
 - **Glass layout** – menu on the left and a frosted, 70 % transparent glass frame behind the cards, so the dynamic background shows through; on phones the menu opens with ☰
-- **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet and Seerr in one tab, filter by level, search, auto-refresh and download
+- **Logs** – read ArrHub's own log and the logs of Radarr, Sonarr, qBittorrent, NZBGet, Seerr, Prowlarr and Bazarr in one tab, filter by level, search, auto-refresh and download
 - **Own CA certificate** – paste your certificate authority's certificate (PEM) in Settings → *SSL / TLS* and ArrHub fully verifies your `https://` services against it, including the host name. Also `ARRHUB_CA` (PEM text) or `ARRHUB_CA_FILE` (path to a .crt/.pem)
 - **Calendar** – movies and episodes for the next 2 weeks
-- **History** – latest events from Radarr, Sonarr and NZBGet
+- **History** – latest events from Radarr, Sonarr, NZBGet, qBittorrent, Prowlarr (searches, grabs) and Bazarr (subtitles)
 - **Add** – search and add movies/series (quality profile and root folder, optionally search right away)
 - **Settings** – service URLs, API keys and passwords, ArrHub login, refresh interval and port, all from the UI.
   *Test connection* checks each service before saving, and changes apply immediately without a restart.
@@ -49,7 +51,7 @@ and proxies the calls, so the browser never sees secrets and there are no CORS p
   The last two use posters and fanart from Radarr/Sonarr (fetched by ArrHub, no internet needed).
   The animation can speed up with download speed and respects the system “reduce motion” setting.
 - **Service icons on cards**: a large, faded service icon behind each card. ArrHub fetches the official icon from your own
-  Radarr/Sonarr/qBittorrent/NZBGet/Seerr instance (falls back to a generic icon), with an on/off switch and strength slider in Settings → Appearance
+  Radarr/Sonarr/qBittorrent/NZBGet/Seerr/Prowlarr/Bazarr instance (falls back to a generic icon), with an on/off switch and strength slider in Settings → Appearance
 - **Language**: English or Croatian (or automatic from the browser), chosen in Settings → Appearance
 - Automatic refresh (5 s by default), optional Basic Auth login
 - Supports qBittorrent 4.x and 5.x (stop/start and pause/resume)
@@ -68,9 +70,9 @@ never shown in the UI: a field showing `********` means the existing value is ke
 
 Instead of the UI you can also edit `config.json` by hand (template: `config.example.json`) and restart the service.
 Everything can also be set with environment variables: `PORT, ARRHUB_REFRESH, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
-SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY`,
-the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK`,
-self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE` (`true`/`false`),
+SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS, SEERR_URL, SEERR_KEY, PROWLARR_URL, PROWLARR_KEY, BAZARR_URL, BAZARR_KEY`,
+the card links `RADARR_LINK, SONARR_LINK, NZBGET_LINK, QBIT_LINK, SEERR_LINK, PROWLARR_LINK, BAZARR_LINK`,
+self-signed certificates `RADARR_INSECURE, SONARR_INSECURE, NZBGET_INSECURE, QBIT_INSECURE, SEERR_INSECURE, PROWLARR_INSECURE, BAZARR_INSECURE` (`true`/`false`),
 own CA `ARRHUB_CA` (PEM) or `ARRHUB_CA_FILE` (path),
 offline mode `ARRHUB_OFFLINE` (`true`/`false`),
 Docker `ARRHUB_DOCKER_URL`, `ARRHUB_DOCKER_SSH_KEY` / `ARRHUB_DOCKER_SSH_KEY_FILE`, `ARRHUB_DOCKER_CERT_PATH` (or `ARRHUB_DOCKER_CA`, `ARRHUB_DOCKER_CERT`, `ARRHUB_DOCKER_KEY`), `ARRHUB_DOCKER_CLEANUP`, `ARRHUB_DOCKER_LINK`, `ARRHUB_DOCKER_WEB_HOST`, Nginx Proxy Manager `ARRHUB_NPM_URL`, `ARRHUB_NPM_USER`, `ARRHUB_NPM_PASS`, and for the look
@@ -198,7 +200,7 @@ The Docker host's SSH key is trusted on the first connection and remembered in `
 **Web pages and terminal.** Containers with a published TCP port (or a `arrhub.url` / `homepage.href` label) get a 🌐 button that opens the app in a window over ArrHub. Apps that forbid being shown inside another page (e.g. qBittorrent with its clickjacking protection on) and plain `http://` pages while ArrHub itself runs on `https://` are offered in a new tab instead. If the links use the wrong address, set *Address for opening containers* in Settings → Docker.
 
 **https addresses are found automatically**, so the browser never has to show an `http://` page inside the `https://` ArrHub:
-- **Arr services** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr) are recognised by container name, compose service or image and opened at the address from their card in Settings – e.g. `https://radarr.int`. This also works for qBittorrent behind a VPN container.
+- **Arr services** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr, Prowlarr, Bazarr) are recognised by container name, compose service or image and opened at the address from their card in Settings – e.g. `https://radarr.int`. This also works for qBittorrent behind a VPN container.
 - **Nginx Proxy Manager** (optional, Settings → Docker → *Nginx Proxy Manager*): ArrHub reads your proxy hosts and opens every container at its domain – proxy hosts that forward to the container by name, or to its published port on the Docker host. Hosts with an SSL certificate come first.
 - Order: `arrhub.url` / `homepage.href` label → https (NPM, service settings) → http → `http://host:port`. All addresses are in the window's list.
 

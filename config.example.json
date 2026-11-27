@@ -26,6 +26,14 @@
     "url": "http://192.168.1.10:5055",
     "apiKey": "YOUR_SEERR_API_KEY"
   },
+  "prowlarr": {
+    "url": "http://192.168.1.10:9696",
+    "apiKey": "YOUR_PROWLARR_API_KEY"
+  },
+  "bazarr": {
+    "url": "http://192.168.1.10:6767",
+    "apiKey": "YOUR_BAZARR_API_KEY"
+  },
   "ui": {
     "lang": "en"
   }

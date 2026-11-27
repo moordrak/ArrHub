@@ -13,7 +13,7 @@
 <style>
 :root{
   --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;
-  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;--seerr:#8b7cf6;--docker:#2496ed;
+  --accent:#e8a33d;--on-accent:#111;--radarr:#f5c518;--sonarr:#35c5f4;--nzb:#7ac943;--qb:#4c8eda;--seerr:#8b7cf6;--prowlarr:#e8743b;--bazarr:#2fb9a4;--docker:#2496ed;
   --ok:#4caf7a;--warn:#e0a63a;--err:#e05a5a;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
@@ -144,6 +144,8 @@ main>section{background:var(--glass-hi),var(--glass);-webkit-backdrop-filter:blu
 [data-tint="1"] .card[data-icon=nzbget],[data-tint="1"] .card[data-svc=nzbget]{--tc:var(--nzb)}
 [data-tint="1"] .card[data-icon=qbittorrent],[data-tint="1"] .card[data-svc=qbittorrent]{--tc:var(--qb)}
 [data-tint="1"] .card[data-icon=seerr],[data-tint="1"] .card[data-svc=seerr]{--tc:var(--seerr)}
+[data-tint="1"] .card[data-icon=prowlarr],[data-tint="1"] .card[data-svc=prowlarr]{--tc:var(--prowlarr)}
+[data-tint="1"] .card[data-icon=bazarr],[data-tint="1"] .card[data-svc=bazarr]{--tc:var(--bazarr)}
 [data-tint="1"] .card[data-icon=docker]{--tc:var(--docker)}
 [data-tint="1"] .card{background:color-mix(in srgb,var(--tc,var(--accent)) 10%,var(--panel))}
 [data-tint="1"] .card[data-icon],[data-tint="1"] .card[data-svc]{background:color-mix(in srgb,var(--tc) 14%,var(--panel))}
@@ -176,7 +178,7 @@ body.has-bg .req{background:color-mix(in srgb,var(--panel) 80%,transparent);back
 .counts{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .counts b{color:var(--text);font-family:var(--mono)}
 .svc .link{margin-top:10px}
-[data-scheme=light]{--docker:#1d7fd0;--seerr:#6d5bd0;--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
+[data-scheme=light]{--docker:#1d7fd0;--seerr:#6d5bd0;--prowlarr:#c8571f;--bazarr:#1e8f7e;--radarr:#d4a400;--sonarr:#1a9fd0;--nzb:#4f9a22;--qb:#2f6fc0;--ok:#2e8b57;--warn:#b7791f;--err:#c53030}
 body{transition:background-color .3s}
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 #bg canvas,#bg .bg-img,#bg .bg-shade{position:absolute;inset:0;transition:opacity .6s}
@@ -350,7 +352,7 @@ body.card-icons .card[data-icon]{position:relative;overflow:hidden;isolation:iso
 body.card-icons .card[data-icon]::after{content:'';position:absolute;z-index:-1;pointer-events:none;right:0;bottom:0;height:clamp(110px,80%,190px);aspect-ratio:1;background:var(--icon) center/contain no-repeat;opacity:var(--card-icon-opacity,.1);transform:translate(16%,18%) rotate(-12deg)}
 body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opacity:calc(var(--card-icon-opacity,.1) * .7)}
 .card[data-icon=radarr]{--icon:var(--icon-radarr)}.card[data-icon=sonarr]{--icon:var(--icon-sonarr)}.card[data-icon=qbittorrent]{--icon:var(--icon-qbittorrent)}
-.card[data-icon=nzbget]{--icon:var(--icon-nzbget)}.card[data-icon=seerr]{--icon:var(--icon-seerr)}.card[data-icon=docker]{--icon:var(--icon-docker)}
+.card[data-icon=nzbget]{--icon:var(--icon-nzbget)}.card[data-icon=seerr]{--icon:var(--icon-seerr)}.card[data-icon=prowlarr]{--icon:var(--icon-prowlarr)}.card[data-icon=bazarr]{--icon:var(--icon-bazarr)}.card[data-icon=docker]{--icon:var(--icon-docker)}
 .about{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .about .ver{font-family:var(--mono);font-size:15px;font-weight:700;padding:6px 12px;border-radius:9px;background:color-mix(in srgb,var(--accent) 16%,var(--panel2));color:var(--text);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
 .about .st{font-size:13px;color:var(--muted);flex:1;min-width:200px}
@@ -494,6 +496,8 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
       <div class="card wide" data-svc="sonarr" data-icon="sonarr"><h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2><div class="list" id="sonarrHist"></div><div class="pager in-card hidden" data-hist="sonarr"></div></div>
       <div class="card wide" data-svc="nzbget" data-icon="nzbget"><h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2><div class="list" id="nzbHist"></div><div class="pager in-card hidden" data-hist="nzbget"></div></div>
       <div class="card wide" data-svc="qbittorrent" data-icon="qbittorrent"><h2><span class="dot" style="background:var(--qb)"></span>qBittorrent <span class="muted hsub" data-i18n="hist.qbSub">completed torrents</span></h2><div class="list" id="qbitHist"></div><div class="pager in-card hidden" data-hist="qbittorrent"></div></div>
+      <div class="card wide" data-svc="prowlarr" data-icon="prowlarr"><h2><span class="dot" style="background:var(--prowlarr)"></span>Prowlarr <span class="muted hsub" data-i18n="hist.prSub">searches and grabs</span></h2><div class="list" id="prowlarrHist"></div><div class="pager in-card hidden" data-hist="prowlarr"></div></div>
+      <div class="card wide" data-svc="bazarr" data-icon="bazarr"><h2><span class="dot" style="background:var(--bazarr)"></span>Bazarr <span class="muted hsub" data-i18n="hist.bzSub">subtitles</span></h2><div class="list" id="bazarrHist"></div><div class="pager in-card hidden" data-hist="bazarr"></div></div>
     </div>
   </section>
 
@@ -644,6 +648,22 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="seerr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
           <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--prowlarr)">
+          <h2><span class="dot" style="background:var(--prowlarr)"></span>Prowlarr</h2>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="prowlarr.url" placeholder="http://192.168.1.10:9696"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="prowlarr.link" placeholder="https://prowlarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="prowlarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="prowlarr.apiKey" type="password"><span class="hint">Prowlarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="prowlarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--bazarr)">
+          <h2><span class="dot" style="background:var(--bazarr)"></span>Bazarr</h2>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="bazarr.url" placeholder="http://192.168.1.10:6767"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="bazarr.link" placeholder="https://bazarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="bazarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="bazarr.apiKey" type="password"><span class="hint">Bazarr → Settings → General → Security</span></div>
+          <div class="test"><button type="button" class="btn" data-test="bazarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--docker)">
           <h2><span class="dot" style="background:var(--docker)"></span>Docker</h2>

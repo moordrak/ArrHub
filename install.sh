@@ -6,7 +6,7 @@
 # Running it again upgrades ArrHub and keeps the existing /opt/arrhub/config.json.
 # Unattended: set the variables (PORT, ARRHUB_USER, ARRHUB_PASS, RADARR_URL, RADARR_KEY,
 # SONARR_URL, SONARR_KEY, NZBGET_URL, NZBGET_USER, NZBGET_PASS, QBIT_URL, QBIT_USER, QBIT_PASS,
-# SEERR_URL, SEERR_KEY, ARRHUB_LANG)
+# SEERR_URL, SEERR_KEY, PROWLARR_URL, PROWLARR_KEY, BAZARR_URL, BAZARR_KEY, ARRHUB_LANG)
 # and NONINTERACTIVE=1.
 set -euo pipefail
 
@@ -93,9 +93,13 @@ else
   [[ -n "${QBIT_URL:-}" ]] && { ask QBIT_USER "qBittorrent username" admin; ask QBIT_PASS "qBittorrent password" "" secret; }
   nl; ask SEERR_URL "Seerr URL (e.g. http://192.168.1.10:5055)"
   [[ -n "${SEERR_URL:-}" ]] && ask SEERR_KEY "Seerr API key"
+  nl; ask PROWLARR_URL "Prowlarr URL (e.g. http://192.168.1.10:9696)"
+  [[ -n "${PROWLARR_URL:-}" ]] && ask PROWLARR_KEY "Prowlarr API key"
+  nl; ask BAZARR_URL "Bazarr URL (e.g. http://192.168.1.10:6767)"
+  [[ -n "${BAZARR_URL:-}" ]] && ask BAZARR_KEY "Bazarr API key"
 
   export PORT ARRHUB_USER ARRHUB_PASS RADARR_URL RADARR_KEY SONARR_URL SONARR_KEY \
-         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS SEERR_URL SEERR_KEY ARRHUB_LANG
+         NZBGET_URL NZBGET_USER NZBGET_PASS QBIT_URL QBIT_USER QBIT_PASS SEERR_URL SEERR_KEY PROWLARR_URL PROWLARR_KEY BAZARR_URL BAZARR_KEY ARRHUB_LANG
   node -e '
     const e = process.env, s = (u, o) => (u ? { url: u, ...o } : undefined);
     const cfg = {
@@ -106,6 +110,8 @@ else
       nzbget: s(e.NZBGET_URL, { user: e.NZBGET_USER || "", pass: e.NZBGET_PASS || "" }),
       qbittorrent: s(e.QBIT_URL, { user: e.QBIT_USER || "", pass: e.QBIT_PASS || "" }),
       seerr: s(e.SEERR_URL, { apiKey: e.SEERR_KEY || "" }),
+      prowlarr: s(e.PROWLARR_URL, { apiKey: e.PROWLARR_KEY || "" }),
+      bazarr: s(e.BAZARR_URL, { apiKey: e.BAZARR_KEY || "" }),
       ui: { lang: ["en", "hr", "auto"].includes(e.ARRHUB_LANG) ? e.ARRHUB_LANG : "en" },
     };
     require("fs").writeFileSync(process.argv[1], JSON.stringify(cfg, null, 2) + "\n");

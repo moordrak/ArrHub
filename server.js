@@ -60,6 +60,7 @@ const MSG = {
     stackNoNetwork: 'External network "{name}" does not exist – create it first (docker network create {name})', stackNoVolume: 'External volume "{name}" does not exist',
     stackNoImage: 'Image {image} is not on the Docker host and pull_policy is never', stackDepFailed: 'Dependency {name} did not start ({why})',
     stackBusy: 'This stack is already being deployed or removed', imageInUse: 'used by {names}',
+    nIndexers: '{n} indexers',
     dockerOk: 'Connected – Docker {version}, {n} containers', dockerSelf: 'This is ArrHub\'s own container – it cannot stop or replace itself',
     dockerPinned: 'The image is pinned to a fixed version (digest) – change it in your compose file', dockerNoImage: 'The image could not be found after pulling',
     dockerAutoRemove: 'The container was started with --rm and would disappear when stopped – recreate it with docker compose',
@@ -98,6 +99,7 @@ const MSG = {
     stackNoNetwork: 'Vanjska mreža „{name}” ne postoji – prvo je napravi (docker network create {name})', stackNoVolume: 'Vanjski volumen „{name}” ne postoji',
     stackNoImage: 'Image {image} nije na Docker hostu, a pull_policy je never', stackDepFailed: 'Ovisnost {name} se nije pokrenula ({why})',
     stackBusy: 'Ovaj stack se upravo pokreće ili uklanja', imageInUse: 'koristi ga {names}',
+    nIndexers: 'indeksera: {n}',
     dockerOk: 'Spojeno – Docker {version}, {n} kontejnera', dockerSelf: 'Ovo je ArrHubov vlastiti kontejner – ne može sam sebe zaustaviti ni zamijeniti',
     dockerPinned: 'Image je vezan na fiksnu verziju (digest) – promijeni ga u compose datoteci', dockerNoImage: 'Image nije pronađen nakon preuzimanja',
     dockerAutoRemove: 'Kontejner je pokrenut s --rm i nestao bi kad se zaustavi – ponovno ga stvori s docker compose',
@@ -126,7 +128,7 @@ function requestLang(r) {
 
 // ---------- Configuration ----------
 const CONFIG_FILE = process.env.ARRHUB_CONFIG || path.join(__dirname, 'config.json');
-const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr'];
+const SERVICES = ['radarr', 'sonarr', 'nzbget', 'qbittorrent', 'seerr', 'prowlarr', 'bazarr'];
 const MASK = '********';
 // [section, field, environment variable, secret?]
 const FIELDS = [
@@ -137,12 +139,14 @@ const FIELDS = [
   ['nzbget', 'url', 'NZBGET_URL'], ['nzbget', 'user', 'NZBGET_USER'], ['nzbget', 'pass', 'NZBGET_PASS', true],
   ['qbittorrent', 'url', 'QBIT_URL'], ['qbittorrent', 'user', 'QBIT_USER'], ['qbittorrent', 'pass', 'QBIT_PASS', true],
   ['seerr', 'url', 'SEERR_URL'], ['seerr', 'apiKey', 'SEERR_KEY', true],
+  ['prowlarr', 'url', 'PROWLARR_URL'], ['prowlarr', 'apiKey', 'PROWLARR_KEY', true],
+  ['bazarr', 'url', 'BAZARR_URL'], ['bazarr', 'apiKey', 'BAZARR_KEY', true],
   // optional address the browser opens from the cards (e.g. a public reverse-proxy URL); empty = the service URL
   ['radarr', 'link', 'RADARR_LINK'], ['sonarr', 'link', 'SONARR_LINK'], ['nzbget', 'link', 'NZBGET_LINK'],
-  ['qbittorrent', 'link', 'QBIT_LINK'], ['seerr', 'link', 'SEERR_LINK'],
+  ['qbittorrent', 'link', 'QBIT_LINK'], ['seerr', 'link', 'SEERR_LINK'], ['prowlarr', 'link', 'PROWLARR_LINK'], ['bazarr', 'link', 'BAZARR_LINK'],
   // accept a self-signed / locally signed TLS certificate for that service only
   ['radarr', 'insecure', 'RADARR_INSECURE'], ['sonarr', 'insecure', 'SONARR_INSECURE'], ['nzbget', 'insecure', 'NZBGET_INSECURE'],
-  ['qbittorrent', 'insecure', 'QBIT_INSECURE'], ['seerr', 'insecure', 'SEERR_INSECURE'],
+  ['qbittorrent', 'insecure', 'QBIT_INSECURE'], ['seerr', 'insecure', 'SEERR_INSECURE'], ['prowlarr', 'insecure', 'PROWLARR_INSECURE'], ['bazarr', 'insecure', 'BAZARR_INSECURE'],
   // own CA certificate(s) in PEM, trusted (together with the system CAs) for connections to the services
   ['tls', 'ca', 'ARRHUB_CA'],
   // offline mode: ArrHub only talks to the configured services (no update check, no TMDB/TVDB images)
@@ -281,7 +285,7 @@ function validate(c) {
     if (!/^https?:$/.test(p.protocol)) throw new Error(T('linkInvalid', { svc: k }));
     c[k].link = l.replace(/\/+$/, '');
   }
-  for (const k of ['radarr', 'sonarr', 'seerr']) if (c[k]?.url && !c[k].apiKey) throw new Error(T('needsKey', { svc: k[0].toUpperCase() + k.slice(1) }));
+  for (const k of ['radarr', 'sonarr', 'seerr', 'prowlarr', 'bazarr']) if (c[k]?.url && !c[k].apiKey) throw new Error(T('needsKey', { svc: k[0].toUpperCase() + k.slice(1) }));
   if (c.auth?.user && !c.auth.pass) throw new Error(T('authNeedsPass'));
   if (c.port !== undefined) { const n = Number(c.port); if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(T('badPort')); c.port = n; }
   if (c.refresh !== undefined) c.refresh = Math.min(300, Math.max(2, Number(c.refresh) || 5));
@@ -340,6 +344,18 @@ async function runServiceTest(service, s) {
     const client = makeSeerr(() => s);
     const [st, me] = await Promise.all([client.call('/status'), client.call('/auth/me')]);
     return { message: `Seerr ${st.version || ''} · ${me.displayName || me.username || me.email || T('user')}` };
+  }
+  if (service === 'prowlarr') {
+    const st = await makeProwlarr(s).call('/system/status');
+    if (st.appName && st.appName.toLowerCase() !== 'prowlarr') throw new Error(T('wrongApp', { app: st.appName, svc: 'Prowlarr' }));
+    const idx = await makeProwlarr(s).call('/indexer').catch(() => []);
+    return { message: `Prowlarr ${st.version} · ${T('nIndexers', { n: Array.isArray(idx) ? idx.length : 0 })}` };
+  }
+  if (service === 'bazarr') {
+    const st = await makeBazarr(s).call('/system/status');
+    const v = st?.data?.bazarr_version;
+    if (!v) throw new Error(T('wrongApp', { app: '?', svc: 'Bazarr' }));
+    return { message: `Bazarr ${v}` };
   }
   return { message: `NZBGet ${await makeNzb(() => s).rpc('version')}` };
 }
@@ -486,6 +502,106 @@ function arr(name, c = cfg[name]) {
     },
   };
 }
+
+// ---------- Prowlarr (API v1) ----------
+function makeProwlarr(c) {
+  const call = (p, opts = {}) => json(`${c.url}/api/v1${p}`, { ...opts, headers: { 'X-Api-Key': c.apiKey, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  const names = async () => Object.fromEntries((await call('/indexer').catch(() => [])).map(i => [i.id, i.name]));
+  return {
+    call,
+    async summary() {
+      const since = new Date(Date.now() - 86400000).toISOString();
+      const [status, indexers, istatus, health, apps, stats] = await Promise.all([
+        call('/system/status'), call('/indexer'), call('/indexerstatus').catch(() => []), call('/health').catch(() => []),
+        call('/applications').catch(() => []), call(`/indexerstats?startDate=${encodeURIComponent(since)}`).catch(() => null),
+      ]);
+      const now = Date.now();
+      const byId = Object.fromEntries(indexers.map(i => [i.id, i]));
+      // an indexer is failing while Prowlarr has it disabled after errors (disabledTill in the future)
+      const failing = (istatus || []).filter(x => byId[x.indexerId]?.enable && x.disabledTill && Date.parse(x.disabledTill) > now)
+        .map(x => ({ name: byId[x.indexerId].name, until: x.disabledTill, since: x.mostRecentFailure || x.initialFailure || null }));
+      const st = (stats?.indexers || []);
+      const sum = k => st.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+      return {
+        version: status.version, total: indexers.length, enabled: indexers.filter(i => i.enable).length, failing,
+        apps: (apps || []).map(a => ({ name: a.name, app: a.implementationName || a.implementation, sync: a.syncLevel })),
+        queries: sum('numberOfQueries'), grabs: sum('numberOfGrabs'), failedQueries: sum('numberOfFailedQueries') + sum('numberOfFailedGrabs'),
+        health: health || [],
+      };
+    },
+    async history(page, size) {
+      const [d, n] = await Promise.all([call(`/history?page=${page}&pageSize=${size}&sortKey=date&sortDirection=descending`), names()]);
+      const records = (d.records || []).map(r => ({ id: r.id, date: r.date, eventType: r.eventType, successful: r.successful !== false, indexer: n[r.indexerId] || '',
+        query: r.data?.query || '', results: r.data?.queryResults != null ? Number(r.data.queryResults) : null, title: r.data?.grabTitle || r.data?.title || '',
+        source: r.data?.source || '', host: r.data?.host || '', elapsed: r.data?.elapsedTime != null ? Number(r.data.elapsedTime) : null }));
+      return { records, total: d.totalRecords ?? records.length };
+    },
+    // tests every enabled indexer; Prowlarr disables the ones that fail
+    async testAll() {
+      const [res, n] = await Promise.all([call('/indexer/testall', { method: 'POST', timeout: 120000 }), names()]);
+      const list = Array.isArray(res) ? res : [];
+      const bad = list.filter(x => x.isValid === false).map(x => ({ name: n[x.id] || `#${x.id}`, error: (x.validationFailures || []).map(f => f.errorMessage).filter(Boolean).join('; ') }));
+      return { tested: list.length, ok: list.length - bad.length, bad };
+    },
+    syncApps() { return call('/command', { method: 'POST', body: JSON.stringify({ name: 'ApplicationIndexerSync' }) }); },
+  };
+}
+const prowlarr = { summary: () => makeProwlarr(cfg.prowlarr).summary(), history: (p, s) => makeProwlarr(cfg.prowlarr).history(p, s), call: (p, o) => makeProwlarr(cfg.prowlarr).call(p, o) };
+
+// ---------- Bazarr ----------
+// Bazarr formats times as text: history "%x %X" (11/27/26 18:22:01), logs "27/11/2026 18:22:01" – both in Bazarr's local time
+function bazarrTime(s) {
+  if (!s) return null;
+  if (/^\d{4}-\d\d-\d\dT/.test(s)) { const t = Date.parse(s); return Number.isNaN(t) ? null : t; }
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{2})[ ,T]+(\d{1,2}):(\d\d)(?::(\d\d))?/.exec(s);
+  if (m) return new Date(2000 + Number(m[3]), m[1] - 1, Number(m[2]), Number(m[4]), Number(m[5]), Number(m[6] || 0)).getTime();
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})[ ,T]+(\d{1,2}):(\d\d)(?::(\d\d))?/.exec(s);
+  if (m) return new Date(Number(m[3]), m[2] - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6] || 0)).getTime();
+  const t = Date.parse(s); return Number.isNaN(t) ? null : t;
+}
+function makeBazarr(c) {
+  const call = (p, opts = {}) => json(`${c.url}/api${p}`, { ...opts, headers: { 'X-API-KEY': c.apiKey, Accept: 'application/json', ...(opts.headers || {}) } });
+  const histItem = (r, kind) => ({
+    kind, action: Number(r.action), title: kind === 'movie' ? r.title : r.seriesTitle, episode: kind === 'episode' ? [r.episode_number, r.episodeTitle].filter(Boolean).join(' · ') : '',
+    language: r.language?.name || r.language?.code2 || (typeof r.language === 'string' ? r.language : ''), forced: !!r.language?.forced, hi: !!r.language?.hi,
+    provider: r.provider || '', score: r.score || '', description: r.description || '',
+    time: bazarrTime(r.parsed_timestamp) ?? bazarrTime(r.timestamp), when: r.timestamp || '',
+  });
+  return {
+    call,
+    async summary() {
+      const [status, badges, health, providers] = await Promise.all([
+        call('/system/status'), call('/badges').catch(() => ({})), call('/system/health').catch(() => ({ data: [] })), call('/providers').catch(() => ({ data: [] })),
+      ]);
+      return {
+        version: status?.data?.bazarr_version || '', episodes: Number(badges.episodes) || 0, movies: Number(badges.movies) || 0,
+        sonarr: status?.data?.sonarr_version || '', radarr: status?.data?.radarr_version || '',
+        throttled: (providers?.data || []).map(p => ({ name: p.name, status: p.status, retry: p.retry })),
+        health: (health?.data || []).map(h => ({ type: 'warning', message: [h.object, h.issue].filter(Boolean).join(': ') })),
+      };
+    },
+    // episodes and movies come from two endpoints – merged newest first
+    async history(page, size) {
+      const n = page * size;
+      const [e, m] = await Promise.all([
+        call(`/episodes/history?start=0&length=${n}`).catch(err => ({ err })),
+        call(`/movies/history?start=0&length=${n}`).catch(err => ({ err })),
+      ]);
+      if (e?.err && m?.err) throw e.err;
+      const all = [...(e?.data || []).map(r => histItem(r, 'episode')), ...(m?.data || []).map(r => histItem(r, 'movie'))]
+        .sort((a, b) => (b.time || 0) - (a.time || 0));
+      return { records: all.slice((page - 1) * size, n), total: (Number(e?.total) || 0) + (Number(m?.total) || 0) };
+    },
+    // runs Bazarr's own "search for missing subtitles" tasks
+    async searchWanted() {
+      for (const taskid of ['wanted_search_missing_subtitles_series', 'wanted_search_missing_subtitles_movies']) {
+        await call('/system/tasks', { method: 'POST', body: new URLSearchParams({ taskid }).toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      }
+      return { ok: true };
+    },
+  };
+}
+const bazarr = { summary: () => makeBazarr(cfg.bazarr).summary(), history: (p, s) => makeBazarr(cfg.bazarr).history(p, s), call: (p, o) => makeBazarr(cfg.bazarr).call(p, o) };
 
 // ---------- qBittorrent (Web API v2) ----------
 function makeQb(conf) { return {
@@ -719,6 +835,13 @@ async function serviceLogs(src) {
   } else if (src === 'nzbget') {
     const d = await nzb.rpc('log', [0, 250]);
     entries = (d || []).slice().reverse().map(r => ({ time: new Date(r.Time * 1000).toISOString(), level: lvl(r.Kind), message: r.Text }));
+  } else if (src === 'prowlarr') {
+    const d = await prowlarr.call('/log?page=1&pageSize=250&sortKey=time&sortDirection=descending');
+    entries = (d.records || []).map(r => ({ time: r.time, level: lvl(r.level), source: r.logger, message: r.message, detail: r.exception || undefined }));
+  } else if (src === 'bazarr') {
+    const d = await bazarr.call('/system/logs');
+    entries = (d?.data || []).map(r => { const t = bazarrTime(r.timestamp); return { time: t ? new Date(t).toISOString() : r.timestamp, level: lvl(r.type), message: r.message, detail: r.exception || undefined, _t: t || 0 }; })
+      .sort((a, b) => b._t - a._t).slice(0, 250).map(({ _t, ...r }) => r);
   } else if (src === 'seerr') {
     const d = await seerr.call('/settings/logs?take=250&skip=0&filter=debug');
     entries = (d.results || []).map(r => ({ time: r.timestamp, level: lvl(r.level), source: r.label, message: r.message, detail: r.data && Object.keys(r.data).length ? JSON.stringify(r.data, null, 2) : undefined }));
@@ -840,11 +963,13 @@ const ICON_PATHS = {
   qbittorrent: ['/images/qbittorrent-tray.svg', '/images/qbittorrent.svg', '/images/qbittorrent32.png', '/favicon.ico'],
   nzbget: ['/img/favicon-256x256.png', '/img/favicon.png', '/img/favicon.ico', '/favicon.ico'],
   seerr: ['/os_icon.svg', '/android-chrome-512x512.png', '/apple-touch-icon.png', '/favicon.ico'],
+  prowlarr: ['/Content/Images/logo.svg', '/Content/Images/Icons/android-chrome-192x192.png', '/Content/Images/Icons/apple-touch-icon.png', '/favicon.ico'],
+  bazarr: ['/images/logo128.png', '/images/logo64.png', '/images/apple-touch-icon.png', '/images/favicon.ico', '/favicon.ico'],
 };
 const iconCache = new Map(); // svc -> { buf, type, at } | { missing: true, at }
 function iconAuth(svc) {
   const c = cfg[svc];
-  if (svc === 'radarr' || svc === 'sonarr' || svc === 'seerr') return { 'X-Api-Key': c.apiKey };
+  if (svc === 'radarr' || svc === 'sonarr' || svc === 'seerr' || svc === 'prowlarr' || svc === 'bazarr') return { 'X-Api-Key': c.apiKey };
   if (svc === 'nzbget' && c.user) return { Authorization: 'Basic ' + Buffer.from(`${c.user}:${c.pass || ''}`).toString('base64') };
   if (svc === 'qbittorrent' && qb.sid) return { Cookie: `SID=${qb.sid}` };
   return {};
@@ -1739,7 +1864,7 @@ function dockerWebHost() {
   return null;                                   // browser falls back to the address ArrHub was opened with
 }
 // which of ArrHub's services is this container? (name, compose service or image)
-const SVC_MATCH = { radarr: /radarr/, sonarr: /sonarr/, nzbget: /nzbget/, qbittorrent: /qbittorrent/, seerr: /(^|[\s\/_.-])(seerr|overseerr|jellyseerr)([\s:\/_.-]|$)/ };
+const SVC_MATCH = { radarr: /radarr/, sonarr: /sonarr/, nzbget: /nzbget/, qbittorrent: /qbittorrent/, prowlarr: /prowlarr/, bazarr: /bazarr/, seerr: /(^|[\s\/_.-])(seerr|overseerr|jellyseerr)([\s:\/_.-]|$)/ };
 function serviceOf(c, image) {
   const hay = `${(c.Names?.[0] || '').replace(/^\//, '')} ${c.Labels?.['com.docker.compose.service'] || ''} ${image || c.Image || ''}`.toLowerCase();
   return SERVICES.find(k => enabled(k) && SVC_MATCH[k]?.test(hay)) || null;
@@ -2032,11 +2157,17 @@ const routes = {
   'GET /api/nzbget': () => nzb.summary(),
   'GET /api/seerr': q => seerr.summary(q.get('filter') || 'all', q.get('page'), q.get('size')),
   'POST /api/seerr/action': (q, b) => seerr.action(b.id, b.action),
+  'GET /api/prowlarr': () => prowlarr.summary(),
+  'POST /api/prowlarr/test': () => makeProwlarr(cfg.prowlarr).testAll(),
+  'POST /api/prowlarr/sync': () => makeProwlarr(cfg.prowlarr).syncApps(),
+  'GET /api/bazarr': () => bazarr.summary(),
+  'POST /api/bazarr/search': () => makeBazarr(cfg.bazarr).searchWanted(),
   'GET /api/:svc/history': async (q, b, p) => {
     const size = PAGE_SIZES.includes(Number(q.get('size'))) ? Number(q.get('size')) : 10;
     const page = Math.max(1, Math.floor(Number(q.get('page'))) || 1);
-    const src = p.svc === 'radarr' || p.svc === 'sonarr' ? arr(p.svc) : p.svc === 'nzbget' ? nzb : p.svc === 'qbittorrent' ? qb : null;
+    const src = p.svc === 'radarr' || p.svc === 'sonarr' ? arr(p.svc) : p.svc === 'nzbget' ? nzb : p.svc === 'qbittorrent' ? qb : p.svc === 'prowlarr' ? prowlarr : p.svc === 'bazarr' ? bazarr : null;
     if (!src) { const e = new Error(T('notFound')); e.status = 404; throw e; }
+    if (!enabled(p.svc)) { const e = new Error(T('notConfigured', { svc: p.svc })); e.status = 400; throw e; }
     const d = await src.history(page, size);
     return { ...d, page, pageSize: size, pages: Math.max(1, Math.ceil(d.total / size)) };
   },
