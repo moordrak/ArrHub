@@ -10,6 +10,7 @@ WORKDIR /app
 COPY package.json server.js compose.js ./
 COPY lib ./lib
 COPY public ./public
+COPY proxmox/arr-stack-lxc.sh ./proxmox/
 # ssh client for Docker control over ssh:// (Settings → Docker)
 RUN apk add --no-cache openssh-client && mkdir -p /app/data && chown node:node /app/data
 

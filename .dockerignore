@@ -8,3 +8,4 @@ proxmox
 install.sh
 arrhub.service
 docker-compose.yml
+!proxmox/arr-stack-lxc.sh

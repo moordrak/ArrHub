@@ -550,6 +550,7 @@ function show(v) {
   if (v === 'logs') { renderLogSources(); loadLogs(); }
   if (v === 'history') loadAllHistory();
   if (v === 'docker') { $('#dkList').innerHTML ||= `<div class="empty">${t('c.loading')}</div>`; loadDocker(); }
+  if (v === 'tools') Tools.show();
   if (v === 'settings') loadSettings();
   else if (state.cfg.ui) applyUi(state.cfg.ui);
   history.replaceState(null, '', '#' + v);
@@ -1003,6 +1004,15 @@ async function openStacks() {
   if (st.cur && st.list.some(x => x.name === st.cur)) { if (!$('#stYml').value) stSelect(st.cur); else stRenderList(); }
   else if (!st.cur) { const first = st.list.find(x => x.saved); first ? stSelect(first.name) : stShowEditor(null); }
 }
+// ArrHub → Tools: open a generated compose file as a new, unsaved stack
+window.dockerReady = () => !!state.cfg.docker && !state.cfg.dockerLocked;
+window.openStackWith = async (name, yml) => {
+  show('docker'); await openStacks();
+  if (st.dirty && !confirm(t('st.discard'))) return;
+  const taken = st.list.some(x => x.name === name);
+  stShowEditor({ name: taken ? '' : name, yml, env: '' });
+  st.dirty = true; if (taken) toast(t('tl.nameTaken', { name }));
+};
 function closeStacks() { if (st.dirty && !confirm(t('st.discard'))) return; st.open = false; $('#stModal').classList.add('hidden'); }
 $('#dkStacks').onclick = openStacks;
 $('#stClose').onclick = closeStacks;
@@ -1278,7 +1288,7 @@ function labelAppearance() {
 
 // Re-render everything that contains translated text
 function relabel() {
-  I18N.apply(); renderLogSources(); renderLogs(); placeTabHead(state.view); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
+  I18N.apply(); if (state.view === 'tools') Tools.render(); renderLogSources(); renderLogs(); placeTabHead(state.view); labelAppearance(); settingsTexts(); renderAbout(); renderIconStatus(); decorateStaticLinks(); render();
   if (lastResults.length && state.view === 'add') renderResults();
   if (st.open) { stRenderList(); stShowState(); if (st.job && st.job.state !== 'running') $('#stOut').innerHTML = stJobHtml(st.job); }
   if (!$('#imModal').classList.contains('hidden')) imRender();

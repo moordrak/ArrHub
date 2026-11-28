@@ -153,6 +153,17 @@ Dodaj Proxy Host → `http://<ip-lxc>:8686`. Ako je dostupno izvan LAN-a, obavez
   `X-Forwarded-Host`), a POST iz preglednika mora biti JSON. Skripte bez `Origin` zaglavlja (curl) i dalje rade.
   Ako ArrHubov API zoveš s neke svoje druge stranice, dodaj je u `ARRHUB_ORIGINS` (odvojeno zarezom).
 
+## Instalacija cijelog arr stacka (Alati)
+
+**Alati** u bočnom izborniku slažu instalaciju cijelog stacka – Radarr, Sonarr, Prowlarr, Bazarr, NZBGet, qBittorrent, Seerr, ArrHub i po želji Nginx Proxy Manager. Odaberi aplikacije i postavke pa kopiraj ili preuzmi rezultat:
+
+- **Docker compose** – linuxserver.io image-i (službeni za Seerr i ArrHub), jedna zajednička mapa `/data` za hardlinkove (`/data/torrents`, `/data/usenet`, `/data/media`), PUID/PGID/TZ, ArrHub već povezan s ostalima preko imena servisa. Zalijepi u Portainer, pokreni `docker compose up -d` ili otvori u ArrHub Compose stackovima. Zadana kopija je u [`stack/docker-compose.yml`](stack/docker-compose.yml).
+- **Proxmox LXC** – [`proxmox/arr-stack-lxc.sh`](proxmox/arr-stack-lxc.sh) svakoj aplikaciji napravi vlastiti Debian kontejner (whiptail dijalozi: aplikacije, ID-jevi, spremište, bridge/VLAN, DHCP ili statičke adrese redom, DNS, domena, zajednička mapa s medijima s hosta uz 1:1 mapiranje uid/gid, vlastiti CA, resursi, prijave), instalira aplikacije kao systemd servise i postavi ArrHub s njihovim adresama i API ključevima. Na kraju ispiše tablicu s adresama, API ključevima i lozinkama (spremljeno i u `/root/arr-stack-*.txt`) te proxy hostove za Nginx Proxy Manager.
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/proxmox/arr-stack-lxc.sh)"
+```
+
 ## Upravljanje Dockerom
 
 Tab **Docker** prikazuje sve kontejnere na tvom Docker hostu – grupirane po compose projektu – sa stanjem, zdravljem, vremenom rada, procesorom i RAM-om, portovima i oznakom ima li novija verzija image-a. Kontejnere možeš pokretati, zaustavljati i ponovno pokretati, čitati njihove logove te ih **ažurirati** jedan po jedan ili sve odjednom.

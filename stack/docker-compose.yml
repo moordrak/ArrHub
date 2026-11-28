@@ -1,0 +1,156 @@
+# ArrHub – the whole arr stack in Docker (generated in ArrHub → Tools)
+#
+# Assumptions – change them to match your setup:
+#  - every app runs as 1000:1000 (PUID/PGID) and owns /opt/arr/config and /opt/arr/data
+#  - one shared folder /opt/arr/data → /data in every app that touches files, so Radarr/Sonarr can
+#    hardlink instead of copy:  /data/torrents/{movies,tv}  /data/usenet/complete/{movies,tv}  /data/media/{movies,tv}
+#  - the apps find each other by service name on the stack network (http://radarr:7878, http://qbittorrent:8080, …)
+#  - web UI ports are published on the Docker host; behind Nginx Proxy Manager you can remove them
+#  - images: linuxserver.io where there is one, the official image for Seerr and ArrHub
+#
+# Before the first start:  mkdir -p /opt/arr/data/{torrents/{movies,tv},usenet/{incomplete,complete/{movies,tv}},media/{movies,tv}} /opt/arr/config
+#                          chown -R 1000:1000 /opt/arr/data /opt/arr/config
+# Deploy: Portainer → Stacks → Add stack, ArrHub → Docker → Compose stacks, or  docker compose up -d
+
+name: arr
+
+services:
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+    volumes:
+      - /opt/arr/config/radarr:/config
+      - /opt/arr/data:/data
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+    volumes:
+      - /opt/arr/config/sonarr:/config
+      - /opt/arr/data:/data
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+    volumes:
+      - /opt/arr/config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+    volumes:
+      - /opt/arr/config/bazarr:/config
+      - /opt/arr/data/media:/data/media
+    ports:
+      - "6767:6767"
+    restart: unless-stopped
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+      - NZBGET_USER=nzbget
+      - NZBGET_PASS=change-me   # change it here or in NZBGet → Settings → Security
+    # NZBGet → Settings → Paths: MainDir /data/usenet, DestDir /data/usenet/complete, InterDir /data/usenet/incomplete
+    volumes:
+      - /opt/arr/config/nzbget:/config
+      - /opt/arr/data:/data
+    ports:
+      - "6789:6789"
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zagreb
+      - UMASK=002
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    # first login: user admin, temporary password in the container log (docker logs qbittorrent)
+    # qBittorrent → Options → Downloads: default save path /data/torrents
+    volumes:
+      - /opt/arr/config/qbittorrent:/config
+      - /opt/arr/data:/data
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
+    # runs as user 1000 – /opt/arr/config/seerr must be writable for it
+    environment:
+      - TZ=Europe/Zagreb
+      - LOG_LEVEL=info
+      - PORT=5055
+    volumes:
+      - /opt/arr/config/seerr:/app/config
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+
+  arrhub:
+    image: ghcr.io/moordrak/arrhub:latest
+    container_name: arrhub
+    # the addresses below are fixed here; API keys and passwords go in ArrHub → Settings
+    environment:
+      - TZ=Europe/Zagreb
+      - ARRHUB_LANG=en
+      - RADARR_URL=http://radarr:7878
+      - SONARR_URL=http://sonarr:8989
+      - PROWLARR_URL=http://prowlarr:9696
+      - BAZARR_URL=http://bazarr:6767
+      - NZBGET_URL=http://nzbget:6789
+      - QBIT_URL=http://qbittorrent:8080
+      - SEERR_URL=http://seerr:5055
+      - NZBGET_USER=nzbget
+      - ARRHUB_DOCKER_URL=unix:///var/run/docker.sock
+    # Docker control: the socket is root:docker – put the docker group id of the host here (getent group docker)
+    group_add:
+      - "999"
+    volumes:
+      - /opt/arr/config/arrhub:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8686:8686"
+    restart: unless-stopped
