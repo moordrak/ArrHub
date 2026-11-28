@@ -605,77 +605,77 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         </div>
         <div class="card" style="border-top:3px solid var(--radarr)">
           <h2><span class="dot" style="background:var(--radarr)"></span>Radarr</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="radarr.link" placeholder="https://radarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="radarr.url" placeholder="http://192.168.1.10:7878" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="radarr.link" placeholder="https://radarr.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="radarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
-          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="radarr.apiKey" type="password"><span class="hint">Radarr → Settings → General → Security</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="radarr.apiKey" type="password" autocomplete="new-password"><span class="hint">Radarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="radarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--sonarr)">
           <h2><span class="dot" style="background:var(--sonarr)"></span>Sonarr</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="sonarr.link" placeholder="https://sonarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="sonarr.url" placeholder="http://192.168.1.10:8989" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="sonarr.link" placeholder="https://sonarr.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="sonarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
-          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="sonarr.apiKey" type="password"><span class="hint">Sonarr → Settings → General → Security</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="sonarr.apiKey" type="password" autocomplete="new-password"><span class="hint">Sonarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="sonarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--qb)">
           <h2><span class="dot" style="background:var(--qb)"></span>qBittorrent</h2>
-          <div class="field"><label data-i18n="set.webUiUrl">Web UI URL</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="qbittorrent.link" placeholder="https://qbittorrent.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.webUiUrl">Web UI URL</label><input name="qbittorrent.url" placeholder="http://192.168.1.10:8080" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="qbittorrent.link" placeholder="https://qbittorrent.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="qbittorrent.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="row2">
-            <div class="field"><label data-i18n="set.user">Username</label><input name="qbittorrent.user" placeholder="admin"></div>
-            <div class="field"><label data-i18n="set.pass">Password</label><input name="qbittorrent.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="qbittorrent.user" placeholder="admin" autocomplete="section-qbittorrent username"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="qbittorrent.pass" type="password" autocomplete="new-password"></div>
           </div>
           <div class="test"><button type="button" class="btn" data-test="qbittorrent" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--nzb)">
           <h2><span class="dot" style="background:var(--nzb)"></span>NZBGet</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="nzbget.link" placeholder="https://nzbget.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="nzbget.url" placeholder="http://192.168.1.10:6789" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="nzbget.link" placeholder="https://nzbget.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="nzbget.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
           <div class="row2">
-            <div class="field"><label data-i18n="set.user">Username</label><input name="nzbget.user" placeholder="nzbget"></div>
-            <div class="field"><label data-i18n="set.pass">Password</label><input name="nzbget.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="nzbget.user" placeholder="nzbget" autocomplete="section-nzbget username"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="nzbget.pass" type="password" autocomplete="new-password"></div>
           </div>
           <div class="test"><button type="button" class="btn" data-test="nzbget" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--seerr)">
           <h2><span class="dot" style="background:var(--seerr)"></span>Seerr</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="seerr.link" placeholder="https://seerr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="seerr.url" placeholder="http://192.168.1.10:5055" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="seerr.link" placeholder="https://seerr.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="seerr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
-          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password"><span class="hint">Seerr → Settings → General → API Key</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="seerr.apiKey" type="password" autocomplete="new-password"><span class="hint">Seerr → Settings → General → API Key</span></div>
           <div class="test"><button type="button" class="btn" data-test="seerr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--prowlarr)">
           <h2><span class="dot" style="background:var(--prowlarr)"></span>Prowlarr</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="prowlarr.url" placeholder="http://192.168.1.10:9696"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="prowlarr.link" placeholder="https://prowlarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="prowlarr.url" placeholder="http://192.168.1.10:9696" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="prowlarr.link" placeholder="https://prowlarr.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="prowlarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
-          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="prowlarr.apiKey" type="password"><span class="hint">Prowlarr → Settings → General → Security</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="prowlarr.apiKey" type="password" autocomplete="new-password"><span class="hint">Prowlarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="prowlarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--bazarr)">
           <h2><span class="dot" style="background:var(--bazarr)"></span>Bazarr</h2>
-          <div class="field"><label data-i18n="set.url">URL</label><input name="bazarr.url" placeholder="http://192.168.1.10:6767"></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="bazarr.link" placeholder="https://bazarr.example.com" data-i18n-ph="set.linkPh"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
+          <div class="field"><label data-i18n="set.url">URL</label><input name="bazarr.url" placeholder="http://192.168.1.10:6767" autocomplete="off"></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="bazarr.link" placeholder="https://bazarr.example.com" data-i18n-ph="set.linkPh" autocomplete="off"><span class="hint" data-i18n="set.linkHint">Opened from the cards. Empty = the URL above.</span></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="bazarr.insecure"> <span data-i18n="set.insecure">Accept self-signed certificate</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.insecureHint">Only for your own https:// service on the local network.</span></div>
-          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="bazarr.apiKey" type="password"><span class="hint">Bazarr → Settings → General → Security</span></div>
+          <div class="field"><label data-i18n="set.apiKey">API key</label><input name="bazarr.apiKey" type="password" autocomplete="new-password"><span class="hint">Bazarr → Settings → General → Security</span></div>
           <div class="test"><button type="button" class="btn" data-test="bazarr" data-i18n="set.test">Test connection</button><span class="r"></span></div>
         </div>
         <div class="card" style="border-top:3px solid var(--docker)">
           <h2><span class="dot" style="background:var(--docker)"></span>Docker</h2>
-          <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375 · ssh://arrhub@192.168.1.20"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
-          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
-          <div class="field"><label data-i18n="set.dockerWebHost">Address for opening containers (optional)</label><input name="docker.webHost" placeholder="192.168.1.20" data-i18n-ph="set.dockerWebHostPh"><span class="hint" data-i18n="set.dockerWebHostHint">Host name or IP of the Docker host used for the container web pages. Empty = the host from the Docker address.</span></div>
+          <div class="field"><label data-i18n="set.dockerUrl">Docker address</label><input name="docker.url" placeholder="http://192.168.1.20:2375 · ssh://arrhub@192.168.1.20" autocomplete="off"><span class="hint" data-i18n-html="set.dockerUrlHint">Address of the Docker host. Recommended: a <b>docker-socket-proxy</b> on that host (<code>http://host:2375</code>). Also <code>https://host:2376</code> with TLS certificates, or <code>unix:///var/run/docker.sock</code> if ArrHub runs on the same host.</span></div>
+          <div class="field"><label data-i18n="set.link">Link in cards (optional)</label><input name="docker.link" placeholder="https://portainer.example.com" data-i18n-ph="set.dockerLinkPh" autocomplete="off"><span class="hint" data-i18n="set.dockerLinkHint">E.g. Portainer or Dockge, opened from the Docker card.</span></div>
+          <div class="field"><label data-i18n="set.dockerWebHost">Address for opening containers (optional)</label><input name="docker.webHost" placeholder="192.168.1.20" data-i18n-ph="set.dockerWebHostPh" autocomplete="off"><span class="hint" data-i18n="set.dockerWebHostHint">Host name or IP of the Docker host used for the container web pages. Empty = the host from the Docker address.</span></div>
           <div class="ctl" style="margin:2px 0 10px"><label><input type="checkbox" name="docker.cleanup" checked> <span data-i18n="set.dockerCleanup">Remove the old image after an update</span></label></div>
           <div class="ctl" style="margin:2px 0 12px"><label><input type="checkbox" name="docker.noAuth"> <span data-i18n="set.dockerNoAuth">Login is handled by my reverse proxy</span></label><span class="hint" style="font-size:11.5px;color:var(--muted)" data-i18n="set.dockerNoAuthHint">Docker control needs an ArrHub login. Tick this only if e.g. an Nginx Proxy Manager Access List already asks for a password in front of ArrHub.</span></div>
           <details class="dktls" id="dkNpm"><summary data-i18n="set.npm">Nginx Proxy Manager – https addresses (optional)</summary>
             <span class="hint" style="display:block;margin-bottom:10px" data-i18n="set.npmHint">ArrHub reads your proxy hosts and opens each container at its https domain instead of http://IP:port – no browser warning about http inside https. Arr services also use the addresses from their cards above.</span>
-            <div class="field"><label data-i18n="set.npmUrl">Admin address</label><input name="npm.url" placeholder="http://192.168.1.10:81"></div>
-            <div class="field"><label data-i18n="set.npmUser">E-mail</label><input name="npm.user" autocomplete="off" placeholder="admin@example.com"></div>
+            <div class="field"><label data-i18n="set.npmUrl">Admin address</label><input name="npm.url" placeholder="http://192.168.1.10:81" autocomplete="off"></div>
+            <div class="field"><label data-i18n="set.npmUser">E-mail</label><input name="npm.user" placeholder="admin@example.com" autocomplete="section-npm username"></div>
             <div class="field"><label data-i18n="set.npmPass">Password</label><input name="npm.pass" type="password" autocomplete="new-password"></div>
             <div class="test" style="margin-bottom:8px"><button type="button" class="btn" data-test="npm" data-i18n="set.test">Test connection</button><span class="r"></span></div>
           </details>
@@ -698,15 +698,15 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
         <div class="card">
           <h2 data-i18n="set.general">General</h2>
           <div class="row2">
-            <div class="field"><label data-i18n="set.refresh">Refresh (seconds)</label><input name="refresh" type="number" min="2" max="300"></div>
-            <div class="field"><label data-i18n="set.port">Port</label><input name="port" type="number" min="1" max="65535"><span class="hint" data-i18n="set.portHint">Changing it requires a service restart</span></div>
+            <div class="field"><label data-i18n="set.refresh">Refresh (seconds)</label><input name="refresh" type="number" min="2" max="300" autocomplete="off"></div>
+            <div class="field"><label data-i18n="set.port">Port</label><input name="port" type="number" min="1" max="65535" autocomplete="off"><span class="hint" data-i18n="set.portHint">Changing it requires a service restart</span></div>
           </div>
         </div>
         <div class="card">
           <h2 data-i18n="set.login">ArrHub login</h2>
           <div class="row2">
-            <div class="field"><label data-i18n="set.user">Username</label><input name="auth.user" placeholder="empty = no login" data-i18n-ph="set.loginPh"></div>
-            <div class="field"><label data-i18n="set.pass">Password</label><input name="auth.pass" type="password"></div>
+            <div class="field"><label data-i18n="set.user">Username</label><input name="auth.user" placeholder="empty = no login" data-i18n-ph="set.loginPh" autocomplete="section-auth username"></div>
+            <div class="field"><label data-i18n="set.pass">Password</label><input name="auth.pass" type="password" autocomplete="new-password"></div>
           </div>
           <span class="muted" style="font-size:12px" id="authHint"></span>
         </div>
