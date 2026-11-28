@@ -19,7 +19,7 @@ const { saveSettings, testService } = require('./lib/settings');
 const { dockerOn, sshKeygen, sshPublic, dockerErr } = require('./lib/docker/api');
 const { dockerTest, dockerSummary, dockerContainers, dockerInfo, dk, checkUpdates, startUpdate, dockerAction, dockerLogs, jobs } = require('./lib/docker/containers');
 const { stackList, stackRead, stackOp, dockerImages, removeImages } = require('./lib/docker/stacks');
-const { npmTest, containerWeb } = require('./lib/docker/web');
+const { npmTest } = require('./lib/docker/web');
 const { wsAccept, dockerTerminal } = require('./lib/docker/terminal');
 const { checkAuth, sameOrigin, jsonBody, dockerLocked } = require('./lib/guard');
 
@@ -70,7 +70,6 @@ const routes = {
   'POST /api/docker/containers/:id/update': (q, b, p) => startUpdate(p.id),
   'POST /api/docker/containers/:id/:action': (q, b, p) => dockerAction(p.id, p.action),
   'GET /api/docker/containers/:id/logs': (q, b, p) => dockerLogs(p.id, q.get('tail')),
-  'GET /api/docker/containers/:id/web': (q, b, p) => containerWeb(p.id),
   'GET /api/docker/stacks': () => stackList(),
   'GET /api/docker/stacks/:name': (q, b, p) => { const s = stackRead(p.name); if (!s) throw dockerErr(T('notFound'), { status: 404 }); return s; },
   'POST /api/docker/stacks/:name/:op': (q, b, p) => stackOp(p.name, p.op, b || {}),
