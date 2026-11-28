@@ -206,12 +206,12 @@ Zatim u ArrHubu → **Postavke → Docker** upiši `http://<ip-docker-vm-a>:2375
 
 SSH ključu Docker hosta vjeruje se kod prvog spajanja i pamti se u `docker_known_hosts` pored `config.json`; promijenjeni ključ se odbija. Ključevi s lozinkom nisu podržani. Varijable okoline: `ARRHUB_DOCKER_URL=ssh://…`, `ARRHUB_DOCKER_SSH_KEY` ili `ARRHUB_DOCKER_SSH_KEY_FILE`. Napomena: korisnik u grupi `docker` može sve što može Docker – socket proxy je ograničenija opcija.
 
-**Web stranice i terminal.** Kontejneri s objavljenim TCP portom (ili oznakom `arrhub.url` / `homepage.href`) dobivaju gumb 🌐 koji aplikaciju otvara u prozoru iznad ArrHuba. Aplikacije koje ne dopuštaju prikaz unutar druge stranice (npr. qBittorrent s uključenom zaštitom od clickjackinga) i obične `http://` stranice dok ArrHub radi na `https://` nude se u novoj kartici. Ako poveznice koriste krivu adresu, postavi *Adresa za otvaranje kontejnera* u Postavke → Docker.
+**Web stranice i terminal.** Kontejneri s objavljenim TCP portom (ili oznakom `arrhub.url` / `homepage.href`) dobivaju gumb 🌐 koji aplikaciju otvara u novoj kartici preglednika. Ako kontejner ima više adresa, ▾ pokraj njega nudi ostale. Ako poveznice koriste krivu adresu, postavi *Adresa za otvaranje kontejnera* u Postavke → Docker.
 
-**https adrese pronalaze se automatski**, pa preglednik nikad ne mora prikazati `http://` stranicu unutar `https://` ArrHuba:
+**https adrese pronalaze se automatski**, pa gumb 🌐 radije otvara pravu domenu nego `http://host:port`:
 - **Arr servisi** (Radarr, Sonarr, NZBGet, qBittorrent, Seerr, Prowlarr, Bazarr) prepoznaju se po imenu kontejnera, compose servisu ili image-u i otvaraju se na adresi iz svoje kartice u Postavkama – npr. `https://radarr.int`. Radi i za qBittorrent iza VPN kontejnera.
 - **Nginx Proxy Manager** (neobavezno, Postavke → Docker → *Nginx Proxy Manager*): ArrHub čita tvoje proxy hostove i svaki kontejner otvara na njegovoj domeni – proxy hostovi koji prosljeđuju na kontejner po imenu ili na njegov objavljeni port na Docker hostu. Hostovi sa SSL certifikatom idu prvi.
-- Redoslijed: oznaka `arrhub.url` / `homepage.href` → https (NPM, postavke servisa) → http → `http://host:port`. Sve adrese su u popisu u prozoru.
+- Redoslijed: oznaka `arrhub.url` / `homepage.href` → https (NPM, postavke servisa) → http → `http://host:port`. Najbolja je na gumbu 🌐, a sve su u njegovom izborniku ▾.
 
 Gumb **Terminal** otvara ljusku **unutar** kontejnera (`docker exec`, bash ili sh) – npr. izravno u Radarru, a ne na Docker hostu. Radi preko svih načina spajanja; uz socket proxy dodaj `EXEC=1` (to dopušta root ljusku u bilo kojem kontejneru – izostavi ga ako ne želiš terminal). Iza Nginx Proxy Managera uključi *Websockets Support* za ArrHubov proxy host.
 

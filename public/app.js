@@ -667,6 +667,16 @@ function dkJob(c) {
   if (j.state === 'error') return `<div class="job err">✕ ${esc(j.error || '')}${log}</div>`;
   return `<div class="job" style="color:var(--ok)">✓ ${esc(j.result === 'current' ? t('dk.alreadyCurrent') : t('dk.updated'))}${log}</div>`;
 }
+// container web pages always open in a new browser tab; the best address on the 🌐 button, the others in a small menu
+const fillHost = u => u.replace('{host}', location.hostname);
+function dkWeb(c) {
+  if (!c.web?.length) return '';
+  const a = (l, cls, inner) => `<a class="${cls}" href="${esc(fillHost(l.url))}" target="_blank" rel="noopener noreferrer" title="${esc(t('dk.open.web') + ' – ' + l.label)}">${inner}</a>`;
+  const main = a(c.web[0], 'btn ib', DK_ICONS.web);
+  if (c.web.length < 2) return main;
+  return `<span class="dkweb">${main}<details class="dkwebm"><summary class="btn ib" title="${esc(t('dk.open.webMore'))}" aria-label="${esc(t('dk.open.webMore'))}">▾</summary>
+    <div>${c.web.map(l => a(l, '', esc(l.label))).join('')}</div></details></span>`;
+}
 function dkRow(c) {
   const run = c.state === 'running', busy = dk.jobs[c.name]?.state === 'running';
   const st = c.stats;
@@ -676,7 +686,7 @@ function dkRow(c) {
   const dis = busy ? ' disabled' : '';
   const ib = (a, icon, label, extra = '') => `<button class="btn ib" data-dk="${a}" title="${esc(label)}" aria-label="${esc(label)}"${extra}>${DK_ICONS[icon]}</button>`;
   const acts = [
-    c.web?.length ? ib('web', 'web', t('dk.open.web') + ' – ' + c.web.map(w => w.label).join(', ')) : '',
+    dkWeb(c),
     run ? ib('term', 'term', t('dk.terminal')) : '',
     ib('logs', 'logs', t('dk.logs')),
     run ? ib('restart', 'restart', t('dk.restart'), dis) : '',
@@ -713,9 +723,9 @@ function renderDocker() {
   const groups = {};
   for (const c of rows) (groups[c.project || ''] ||= []).push(c);
   // keep open "log" details open across refreshes
-  const open = new Set([...document.querySelectorAll('.dkrow details[open]')].map(d => d.closest('.dkrow').dataset.name));
+  const open = [...document.querySelectorAll('.dkrow details[open]')].map(d => [d.closest('.dkrow').dataset.name, d.className]);
   $('#dkList').innerHTML = Object.entries(groups).map(([g, cs]) => `<div class="dkgrp"><h3>${esc(g || t('dk.noProject'))} <span>${cs.length}</span></h3>${cs.map(dkRow).join('')}</div>`).join('');
-  open.forEach(n => document.querySelector(`.dkrow[data-name="${CSS.escape(n)}"] details`)?.setAttribute('open', ''));
+  open.forEach(([n, cls]) => document.querySelector(`.dkrow[data-name="${CSS.escape(n)}"] details${cls ? '.' + cls : ':not([class])'}`)?.setAttribute('open', ''));
 }
 async function dkUpdate(c) {
   try {
@@ -735,7 +745,6 @@ $('#dkList').addEventListener('click', async e => {
   const row = b.closest('.dkrow'), c = dk.list.find(x => x.id === row.dataset.id); if (!c) return;
   const a = b.dataset.dk;
   if (a === 'logs') return dkOpenLogs(c);
-  if (a === 'web') return openWeb(c);
   if (a === 'term') return openTerm(c);
   if (a === 'update') { if (confirm(t('dk.confirmUpdate', { name: c.name }))) dkUpdate(c); return; }
   if ((a === 'stop' || a === 'restart') && !confirm(t('dk.confirm.' + a, { name: c.name }))) return;
@@ -744,6 +753,8 @@ $('#dkList').addEventListener('click', async e => {
   catch (err) { toast(t('c.error', { msg: err.message })); }
   loadDocker();
 });
+// close the 🌐 address menu after a pick or a click elsewhere
+document.addEventListener('click', e => document.querySelectorAll('details.dkwebm[open]').forEach(d => { if (!d.contains(e.target) || e.target.closest('a')) d.removeAttribute('open'); }));
 $('#dkFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; dk.filter = b.dataset.f; [...$('#dkFilter').children].forEach(x => x.classList.toggle('on', x === b)); renderDocker(); };
 $('#dkSearch').oninput = e => { dk.q = e.target.value.trim(); renderDocker(); };
 $('#dkCheck').onclick = async () => { try { await api('docker/check', {}); dk.checking = true; renderDocker(); setTimeout(loadDocker, 2500); setTimeout(loadDocker, 8000); } catch (e) { toast(t('c.error', { msg: e.message })); } };
@@ -754,35 +765,6 @@ $('#dkUpdAll').onclick = async () => {
   for (const c of list) { await dkUpdate(c); dk.queue.shift(); }
   dk.queue = []; renderDocker();
 };
-// ---- container web page in a window over the app ----
-const web = { c: null, links: [] };
-const fillHost = u => u.replace('{host}', location.hostname);
-function webShow(i) {
-  const l = web.links[i]; if (!l) return;
-  const url = fillHost(l.url);
-  $('#webUrl').textContent = url; $('#webNew').href = url;
-  const mixed = location.protocol === 'https:' && url.startsWith('http:');
-  const why = mixed ? t('web.mixed') : l.frameable === false ? t('web.noFrame', { reason: l.reason || '' }) : '';
-  $('#webBody').innerHTML = why
-    ? `<div class="ovmsg"><div><span>${esc(why)}</span><a class="btn p" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${t('web.newTab')}</a></div></div>`
-    : `<iframe src="${esc(url)}" referrerpolicy="no-referrer" allow="clipboard-read; clipboard-write; fullscreen"></iframe>`;
-}
-async function openWeb(c) {
-  web.c = c; web.links = c.web.map(w => ({ ...w }));
-  $('#webTitle').textContent = c.name; $('#webModal').classList.remove('hidden');
-  $('#webBody').innerHTML = `<div class="ovmsg"><div>${t('c.loading')}</div></div>`;
-  try { web.links = (await api(`docker/containers/${encodeURIComponent(c.id)}/web`)).links; } catch {}
-  const sel = $('#webSel');
-  sel.classList.toggle('hidden', web.links.length < 2);
-  sel.innerHTML = web.links.map((l, i) => `<option value="${i}">${esc(l.label)}</option>`).join('');
-  webShow(0);
-}
-function closeWeb() { $('#webModal').classList.add('hidden'); $('#webBody').innerHTML = ''; web.c = null; }
-$('#webSel').onchange = e => webShow(Number(e.target.value));
-$('#webReload').onclick = () => { const f = $('#webBody iframe'); if (f) f.src = f.src; };
-$('#webClose').onclick = closeWeb;
-$('#webModal').onclick = e => { if (e.target.id === 'webModal') closeWeb(); };
-
 // ---- terminal into a container (docker exec) ----
 const term = { c: null, t: null, fit: null, ws: null, lib: null, ro: null };
 async function xtermLib() {
@@ -845,7 +827,7 @@ function dkOpenLogs(c) {
 function dkCloseLogs() { $('#dkModal').classList.add('hidden'); clearInterval(dkm.timer); dkm.c = null; }
 $('#dkmClose').onclick = dkCloseLogs;
 $('#dkModal').onclick = e => { if (e.target.id === 'dkModal') dkCloseLogs(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && dkm.c) dkCloseLogs(); else if (e.key === 'Escape' && web.c) closeWeb(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && dkm.c) dkCloseLogs(); });
 $('#dkmTail').onchange = dkLoadLogs;
 $('#dkmDl').onclick = () => {
   const a = document.createElement('a');
