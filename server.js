@@ -59,6 +59,8 @@ const routes = {
   },
   'GET /api/cover/:id': (q, b, p) => cover(p.id),
   'GET /api/settings': async () => settingsView(),
+  // ArrHub → Tools: the Proxmox script the page builds a copy of (with the chosen settings)
+  'GET /api/tools/lxc-script': async () => ({ __raw: fs.readFileSync(path.join(__dirname, 'proxmox', 'arr-stack-lxc.sh')), type: 'text/plain; charset=utf-8', headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' } }),
   'GET /api/logs/:src': (q, b, p) => serviceLogs(p.src),
   'POST /api/settings': (q, b) => saveSettings(b.values),
   'POST /api/settings/test': (q, b) => b.service === 'docker' ? dockerTest(b.values) : b.service === 'npm' ? npmTest(b.values) : testService(b.service, b.values),
@@ -167,7 +169,7 @@ async function handle(r, res) {
     const svc = u.pathname.split('/')[2];
     if (svc === 'docker' && !dockerOn()) return send(res, 400, { error: T('dockerNotConfigured') });
     if (svc === 'docker' && dockerLocked()) return send(res, 403, { error: T('dockerNeedsLogin') });
-    if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs', 'docker'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
+    if (!['config', 'settings', 'media', 'cover', 'about', 'icon', 'logs', 'docker', 'tools'].includes(svc) && !enabled(svc)) return send(res, 400, { error: T('notConfigured', { svc }) });
     try {
       const body = r.method === 'POST' ? await readBody(r) : {};
       const out = await m.fn(u.searchParams, body, m.params);

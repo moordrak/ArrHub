@@ -59,7 +59,9 @@ jobs:
           for f in lib/*.js lib/docker/*.js; do node --check "$f"; done
           node -e "for (const f of ['settings', 'logs', 'docker/stacks', 'docker/terminal']) require('./lib/' + f)"   # loads every module
           for f in public/*.js; do node --check "$f"; done
-          bash -n install.sh && bash -n proxmox/arrhub-lxc.sh
+          bash -n install.sh && bash -n proxmox/arrhub-lxc.sh && bash -n proxmox/arr-stack-lxc.sh
+          node -e "const A=require('./public/tools.js'), C=require('./compose.js'); C.plan(A.genCompose({ npm: true }), '', 'arr', {})"   # generated compose parses
+          node -e "process.stdout.write(require('./public/tools.js').genCompose({}))" | diff - stack/docker-compose.yml   # stack/ is up to date
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3

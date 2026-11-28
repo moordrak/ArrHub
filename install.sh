@@ -73,6 +73,7 @@ id "$APP_USER" &>/dev/null || useradd --system --home "$APP_DIR" --shell /usr/sb
 mkdir -p "$APP_DIR"
 rm -rf "$APP_DIR/public" "$APP_DIR/lib"
 cp -r "$SRC/server.js" "$SRC/compose.js" "$SRC/package.json" "$SRC/lib" "$SRC/public" "$SRC/config.example.json" "$APP_DIR/"
+mkdir -p "$APP_DIR/proxmox" && cp "$SRC/proxmox/arr-stack-lxc.sh" "$APP_DIR/proxmox/" 2>/dev/null || true
 cp "$SRC"/README*.md "$APP_DIR/" 2>/dev/null || true
 
 # ---------- configuration ----------

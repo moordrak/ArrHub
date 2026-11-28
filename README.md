@@ -153,6 +153,17 @@ Add a Proxy Host → `http://<lxc-ip>:8686`. If it is reachable outside your LAN
   `X-Forwarded-Host`), and browser POSTs must be JSON. Scripts without an `Origin` header (curl) still work.
   If you call ArrHub's API from another page of your own, list it in `ARRHUB_ORIGINS` (comma separated).
 
+## Install the whole arr stack (Tools)
+
+**Tools** in the side menu builds an install for the whole stack – Radarr, Sonarr, Prowlarr, Bazarr, NZBGet, qBittorrent, Seerr, ArrHub and optionally Nginx Proxy Manager. Pick the apps and settings and copy or download the result:
+
+- **Docker compose** – linuxserver.io images (official ones for Seerr and ArrHub), one shared `/data` folder for hardlinks (`/data/torrents`, `/data/usenet`, `/data/media`), PUID/PGID/TZ, ArrHub already pointed at the other apps by service name. Paste it into Portainer, run `docker compose up -d`, or open it in ArrHub's Compose stacks. A default copy is in [`stack/docker-compose.yml`](stack/docker-compose.yml).
+- **Proxmox LXC** – [`proxmox/arr-stack-lxc.sh`](proxmox/arr-stack-lxc.sh) creates one Debian container per app (whiptail dialogs: apps, container IDs, storage, bridge/VLAN, DHCP or consecutive static addresses, DNS, search domain, shared media folder from the host with 1:1 uid/gid mapping, own CA certificate, resources, logins), installs the apps natively as systemd services and sets ArrHub up with their addresses and API keys. At the end it prints a table with addresses, API keys and passwords (also saved to `/root/arr-stack-*.txt`) and the proxy hosts for Nginx Proxy Manager.
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/moordrak/arrhub/main/proxmox/arr-stack-lxc.sh)"
+```
+
 ## Docker control
 
 The **Docker** tab shows every container on your Docker host – grouped by compose project – with its state, health, uptime, CPU and RAM, ports and whether a newer image is available. You can start, stop and restart containers, read their logs and **update** them one by one or all at once.

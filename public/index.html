@@ -365,6 +365,34 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
 .about a{color:var(--accent-text,var(--accent));text-decoration:none;font-size:13px}.about a:hover{text-decoration:underline}
 .vbadge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
 .vbadge.upd{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:560px){.row3{grid-template-columns:1fr 1fr}}
+.field select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 10px;font:inherit}
+#tlForm .field{min-width:0}#tlForm .field input,#tlForm .field select{min-width:0;width:100%;box-sizing:border-box}
+@media(max-width:560px){#tlForm .row2{grid-template-columns:1fr}}
+.tlhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px}
+.tlhead h2{margin-bottom:4px}.tlhead p{margin:0;font-size:13px;max-width:720px}
+.tlgrid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:16px;align-items:start}
+@media(max-width:1100px){.tlgrid{grid-template-columns:1fr}}
+#tlForm h3,.tlout h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 10px;font-weight:600}
+#tlForm h3:first-child{margin-top:0}
+.tlapps{display:flex;flex-wrap:wrap;gap:8px}
+.tlapp{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);cursor:pointer;font-size:12.5px;user-select:none}
+.tlapp input{display:none}.tlapp .dot{background:var(--c);opacity:.35}
+.tlapp:has(input:checked){border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--panel2))}
+.tlapp:has(input:checked) .dot{opacity:1}
+.tlhint{display:block;font-size:11.5px;color:var(--muted);margin:2px 0 6px}
+.tlres{display:grid;gap:6px}
+.tlres-h,.tlres-r{display:grid;grid-template-columns:minmax(90px,1.4fr) repeat(3,minmax(0,1fr));gap:8px;align-items:center;font-size:12.5px}
+.tlres-h span{color:var(--muted);font-size:11.5px}
+.tlres-r input{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:6px 8px;font:12.5px var(--mono);width:100%}
+.tlout{position:sticky;top:12px}
+.tlbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 8px}.tlbar .sp{flex:1}.tlbar .muted{font-size:12px}
+.tlcode{margin:0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:12px/1.5 var(--mono);white-space:pre;overflow:auto;max-height:68vh;tab-size:2}
+.tlcmd{display:flex;gap:8px;align-items:flex-start;margin-bottom:4px}
+.tlcmd code{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:11.5px/1.5 var(--mono);word-break:break-all;max-height:140px;overflow:auto}
+.tlwarn{border:1px solid var(--warn,#e0a030);color:var(--warn,#e0a030);border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:10px}
+.btn.ok{border-color:var(--ok,#3fb950)}
 .set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media(max-width:900px){.set-grid{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
@@ -399,6 +427,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
     <button data-v="add"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span data-i18n="nav.add">Add</span></button>
     <button data-v="docker" data-svc="docker"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span data-i18n="nav.docker">Docker</span></button>
     <button data-v="logs"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span data-i18n="nav.logs">Logs</span></button>
+    <button data-v="tools"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.5 2.5-2.5-.7-.7-2.5z"/></svg><span data-i18n="nav.tools">Tools</span></button>
     <button data-v="settings"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span data-i18n="nav.settings">Settings</span></button>
   </nav>
 </aside>
@@ -565,6 +594,110 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
       </div>
       <div class="muted loginfo" id="logInfo"></div>
       <div class="loglist" id="logList"></div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="v-tools" class="hidden">
+    <div class="card wide tlhead">
+      <div>
+        <h2 data-i18n="tl.title">Install the whole arr stack</h2>
+        <p class="muted" data-i18n="tl.intro">Pick the apps and settings, then copy or download a Docker compose file or a Proxmox script that puts every app in its own LXC container.</p>
+      </div>
+      <div class="seg" id="tlMode"><button type="button" data-m="compose" class="on">Docker compose</button><button type="button" data-m="lxc">Proxmox LXC</button></div>
+    </div>
+    <div class="tlgrid">
+      <form id="tlForm" class="card" autocomplete="off" onsubmit="return false">
+        <h3 data-i18n="tl.apps">Apps</h3>
+        <div class="tlapps">
+            <label class="tlapp" style="--c:var(--radarr)"><input type="checkbox" name="app" value="radarr" checked><span class="dot"></span>Radarr</label>
+            <label class="tlapp" style="--c:var(--sonarr)"><input type="checkbox" name="app" value="sonarr" checked><span class="dot"></span>Sonarr</label>
+            <label class="tlapp" style="--c:var(--prowlarr)"><input type="checkbox" name="app" value="prowlarr" checked><span class="dot"></span>Prowlarr</label>
+            <label class="tlapp" style="--c:var(--bazarr)"><input type="checkbox" name="app" value="bazarr" checked><span class="dot"></span>Bazarr</label>
+            <label class="tlapp" style="--c:var(--nzb)"><input type="checkbox" name="app" value="nzbget" checked><span class="dot"></span>NZBGet</label>
+            <label class="tlapp" style="--c:var(--qb)"><input type="checkbox" name="app" value="qbittorrent" checked><span class="dot"></span>qBittorrent</label>
+            <label class="tlapp" style="--c:var(--seerr)"><input type="checkbox" name="app" value="seerr" checked><span class="dot"></span>Seerr</label>
+            <label class="tlapp" style="--c:var(--accent)"><input type="checkbox" name="app" value="arrhub" checked><span class="dot"></span>ArrHub</label>
+            <label class="tlapp" data-only="compose" style="--c:var(--muted)"><input type="checkbox" name="app" value="npm"><span class="dot"></span>Nginx Proxy Manager</label>
+        </div>
+        <h3 data-i18n="tl.common">Common</h3>
+        <div class="row3">
+          <div class="field"><label data-i18n="tl.tz">Time zone</label><input data-k="tz" placeholder="Europe/Zagreb"></div>
+          <div class="field"><label>PUID</label><input data-k="puid" inputmode="numeric"></div>
+          <div class="field"><label>PGID</label><input data-k="pgid" inputmode="numeric"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label data-i18n="tl.domain">Domain (for proxy hosts)</label><input data-k="domain" placeholder="int"></div>
+          <div class="field"><label data-i18n="tl.lang">ArrHub language</label><select data-k="lang"><option value="en">English</option><option value="hr">Hrvatski</option><option value="auto" data-i18n="set.langAuto">Automatic (browser)</option></select></div>
+        </div>
+
+        <div data-only="compose">
+          <h3>Docker</h3>
+          <div class="row2">
+            <div class="field"><label data-i18n="tl.cfgPath">Config folder on the Docker host</label><input data-k="cfgPath" placeholder="/opt/arr/config"></div>
+            <div class="field"><label data-i18n="tl.dataPath">Media folder (→ /data)</label><input data-k="dataPath" placeholder="/opt/arr/data"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label data-i18n="tl.project">Stack name</label><input data-k="project" placeholder="arr"></div>
+            <div class="field"><label data-i18n="tl.nzbUser">NZBGet username</label><input data-k="nzbUser" placeholder="nzbget"></div>
+          </div>
+          <div class="ctl"><label><input type="checkbox" data-k="ports"> <span data-i18n="tl.ports">Publish web UI ports on the host</span></label></div>
+          <div class="ctl"><label><input type="checkbox" data-k="socket"> <span data-i18n="tl.socket">ArrHub controls Docker through the socket</span></label></div>
+        </div>
+
+        <div data-only="lxc" class="hidden">
+          <h3 data-i18n="tl.containers">Containers</h3>
+          <div class="row3">
+            <div class="field"><label data-i18n="tl.ctid">First container ID</label><input data-k="ctid" inputmode="numeric" placeholder="next free" data-i18n-ph="tl.ctidPh"></div>
+            <div class="field"><label data-i18n="tl.prefix">Hostname prefix</label><input data-k="prefix" placeholder="arr-"></div>
+            <div class="field"><label data-i18n="tl.storage">Disk storage</label><input data-k="storage" placeholder="local-lvm"></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label data-i18n="tl.tplStorage">Template storage</label><input data-k="tplStorage" placeholder="local"></div>
+            <div class="field"><label data-i18n="tl.bridge">Bridge</label><input data-k="bridge" placeholder="vmbr0"></div>
+            <div class="field"><label>VLAN</label><input data-k="vlan" inputmode="numeric" placeholder="—"></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label data-i18n="tl.net">Addresses</label><select data-k="net"><option value="dhcp">DHCP</option><option value="static" data-i18n="tl.static">Static, one after another</option></select></div>
+            <div class="field"><label>DNS</label><input data-k="dns" placeholder="—" data-i18n-ph="tl.asHost"></div>
+            <div class="field"><label data-i18n="tl.caFile">Own CA (file on the host)</label><input data-k="caFile" placeholder="/root/ca.crt"></div>
+          </div>
+          <div class="row2" id="tlStatic">
+            <div class="field"><label data-i18n="tl.ipStart">First address / prefix</label><input data-k="ipStart" placeholder="192.168.1.61/24"></div>
+            <div class="field"><label data-i18n="tl.gw">Gateway</label><input data-k="gw" placeholder="192.168.1.1"></div>
+          </div>
+          <div class="field"><label data-i18n="tl.mediaHost">Shared media folder on the Proxmox host (→ /data)</label><input data-k="mediaHost" placeholder="/tank/data"><span class="hint" data-i18n="tl.mediaHint">Mounted in Radarr, Sonarr, Bazarr, NZBGet and qBittorrent; PUID/PGID are mapped 1:1 so hardlinks and ownership work.</span></div>
+          <div class="ctl"><label><input type="checkbox" data-k="unpriv"> <span data-i18n="tl.unpriv">Unprivileged containers</span></label><label><input type="checkbox" data-k="onboot"> <span data-i18n="tl.onboot">Start on boot</span></label></div>
+          <div class="row3">
+            <div class="field"><label data-i18n="tl.qbUser">qBittorrent user</label><input data-k="qbUser" placeholder="admin"></div>
+            <div class="field"><label data-i18n="tl.nzbUser">NZBGet username</label><input data-k="nzbUser" placeholder="nzbget"></div>
+            <div class="field"><label data-i18n="tl.arrhubUser">ArrHub login</label><input data-k="arrhubUser" placeholder="—" data-i18n-ph="tl.noLogin"></div>
+          </div>
+          <span class="hint tlhint" data-i18n="tl.passHint">Passwords are never written into the script: it asks for them (or makes random ones) and prints them at the end.</span>
+          <h3 data-i18n="tl.resources">Resources</h3>
+          <div class="tlres" id="tlRes"></div>
+        </div>
+        <div class="ctl" style="margin-top:14px"><button type="button" class="btn" id="tlReset" data-i18n="tl.reset">Default settings</button></div>
+      </form>
+
+      <div class="card tlout">
+        <div class="tlwarn hidden" id="tlWarn"></div>
+        <div data-only="lxc" class="hidden">
+          <h3 data-i18n="tl.run">Run on the Proxmox host (as root)</h3>
+          <div class="tlcmd"><code id="tlCmd"></code><button type="button" class="btn" id="tlCmdCopy" data-i18n="set.copy">Copy</button></div>
+          <span class="hint tlhint" data-i18n-html="tl.runHint"></span>
+        </div>
+        <div data-only="compose">
+          <span class="hint tlhint" data-i18n-html="tl.composeHint"></span>
+        </div>
+        <div class="tlbar">
+          <span class="mono" id="tlFile">docker-compose.yml</span><span class="muted" id="tlLines"></span><span class="sp"></span>
+          <button type="button" class="btn" id="tlCopy" data-i18n="set.copy">Copy</button>
+          <button type="button" class="btn" id="tlDownload" data-i18n="log.download">Download</button>
+          <button type="button" class="btn p hidden" id="tlDeploy" data-i18n="tl.deploy">Open in Compose stacks</button>
+        </div>
+        <pre class="tlcode" id="tlOut"></pre>
+      </div>
     </div>
   </section>
 
@@ -818,6 +951,7 @@ body.card-icons .card.wide[data-icon]::after{height:clamp(110px,110%,260px);opac
 
 <script src="i18n.js"></script>
 <script src="appearance.js"></script>
+<script src="tools.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
