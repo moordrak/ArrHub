@@ -669,14 +669,29 @@ function dkJob(c) {
 }
 // container web pages always open in a new browser tab; the best address on the 🌐 button, the others in a small menu
 const fillHost = u => u.replace('{host}', location.hostname);
+const dkWebA = (l, cls, inner) => `<a class="${cls}" href="${esc(fillHost(l.url))}" target="_blank" rel="noopener noreferrer" title="${esc(t('dk.open.web') + ' – ' + l.label)}">${inner}</a>`;
 function dkWeb(c) {
   if (!c.web?.length) return '';
-  const a = (l, cls, inner) => `<a class="${cls}" href="${esc(fillHost(l.url))}" target="_blank" rel="noopener noreferrer" title="${esc(t('dk.open.web') + ' – ' + l.label)}">${inner}</a>`;
-  const main = a(c.web[0], 'btn ib', DK_ICONS.web);
+  const main = dkWebA(c.web[0], 'btn ib', DK_ICONS.web);
   if (c.web.length < 2) return main;
-  return `<span class="dkweb">${main}<details class="dkwebm"><summary class="btn ib" title="${esc(t('dk.open.webMore'))}" aria-label="${esc(t('dk.open.webMore'))}">▾</summary>
-    <div>${c.web.map(l => a(l, '', esc(l.label))).join('')}</div></details></span>`;
+  return `<span class="dkweb">${main}<button class="btn ib dkwebmore" data-dk="webmore" title="${esc(t('dk.open.webMore'))}" aria-label="${esc(t('dk.open.webMore'))}" aria-haspopup="menu">▾</button></span>`;
 }
+// the address menu lives on <body>, so it is drawn above the side menu and is not clipped by the row
+function dkWebMenu(c, btn) {
+  const m = $('#dkWebMenu');
+  if (!m.classList.contains('hidden') && m.dataset.id === c.id) return dkWebMenuClose();
+  m.dataset.id = c.id;
+  m.innerHTML = c.web.map(l => dkWebA(l, '', esc(l.label))).join('');
+  m.classList.remove('hidden');
+  const r = (btn.closest('.dkweb') || btn).getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  const left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+  const top = r.bottom + 4 + h > innerHeight - 8 ? Math.max(8, r.top - 4 - h) : r.bottom + 4;
+  m.style.left = left + 'px'; m.style.top = top + 'px';
+}
+function dkWebMenuClose() { const m = $('#dkWebMenu'); m.classList.add('hidden'); m.dataset.id = ''; }
+document.addEventListener('click', e => { if (!e.target.closest('[data-dk="webmore"]') && (!e.target.closest('#dkWebMenu') || e.target.closest('a'))) dkWebMenuClose(); });
+addEventListener('scroll', dkWebMenuClose, true); addEventListener('resize', dkWebMenuClose);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') dkWebMenuClose(); });
 function dkRow(c) {
   const run = c.state === 'running', busy = dk.jobs[c.name]?.state === 'running';
   const st = c.stats;
@@ -723,9 +738,9 @@ function renderDocker() {
   const groups = {};
   for (const c of rows) (groups[c.project || ''] ||= []).push(c);
   // keep open "log" details open across refreshes
-  const open = [...document.querySelectorAll('.dkrow details[open]')].map(d => [d.closest('.dkrow').dataset.name, d.className]);
+  const open = new Set([...document.querySelectorAll('.dkrow details[open]')].map(d => d.closest('.dkrow').dataset.name));
   $('#dkList').innerHTML = Object.entries(groups).map(([g, cs]) => `<div class="dkgrp"><h3>${esc(g || t('dk.noProject'))} <span>${cs.length}</span></h3>${cs.map(dkRow).join('')}</div>`).join('');
-  open.forEach(([n, cls]) => document.querySelector(`.dkrow[data-name="${CSS.escape(n)}"] details${cls ? '.' + cls : ':not([class])'}`)?.setAttribute('open', ''));
+  open.forEach(n => document.querySelector(`.dkrow[data-name="${CSS.escape(n)}"] details`)?.setAttribute('open', ''));
 }
 async function dkUpdate(c) {
   try {
@@ -744,6 +759,7 @@ $('#dkList').addEventListener('click', async e => {
   const b = e.target.closest('[data-dk]'); if (!b) return;
   const row = b.closest('.dkrow'), c = dk.list.find(x => x.id === row.dataset.id); if (!c) return;
   const a = b.dataset.dk;
+  if (a === 'webmore') return dkWebMenu(c, b);
   if (a === 'logs') return dkOpenLogs(c);
   if (a === 'term') return openTerm(c);
   if (a === 'update') { if (confirm(t('dk.confirmUpdate', { name: c.name }))) dkUpdate(c); return; }
@@ -753,8 +769,6 @@ $('#dkList').addEventListener('click', async e => {
   catch (err) { toast(t('c.error', { msg: err.message })); }
   loadDocker();
 });
-// close the 🌐 address menu after a pick or a click elsewhere
-document.addEventListener('click', e => document.querySelectorAll('details.dkwebm[open]').forEach(d => { if (!d.contains(e.target) || e.target.closest('a')) d.removeAttribute('open'); }));
 $('#dkFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; dk.filter = b.dataset.f; [...$('#dkFilter').children].forEach(x => x.classList.toggle('on', x === b)); renderDocker(); };
 $('#dkSearch').oninput = e => { dk.q = e.target.value.trim(); renderDocker(); };
 $('#dkCheck').onclick = async () => { try { await api('docker/check', {}); dk.checking = true; renderDocker(); setTimeout(loadDocker, 2500); setTimeout(loadDocker, 8000); } catch (e) { toast(t('c.error', { msg: e.message })); } };
